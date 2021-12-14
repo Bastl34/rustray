@@ -137,9 +137,6 @@ impl Renderer
                         }
                     }
 
-                    //let x = helper::rand(range.x, range.x + range.width);
-                    //let y = helper::rand(range.y, range.y + range.height);
-
                     let r = helper::rand(0, 255);
                     let g = helper::rand(0, 255);
                     let b = helper::rand(0, 255);
@@ -147,8 +144,6 @@ impl Renderer
                     let pixel_val = PixelColor { r: r, g: g, b: b, x: x, y: y };
                     tx.send(pixel_val).unwrap();
 
-                    //::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
-                    //::std::thread::sleep(Duration::from_millis(1));
                     ::std::thread::sleep(Duration::from_nanos(10));
                 }
             }

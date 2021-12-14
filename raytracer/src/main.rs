@@ -1,6 +1,7 @@
 extern crate sdl2;
 extern crate rand;
 
+use std::io::Write;
 use std::time::Instant;
 
 use sdl2::rect::Point;
@@ -8,6 +9,10 @@ use sdl2::pixels::Color;
 
 use sdl2::keyboard::Keycode;
 use sdl2::event::WindowEvent;
+
+use sdl2::video::WindowPos::Positioned;
+
+use std::fs::File;
 
 pub mod helper;
 pub mod pixel_color;
@@ -37,7 +42,23 @@ fn main()
     let mut width: i32 = 900;
     let mut height: i32 = 700;
 
-    let window = video_subsystem.window("Raytracer", width as u32, height as u32).resizable().build().unwrap();
+    let mut window = video_subsystem.window("Raytracer", width as u32, height as u32).resizable().build().unwrap();
+
+    //try to load window position
+    let data = std::fs::read_to_string("pos.data");
+    if data.is_ok()
+    {
+        let res = data.unwrap();
+        let splits: Vec<&str> = res.split("x").collect();
+        let splits_arr = splits.as_slice();
+
+        let x: i32 = splits_arr[0].parse().unwrap();
+        let y: i32 = splits_arr[1].parse().unwrap();
+
+        println!("x: {} y: {}", x, y);
+
+        window.set_position(Positioned(x), Positioned(y));
+    }
 
     let mut canvas = window.into_canvas().present_vsync().build().unwrap();
     //let mut canvas = window.into_canvas().build().unwrap();
@@ -74,6 +95,12 @@ fn main()
                     canvas.clear();
 
                     rendering.restart(width, height);
+                },
+                //save the window position
+                sdl2::event::Event::Window { win_event: WindowEvent::Moved(x, y), ..} =>
+                {
+                    let mut file = File::create("pos.data").unwrap();
+                    let _ = file.write(format!("{}x{}", x, y).as_bytes());
                 },
                 _ => {},
             }
