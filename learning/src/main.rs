@@ -15,7 +15,8 @@
 //mod threads;
 //mod options;
 //mod crates_modules;
-mod traits;
+//mod traits;
+mod smartpointer;
 
 //use strings as test;
 //use tuples as test;
@@ -29,7 +30,8 @@ mod traits;
 //use enums as test;
 //use cli as test;
 //use threads as test;
-use traits as test;
+//use traits as test;
+use smartpointer as test;
 
 fn main()
 {
