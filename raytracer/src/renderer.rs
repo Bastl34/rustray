@@ -10,8 +10,8 @@ use std::collections::VecDeque;
 
 extern crate num_cpus;
 
+use crate::raytracing::Raytracing;
 use crate::pixel_color::PixelColor;
-use crate::helper;
 
 const BLOCK_SIZE: i32 = 32;
 
@@ -31,7 +31,7 @@ impl CellRange
     }
 }
 
-pub struct Renderer
+pub struct RendererManager
 {
     width: i32,
     height: i32,
@@ -43,15 +43,17 @@ pub struct Renderer
     threads: Vec<JoinHandle<()>>,
     message_sender: Sender<PixelColor>,
     message_receiver: Receiver<PixelColor>,
+
+    raytracing: Arc<Raytracing>
 }
 
-impl Renderer
+impl RendererManager
 {
-    pub fn new(width: i32, height: i32) -> Renderer
+    pub fn new(width: i32, height: i32, raytracing: Arc<Raytracing>) -> RendererManager
     {
         let (tx, rx) = mpsc::channel();
 
-        Renderer
+        RendererManager
         {
             width: width,
             height: height,
@@ -62,7 +64,9 @@ impl Renderer
 
             threads: vec![],
             message_sender: tx,
-            message_receiver: rx
+            message_receiver: rx,
+
+            raytracing: raytracing
         }
     }
 
@@ -136,17 +140,11 @@ impl Renderer
         &self.message_receiver
     }
 
-    pub fn check_running(&self) -> bool
-    {
-        let running_mutex = Arc::clone(&self.running);
-        let running = running_mutex.lock().unwrap();
-        return *running
-    }
-
     fn start_thread(&self) -> JoinHandle<()>
     {
         let tx = self.message_sender.clone();
         let cell_list = Arc::clone(&self.cell_list);
+        let raytracing = Arc::clone(&self.raytracing);
 
         let running_mutex = Arc::clone(&self.running);
         let check_running = move || -> bool
@@ -193,11 +191,7 @@ impl Renderer
                                 break 'outer;
                             }
 
-                            let r = helper::rand(0, 255);
-                            let g = helper::rand(0, 255);
-                            let b = helper::rand(0, 255);
-
-                            let pixel_val = PixelColor { r: r, g: g, b: b, x: x, y: y };
+                            let pixel_val = raytracing.render(x,y);
                             tx.send(pixel_val).unwrap();
 
                             ::std::thread::sleep(Duration::from_nanos(10));

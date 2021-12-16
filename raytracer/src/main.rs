@@ -18,11 +18,13 @@ pub mod helper;
 pub mod pixel_color;
 pub mod shape;
 
-mod renderer;
+pub mod renderer;
+pub mod raytracing;
 
 //mod pixel_color;
 
-use renderer::Renderer;
+use renderer::RendererManager;
+use raytracing::Raytracing;
 
 
 /*SDL stuff:
@@ -74,7 +76,11 @@ fn main()
 
     let timer = Instant::now();
 
-    let mut rendering = Renderer::new(width, height);
+    //let mut raytracing = std::sync::Arc::new(std::sync::Mutex::new(Raytracing::new()));
+    //let mut raytracing: Box<Raytracing + Send> = Box::new(Raytracing::new());
+    let mut raytracing = std::sync::Arc::new(Raytracing::new());
+
+    let mut rendering = RendererManager::new(width, height, raytracing);
     rendering.start();
 
     'main: loop
