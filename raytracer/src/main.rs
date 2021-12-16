@@ -76,8 +76,6 @@ fn main()
 
     let timer = Instant::now();
 
-    //let mut raytracing = std::sync::Arc::new(std::sync::Mutex::new(Raytracing::new()));
-    //let mut raytracing: Box<Raytracing + Send> = Box::new(Raytracing::new());
     let mut raytracing = std::sync::Arc::new(Raytracing::new());
 
     let mut rendering = RendererManager::new(width, height, raytracing);
