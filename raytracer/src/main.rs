@@ -16,6 +16,7 @@ use std::fs::File;
 
 pub mod helper;
 pub mod pixel_color;
+pub mod shape;
 
 mod renderer;
 

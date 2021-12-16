@@ -6,17 +6,29 @@ use std::sync::Mutex;
 use std::sync::Arc;
 use core::time::Duration;
 
+use std::collections::VecDeque;
+
 extern crate num_cpus;
 
 use crate::pixel_color::PixelColor;
 use crate::helper;
 
+const BLOCK_SIZE: i32 = 32;
+
 struct CellRange
 {
-    x: i32,
-    y: i32,
-    width: i32,
-    height: i32
+    x0: i32,
+    x1: i32,
+    y0: i32,
+    y1: i32
+}
+
+impl CellRange
+{
+    pub fn new() -> CellRange
+    {
+        CellRange {x0: 0, x1: 0, y0: 0, y1: 0}
+    }
 }
 
 pub struct Renderer
@@ -25,6 +37,8 @@ pub struct Renderer
     height: i32,
 
     running: Arc<Mutex<bool>>,
+
+    cell_list: Arc<Mutex<VecDeque<CellRange>>>,
 
     threads: Vec<JoinHandle<()>>,
     message_sender: Sender<PixelColor>,
@@ -41,7 +55,11 @@ impl Renderer
         {
             width: width,
             height: height,
+
             running: std::sync::Arc::new(std::sync::Mutex::new(false)),
+
+            cell_list: std::sync::Arc::new(std::sync::Mutex::new(VecDeque::new())),
+
             threads: vec![],
             message_sender: tx,
             message_receiver: rx
@@ -62,33 +80,33 @@ impl Renderer
 
         { *(self.running.lock().unwrap()) = true; }
 
-        let rows = (cores as f64).sqrt() as i32;
-        let cols = (cores as f64).sqrt() as i32;
-
-        let mut x_start: i32 = 0;
-        let mut y_start: i32 = 0;
-
-        let x_steps = self.width / (cols as i32);
-        let y_steps = self.height / (rows as i32);
-
-        for _ in 0..cols
+        let mut x = 0;
+        while x < self.width
         {
-            for _ in 0..rows
+            let mut y = 0;
+            while y < self.width
             {
-                let range = CellRange { x: x_start, y: y_start, width: x_steps, height: y_steps };
-                let handle = self.start_thread(range);
-                self.threads.push(handle);
+                let mut x1 = x + BLOCK_SIZE;
+                let mut y1 = y + BLOCK_SIZE;
 
-                // WARNING: it could be that the last cell may not complete fill the screen res
-                // but it is ok for now 🤷 ¯\_(ツ)_/¯
-                y_start += y_steps;
+                if x1 >= self.width { x1 = self.width - 1; }
+                if y1 >= self.height { y1 = self.height - 1; }
+
+                let cell = CellRange { x0: x, x1: x1, y0: y, y1: y1 };
+
+                (*(self.cell_list.lock().unwrap())).push_back(cell);
+
+                y += BLOCK_SIZE;
             }
 
-            x_start += x_steps;
-            y_start = 0;
+            x += BLOCK_SIZE;
         }
 
-        println!("rows: {}, cols: {}", rows, cols);
+        for _ in 0..cores
+        {
+            let handle = self.start_thread();
+            self.threads.push(handle);
+        }
     }
 
     pub fn stop(&mut self)
@@ -118,33 +136,73 @@ impl Renderer
         &self.message_receiver
     }
 
-    fn start_thread(&self, range: CellRange) -> JoinHandle<()>
+    pub fn check_running(&self) -> bool
+    {
+        let running_mutex = Arc::clone(&self.running);
+        let running = running_mutex.lock().unwrap();
+        return *running
+    }
+
+    fn start_thread(&self) -> JoinHandle<()>
     {
         let tx = self.message_sender.clone();
-        let mutex = Arc::clone(&self.running);
+        let cell_list = Arc::clone(&self.cell_list);
+
+        let running_mutex = Arc::clone(&self.running);
+        let check_running = move || -> bool
+        {
+            let running = running_mutex.lock().unwrap();
+            return *running;
+        };
 
         let handle = std::thread::spawn(move ||
         {
-            for y in range.y .. range.y + range.height
+            let mut running = true;
+            'outer: while running
             {
-                for x in range.x .. range.x + range.width
+                //check running
+                if !check_running()
                 {
+                    break 'outer;
+                }
+
+                //get new cell from list
+                let mut range = CellRange::new();
+                {
+                    let front = (*(cell_list.lock().unwrap())).pop_front();
+
+                    if front.is_some()
                     {
-                        let running = mutex.lock().unwrap();
-                        if !(*running)
+                        range = front.unwrap();
+                    }
+                    else
+                    {
+                        running = false;
+                    }
+                }
+
+                //render
+                if running
+                {
+                    for y in range.y0 .. range.y1
+                    {
+                        for x in range.x0 .. range.x1
                         {
-                            break;
+                            if !check_running()
+                            {
+                                break 'outer;
+                            }
+
+                            let r = helper::rand(0, 255);
+                            let g = helper::rand(0, 255);
+                            let b = helper::rand(0, 255);
+
+                            let pixel_val = PixelColor { r: r, g: g, b: b, x: x, y: y };
+                            tx.send(pixel_val).unwrap();
+
+                            ::std::thread::sleep(Duration::from_nanos(10));
                         }
                     }
-
-                    let r = helper::rand(0, 255);
-                    let g = helper::rand(0, 255);
-                    let b = helper::rand(0, 255);
-
-                    let pixel_val = PixelColor { r: r, g: g, b: b, x: x, y: y };
-                    tx.send(pixel_val).unwrap();
-
-                    ::std::thread::sleep(Duration::from_nanos(10));
                 }
             }
         });
