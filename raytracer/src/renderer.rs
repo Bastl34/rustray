@@ -84,6 +84,8 @@ impl RendererManager
 
         { *(self.running.lock().unwrap()) = true; }
 
+        { (*(self.cell_list.lock().unwrap())).clear(); }
+
         let mut x = 0;
         while x < self.width
         {

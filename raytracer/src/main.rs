@@ -21,11 +21,8 @@ pub mod shape;
 pub mod renderer;
 pub mod raytracing;
 
-//mod pixel_color;
-
 use renderer::RendererManager;
 use raytracing::Raytracing;
-
 
 /*SDL stuff:
 
@@ -35,15 +32,14 @@ http://nercury.github.io/rust/opengl/tutorial/2018/02/09/opengl-in-rust-from-scr
 
 */
 
-
 fn main()
 {
     let sdl = sdl2::init().unwrap();
 
     let video_subsystem = sdl.video().unwrap();
 
-    let mut width: i32 = 900;
-    let mut height: i32 = 700;
+    let mut width: i32 = 800;
+    let mut height: i32 = 600;
 
     let mut window = video_subsystem.window("Raytracer", width as u32, height as u32).resizable().build().unwrap();
 
@@ -64,7 +60,6 @@ fn main()
     }
 
     let mut canvas = window.into_canvas().present_vsync().build().unwrap();
-    //let mut canvas = window.into_canvas().build().unwrap();
 
     canvas.set_draw_color(Color::RGB(0, 0, 0));
     canvas.clear();
@@ -81,6 +76,8 @@ fn main()
     let mut rendering = RendererManager::new(width, height, raytracing);
     rendering.start();
 
+    let mut fps_display_update: u128 = 0;
+
     'main: loop
     {
         for event in event_pump.poll_iter()
@@ -91,10 +88,13 @@ fn main()
                     break 'main,
                 sdl2::event::Event::KeyDown { keycode: Some(Keycode::Escape), .. } =>
                     break 'main,
+                //restart rendering on resize
                 sdl2::event::Event::Window { win_event: WindowEvent::Resized(w, h), ..} =>
                 {
                     width = w;
                     height = h;
+
+                    rendering.stop();
 
                     canvas.set_draw_color(Color::RGB(0, 0, 0));
                     canvas.clear();
@@ -132,13 +132,18 @@ fn main()
 
         //calc fps
         current_time = timer.elapsed().as_millis();
-        let fps = 1000.0 / (current_time - last_time) as f64;
+        let fps = 1000.0f64 / (current_time - last_time) as f64;
         last_time = current_time;
 
         //update window title
-        let window = canvas.window_mut();
-        let title = format!("Raytracer (FPS: {:.2})",fps);
-        window.set_title(&title).unwrap();
+        if current_time - fps_display_update >= 1000
+        {
+            let window = canvas.window_mut();
+            let title = format!("Raytracer (FPS: {:.2})",fps);
+            window.set_title(&title).unwrap();
+
+            fps_display_update = current_time;
+        }
     }
 
     rendering.stop();
