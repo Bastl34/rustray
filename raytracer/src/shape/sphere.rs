@@ -1,10 +1,11 @@
+use parry3d::shape::Ball;
+
 pub struct Spere
 {
     basic: ShapeBasics,
     name: String,
 
-    p: Point3,
-    r: f32
+    ball: Ball
 }
 
 impl Shape for Sphere
@@ -17,5 +18,18 @@ impl Shape for Sphere
     fn calc_bbox()
     {
 
+    }
+}
+
+impl Sphere
+{
+    pub fn new(r: i32) -> Sphere
+    {
+        Spere
+        {
+            basic: ShapeBasics::new(),
+            name: String::from("Sphere"),
+            ball: Ball::new(1.0f32)
+        }
     }
 }

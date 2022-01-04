@@ -9,6 +9,7 @@ use sdl2::pixels::Color;
 
 use sdl2::keyboard::Keycode;
 use sdl2::event::WindowEvent;
+use sdl2::pixels::PixelFormatEnum;
 
 use sdl2::video::WindowPos::Positioned;
 
@@ -41,7 +42,8 @@ fn main()
     let mut width: i32 = 800;
     let mut height: i32 = 600;
 
-    let mut window = video_subsystem.window("Raytracer", width as u32, height as u32).resizable().build().unwrap();
+    let mut window_x = 0;
+    let mut window_y = 0;
 
     //try to load window position
     let data = std::fs::read_to_string("pos.data");
@@ -51,18 +53,27 @@ fn main()
         let splits: Vec<&str> = res.split("x").collect();
         let splits_arr = splits.as_slice();
 
-        let x: i32 = splits_arr[0].parse().unwrap();
-        let y: i32 = splits_arr[1].parse().unwrap();
-
-        println!("x: {} y: {}", x, y);
-
-        window.set_position(Positioned(x), Positioned(y));
+        window_x = splits_arr[0].parse().unwrap();
+        window_y = splits_arr[1].parse().unwrap();
+        width = splits_arr[2].parse().unwrap();
+        height = splits_arr[3].parse().unwrap();
     }
+
+    let mut window = video_subsystem.window("Raytracer", width as u32, height as u32).resizable().build().unwrap();
+    window.set_position(Positioned(window_x), Positioned(window_y));
 
     let mut canvas = window.into_canvas().present_vsync().build().unwrap();
 
     canvas.set_draw_color(Color::RGB(0, 0, 0));
     canvas.clear();
+    canvas.present();
+
+    let mut render_canvas = sdl2::surface::Surface::new(width as u32, height as u32, PixelFormatEnum::RGBA32).unwrap().into_canvas().unwrap();
+    render_canvas.set_draw_color(Color::RGB(0, 0, 0));
+    render_canvas.clear();
+
+    let texture_creator = canvas.texture_creator();
+    let mut texture;
 
     let mut event_pump = sdl.event_pump().unwrap();
 
@@ -84,28 +95,44 @@ fn main()
         {
             match event
             {
-                sdl2::event::Event::Quit {..} =>
+                sdl2::event::Event::Quit { .. } =>
                     break 'main,
                 sdl2::event::Event::KeyDown { keycode: Some(Keycode::Escape), .. } =>
                     break 'main,
                 //restart rendering on resize
                 sdl2::event::Event::Window { win_event: WindowEvent::Resized(w, h), ..} =>
                 {
+                    //apply
                     width = w;
                     height = h;
 
+                    //reset rednering canvas and buffer canvas
                     rendering.stop();
 
                     canvas.set_draw_color(Color::RGB(0, 0, 0));
                     canvas.clear();
+                    canvas.present();
+
+                    render_canvas = sdl2::surface::Surface::new(width as u32, height as u32, PixelFormatEnum::RGBA32).unwrap().into_canvas().unwrap();
+                    render_canvas.set_draw_color(Color::RGB(0, 0, 0));
+                    render_canvas.clear();
 
                     rendering.restart(width, height);
+
+                    //save to file
+                    let mut file = File::create("pos.data").unwrap();
+                    let _ = file.write(format!("{}x{}x{}x{}", window_x, window_y, width, height).as_bytes());
                 },
                 //save the window position
                 sdl2::event::Event::Window { win_event: WindowEvent::Moved(x, y), ..} =>
                 {
+                    //apply changes
+                    window_x = x;
+                    window_y = y;
+
+                    //save to file
                     let mut file = File::create("pos.data").unwrap();
-                    let _ = file.write(format!("{}x{}", x, y).as_bytes());
+                    let _ = file.write(format!("{}x{}x{}x{}", window_x, window_y, width, height).as_bytes());
                 },
                 _ => {},
             }
@@ -122,12 +149,15 @@ fn main()
             if res.is_ok()
             {
                 let item = res.unwrap();
-                canvas.set_draw_color(Color::RGB(item.r, item.g, item.b));
-                canvas.draw_point(Point::new(item.x, item.y)).unwrap();
+
+                render_canvas.set_draw_color(Color::RGB(item.r, item.g, item.b));
+                render_canvas.draw_point(Point::new(item.x, item.y)).unwrap();
             }
         }
 
-        //draw
+        texture = texture_creator.create_texture_from_surface(render_canvas.surface()).unwrap();
+        canvas.clear();
+        canvas.copy(&texture, None, None).unwrap();
         canvas.present();
 
         //calc fps

@@ -9,5 +9,5 @@ edition = "2021"
 sdl2 = { version = "0.35.1", features = ["bundled", "static-link"] }
 rand = "*"
 num_cpus = "*"
-nalgebra = "*"
-parry3d = "*"
+nalgebra = "0.30.0"
+parry3d = "0.8.0"
