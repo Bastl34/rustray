@@ -64,12 +64,12 @@ fn main()
 
     let mut canvas = window.into_canvas().present_vsync().build().unwrap();
 
-    canvas.set_draw_color(Color::RGB(0, 0, 0));
+    canvas.set_draw_color(Color::RGB(255, 255, 255));
     canvas.clear();
     canvas.present();
 
     let mut render_canvas = sdl2::surface::Surface::new(width as u32, height as u32, PixelFormatEnum::RGBA32).unwrap().into_canvas().unwrap();
-    render_canvas.set_draw_color(Color::RGB(0, 0, 0));
+    render_canvas.set_draw_color(Color::RGB(255, 255, 255));
     render_canvas.clear();
 
     let texture_creator = canvas.texture_creator();
@@ -123,15 +123,15 @@ fn main()
                     //reset rednering canvas and buffer canvas
                     rendering.stop();
 
-                    canvas.set_draw_color(Color::RGB(0, 0, 0));
+                    canvas.set_draw_color(Color::RGB(255, 255, 255));
                     canvas.clear();
                     canvas.present();
 
                     render_canvas = sdl2::surface::Surface::new(width as u32, height as u32, PixelFormatEnum::RGBA32).unwrap().into_canvas().unwrap();
-                    render_canvas.set_draw_color(Color::RGB(0, 0, 0));
+                    render_canvas.set_draw_color(Color::RGB(255, 255, 255));
                     render_canvas.clear();
 
-
+                    //TODO
                     //raytracing.init_camera(width as u32, height as u32);
 
                     rendering.restart(width, height);
