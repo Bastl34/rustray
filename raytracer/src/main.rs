@@ -59,7 +59,7 @@ fn main()
         height = splits_arr[3].parse().unwrap();
     }
 
-    let mut window = video_subsystem.window("Raytracer", width as u32, height as u32).resizable().build().unwrap();
+    let mut window = video_subsystem.window("Raytracer", width as u32, height as u32).resizable().allow_highdpi().build().unwrap();
     window.set_position(Positioned(window_x), Positioned(window_y));
 
     let mut canvas = window.into_canvas().present_vsync().build().unwrap();
