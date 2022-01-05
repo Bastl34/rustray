@@ -1,6 +1,11 @@
+use nalgebra::Isometry3;
+
 use parry3d::shape::Ball;
 
-pub struct Spere
+use crate::shape::Shape;
+use crate::shape::ShapeBasics;
+
+pub struct Sphere
 {
     basic: ShapeBasics,
     name: String,
@@ -10,26 +15,35 @@ pub struct Spere
 
 impl Shape for Sphere
 {
-    fn name(&self) -> String
+     fn calc_bbox(&mut self)
     {
-        "shpere".to_string;
-    }
-
-    fn calc_bbox()
-    {
-
+        self.basic.b_box = self.ball.aabb(&self.basic.trans);
     }
 }
 
 impl Sphere
 {
-    pub fn new(r: i32) -> Sphere
+    pub fn new(r: f32) -> Sphere
     {
-        Spere
+        Sphere
         {
             basic: ShapeBasics::new(),
             name: String::from("Sphere"),
-            ball: Ball::new(1.0f32)
+            ball: Ball::new(r)
         }
+    }
+
+    pub fn new_with_pos(x: f32, y: f32, z: f32, r: f32) -> Sphere
+    {
+        let mut sphere = Sphere
+        {
+            basic: ShapeBasics::new(),
+            name: String::from("Sphere"),
+            ball: Ball::new(r)
+        };
+
+        sphere.basic.trans = Isometry3::translation(x, y, z);
+
+        sphere
     }
 }

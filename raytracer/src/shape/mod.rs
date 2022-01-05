@@ -1,33 +1,43 @@
-//use crate::shape::bbox::BoundingBox;
-//use self::bbox::BoundingBox;
-
-mod bounding_box;
-
+use nalgebra::Isometry3;
 use nalgebra::Matrix4;
 
-use bounding_box::BoundingBox;
+use parry3d::bounding_volume::AABB;
+
+pub mod sphere;
 
 pub trait Shape
 {
-    fn name(&self) -> String
-    {
-        "no name".to_string()
-    }
+    fn calc_bbox(&mut self);
 }
 
 pub struct ShapeBasics
 {
-    trans: Matrix4<f32>,
+    trans: Isometry3<f32>,
     tran_inverse: Matrix4<f32>,
 
-    b_box: BoundingBox
+    b_box: AABB
 }
 
 impl ShapeBasics
 {
+    pub fn new() -> ShapeBasics
+    {
+        ShapeBasics
+        {
+            trans: Isometry3::<f32>::identity(),
+            tran_inverse: Matrix4::<f32>::identity(),
+            b_box: AABB::new_invalid()
+        }
+    }
+
+    pub fn get_mat(&mut self) -> Matrix4<f32>
+    {
+        self.trans.to_homogeneous()
+    }
+
     pub fn calc_inverse(&mut self)
     {
         //because we are dealing with 4x4 matrices: unwrap should be fine
-        self.tran_inverse = self.trans.try_inverse().unwrap();
+        self.tran_inverse = self.trans.to_homogeneous().try_inverse().unwrap();
     }
 }

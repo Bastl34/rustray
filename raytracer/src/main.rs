@@ -82,9 +82,19 @@ fn main()
 
     let timer = Instant::now();
 
+    /*
     let mut raytracing = std::sync::Arc::new(Raytracing::new());
+    raytracing.init_with_some_objects();
+    raytracing.init_camera(width as u32, height as u32);
+     */
 
-    let mut rendering = RendererManager::new(width, height, raytracing);
+    let mut raytracing = Raytracing::new();
+    raytracing.init_with_some_objects();
+    raytracing.init_camera(width as u32, height as u32);
+
+    let raytracing_arc = std::sync::Arc::new(raytracing);
+
+    let mut rendering = RendererManager::new(width, height, raytracing_arc);
     rendering.start();
 
     let mut fps_display_update: u128 = 0;
@@ -99,6 +109,10 @@ fn main()
                     break 'main,
                 sdl2::event::Event::KeyDown { keycode: Some(Keycode::Escape), .. } =>
                     break 'main,
+                sdl2::event::Event::KeyDown { keycode: Some(Keycode::Space), .. } =>
+                {
+                    rendering.restart(width, height);
+                },
                 //restart rendering on resize
                 sdl2::event::Event::Window { win_event: WindowEvent::Resized(w, h), ..} =>
                 {
@@ -116,6 +130,9 @@ fn main()
                     render_canvas = sdl2::surface::Surface::new(width as u32, height as u32, PixelFormatEnum::RGBA32).unwrap().into_canvas().unwrap();
                     render_canvas.set_draw_color(Color::RGB(0, 0, 0));
                     render_canvas.clear();
+
+
+                    //raytracing.init_camera(width as u32, height as u32);
 
                     rendering.restart(width, height);
 
