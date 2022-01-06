@@ -154,7 +154,7 @@ impl RendererManager
     pub fn stop(&mut self)
     {
         {
-            let mut running_ref = (self.running.lock().unwrap());
+            let mut running_ref = self.running.lock().unwrap();
 
             if *(running_ref) == false
             {
@@ -193,7 +193,7 @@ impl RendererManager
 
     pub fn get_rendered_pixels(&self) -> u64
     {
-        (*(self.pixels_rendered.lock().unwrap()))
+        *(self.pixels_rendered.lock().unwrap())
     }
 
     pub fn is_done(&self) -> bool
@@ -230,9 +230,6 @@ impl RendererManager
             let running = running_mutex.lock().unwrap();
             return *running;
         };
-
-        let width = self.width;
-        let height = self.height;
 
         let handle = std::thread::spawn(move ||
         {
