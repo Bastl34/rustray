@@ -1,4 +1,5 @@
 use nalgebra::Isometry3;
+use nalgebra::Vector3;
 
 use parry3d::query::{Ray, RayCast};
 use parry3d::shape::Ball;
@@ -34,9 +35,14 @@ impl Shape for Sphere
         self.basic.b_box.cast_ray(&trans, ray, std::f32::MAX, true)
     }
 
-    fn intersect(&self, ray: &Ray) -> Option<f32>
+    fn intersect(&self, ray: &Ray) -> Option<(f32, Vector3<f32>)>
     {
-        self.ball.cast_ray(&self.basic.trans, ray, std::f32::MAX, true)
+        let res = self.ball.cast_ray_and_get_normal(&self.basic.trans, ray, std::f32::MAX, true);
+        if let Some(res) = res
+        {
+            return Some((res.toi, res.normal))
+        }
+        None
     }
 }
 

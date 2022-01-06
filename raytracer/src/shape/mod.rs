@@ -1,4 +1,4 @@
-use nalgebra::{Isometry3, Matrix4, Vector4};
+use nalgebra::{Isometry3, Matrix4, Vector4, Vector3};
 use parry3d::query::{Ray};
 
 use parry3d::bounding_volume::AABB;
@@ -10,7 +10,7 @@ pub trait Shape
     fn get_material(&self) -> &Material;
     fn calc_bbox(&mut self);
     fn intersect_b_box(&self, ray: &Ray) -> Option<f32>;
-    fn intersect(&self, ray: &Ray) -> Option<f32>;
+    fn intersect(&self, ray: &Ray) -> Option<(f32, Vector3<f32>)>;
 }
 
 pub struct Material

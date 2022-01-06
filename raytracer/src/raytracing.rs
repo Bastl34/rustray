@@ -99,18 +99,18 @@ impl Raytracing
         for item in hits
         {
 
-            let dist = item.item.intersect(&ray);
+            let intersection = item.item.intersect(&ray);
 
-            if let Some(dist) = dist
+            if let Some(intersection) = intersection
             {
-                if dist < last_dist
+                if intersection.0 < last_dist
                 {
                     let r_float = (*item.item).get_material().anmbient_color.x * 255.0;
                     let g_float = (*item.item).get_material().anmbient_color.y * 255.0;
                     let b_float = (*item.item).get_material().anmbient_color.z * 255.0;
                     let alpha = (*item.item).get_material().anmbient_color.w;
     
-                    last_dist = dist;
+                    last_dist = intersection.0;
     
                     //TODO: alpha blending
                     r = r_float as u8;
