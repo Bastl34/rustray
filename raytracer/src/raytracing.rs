@@ -3,6 +3,8 @@ use crate::pixel_color::PixelColor;
 
 use crate::shape::sphere::Sphere;
 
+use crate::scene::Scene;
+
 use nalgebra::{Perspective3, Isometry3, Point3, Vector3};
 use parry3d::query::{Ray};
 
@@ -14,7 +16,7 @@ pub struct HitResult<'a>
 
 pub struct Raytracing
 {
-    scene: Vec<Box<dyn Shape + Send + Sync>>,
+    scene: Scene,
 
     width: u32,
     height: u32,
@@ -30,11 +32,11 @@ pub struct Raytracing
 
 impl Raytracing
 {
-    pub fn new() -> Raytracing
+    pub fn new(scene: Scene) -> Raytracing
     {
         Raytracing
         {
-            scene: vec![],
+            scene: scene,
 
             width: 0,
             height: 0,
@@ -66,52 +68,6 @@ impl Raytracing
         self.view = Isometry3::look_at_rh(&eye, &target, &Vector3::y());
     }
 
-    pub fn init_with_some_objects(&mut self)
-    {
-        let mut sphere = Box::new(Sphere::new_with_pos(0.0, 0.0, -5.0, 1.0));
-        sphere.basic.material.anmbient_color.x = 1.0;
-        sphere.basic.material.anmbient_color.y = 0.0;
-        sphere.basic.material.anmbient_color.z = 0.0;
-        sphere.basic.material.anmbient_color.w = 1.0;
-
-        let mut sphere_1 = Box::new(Sphere::new_with_pos(0.0, 0.0, -10.0, 7.0));
-        sphere_1.basic.material.anmbient_color.x = 0.0;
-        sphere_1.basic.material.anmbient_color.y = 1.0;
-        sphere_1.basic.material.anmbient_color.z = 1.0;
-        sphere_1.basic.material.anmbient_color.w = 1.0;
-
-        let mut sphere2 = Box::new(Sphere::new_with_pos(-10.0, 10.0, -10.0, 4.0));
-        sphere2.basic.material.anmbient_color.x = 0.0;
-        sphere2.basic.material.anmbient_color.y = 1.0;
-        sphere2.basic.material.anmbient_color.z = 0.0;
-        sphere2.basic.material.anmbient_color.w = 1.0;
-
-        let mut sphere2_1 = Box::new(Sphere::new_with_pos(-12.0, 10.0, -15.0, 4.0));
-        sphere2_1.basic.material.anmbient_color.x = 1.0;
-        sphere2_1.basic.material.anmbient_color.y = 1.0;
-        sphere2_1.basic.material.anmbient_color.z = 0.0;
-        sphere2_1.basic.material.anmbient_color.w = 1.0;
-
-        let mut sphere3 = Box::new(Sphere::new_with_pos(10.0, -10.0, -10.0, 3.0));
-        sphere3.basic.material.anmbient_color.x = 0.0;
-        sphere3.basic.material.anmbient_color.y = 0.0;
-        sphere3.basic.material.anmbient_color.z = 1.0;
-        sphere3.basic.material.anmbient_color.w = 1.0;
-
-        let mut sphere_away = Box::new(Sphere::new_with_pos(10.0, -10.0, 10.0, 3.0));
-        sphere_away.basic.material.anmbient_color.x = 1.0;
-        sphere_away.basic.material.anmbient_color.y = 1.0;
-        sphere_away.basic.material.anmbient_color.z = 1.0;
-        sphere_away.basic.material.anmbient_color.w = 1.0;
-
-        self.scene.push(sphere);
-        self.scene.push(sphere_1);
-        self.scene.push(sphere2);
-        self.scene.push(sphere2_1);
-        self.scene.push(sphere3);
-        self.scene.push(sphere_away);
-    }
-
     pub fn render(&self, x: i32, y: i32) -> PixelColor
     {
         //map x/y to -1 <=> +1
@@ -126,7 +82,7 @@ impl Raytracing
 
         //find hits (bbox based)
         let mut hits: Vec<HitResult> = vec![];
-        for item in &self.scene
+        for item in &self.scene.items
         {
             let dist = item.intersect_b_box(&ray);
             if let Some(dist) = dist
@@ -136,36 +92,31 @@ impl Raytracing
         }
 
         //sort bbox dist (to get the nearest)
-        //hits.sort_by(|a, b| a.dist.partial_cmp(&b.dist).unwrap());
-        hits.sort_by(|a, b| b.dist.partial_cmp(&a.dist).unwrap());
+        hits.sort_by(|a, b| a.dist.partial_cmp(&b.dist).unwrap());
 
-        //intersect with item
-        /*
-        if hits.len() >= 1
-        {
-            let item = hits[0];
-            let intersection = item.intersect(&ray);
-        }
-         */
+        let mut last_dist:f32 = std::f32::MAX;
 
         for item in hits
         {
+
             let dist = item.item.intersect(&ray);
 
             if let Some(dist) = dist
             {
-                let r_float = (*item.item).get_material().anmbient_color.x * 255.0;
-                let g_float = (*item.item).get_material().anmbient_color.y * 255.0;
-                let b_float = (*item.item).get_material().anmbient_color.z * 255.0;
-                let alpha = (*item.item).get_material().anmbient_color.w;
-
-                r = r_float as u8;
-                g = g_float as u8;
-                b = b_float as u8;
-            }
-            else
-            {
-                println!("nope")
+                if dist < last_dist
+                {
+                    let r_float = (*item.item).get_material().anmbient_color.x * 255.0;
+                    let g_float = (*item.item).get_material().anmbient_color.y * 255.0;
+                    let b_float = (*item.item).get_material().anmbient_color.z * 255.0;
+                    let alpha = (*item.item).get_material().anmbient_color.w;
+    
+                    last_dist = dist;
+    
+                    //TODO: alpha blending
+                    r = r_float as u8;
+                    g = g_float as u8;
+                    b = b_float as u8;
+                }
             }
         }
 

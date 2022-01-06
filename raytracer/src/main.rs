@@ -41,8 +41,8 @@ fn main()
 
     let video_subsystem = sdl.video().unwrap();
 
-    let mut width: i32 = 800;
-    let mut height: i32 = 600;
+    let mut width: i32 = 100;
+    let mut height: i32 = 100;
 
     let mut window_x = 0;
     let mut window_y = 0;
@@ -84,14 +84,10 @@ fn main()
 
     let timer = Instant::now();
 
-    /*
-    let mut raytracing = std::sync::Arc::new(Raytracing::new());
-    raytracing.init_with_some_objects();
-    raytracing.init_camera(width as u32, height as u32);
-     */
+    let mut scene = Scene::new();
+    scene.init_with_some_objects();
 
-    let mut raytracing = Raytracing::new();
-    raytracing.init_with_some_objects();
+    let mut raytracing = Raytracing::new(scene);
     raytracing.init_camera(width as u32, height as u32);
 
     let raytracing_arc = std::sync::Arc::new(raytracing);
@@ -122,7 +118,7 @@ fn main()
                     width = w;
                     height = h;
 
-                    //reset rednering canvas and buffer canvas
+                    //reset rendering canvas and buffer canvas
                     rendering.stop();
 
                     canvas.set_draw_color(Color::RGB(255, 255, 255));
@@ -134,7 +130,7 @@ fn main()
                     render_canvas.clear();
 
                     //TODO
-                    //raytracing.init_camera(width as u32, height as u32);
+                    //test.init_camera(width as u32, height as u32);
 
                     rendering.restart(width, height);
 
@@ -187,8 +183,15 @@ fn main()
         //update window title
         if current_time - fps_display_update >= 1000
         {
+            let pixels = rendering.get_rendered_pixels();
+            let is_done = rendering.is_done();
+            let elapsed = rendering.check_and_get_elapsed_time();
+            let percentage = (pixels as f32 / (width * height) as f32) * 100.0;
+
             let window = canvas.window_mut();
-            let title = format!("Raytracer (FPS: {:.2})",fps);
+
+            let title = format!("Raytracer (FPS: {:.2}, Res: {}x{}, Complete: {:.2}%, Pixels: {}, Time: {}, Done: {})",fps, width, height, percentage, pixels, elapsed, is_done);
+
             window.set_title(&title).unwrap();
 
             fps_display_update = current_time;

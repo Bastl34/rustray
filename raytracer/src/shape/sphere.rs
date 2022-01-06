@@ -29,12 +29,14 @@ impl Shape for Sphere
 
     fn intersect_b_box(&self, ray: &Ray) -> Option<f32>
     {
-        self.basic.b_box.cast_ray(&self.basic.trans, ray, std::f32::MAX, false)
+        //self.basic.b_box.cast_ray(&self.basic.trans, ray, std::f32::MAX, true)
+        let trans = Isometry3::<f32>::identity();
+        self.basic.b_box.cast_ray(&trans, ray, std::f32::MAX, true)
     }
 
     fn intersect(&self, ray: &Ray) -> Option<f32>
     {
-        self.ball.cast_ray(&self.basic.trans, ray, std::f32::MAX, false)
+        self.ball.cast_ray(&self.basic.trans, ray, std::f32::MAX, true)
     }
 }
 
