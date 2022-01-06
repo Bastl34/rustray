@@ -1,11 +1,16 @@
 use crate::shape::Shape;
 use crate::pixel_color::PixelColor;
-use crate::helper;
 
 use crate::shape::sphere::Sphere;
 
 use nalgebra::{Perspective3, Isometry3, Point3, Vector3};
 use parry3d::query::{Ray};
+
+pub struct HitResult<'a>
+{
+    item: &'a dyn Shape,
+    dist: f32,
+}
 
 pub struct Raytracing
 {
@@ -69,11 +74,23 @@ impl Raytracing
         sphere.basic.material.anmbient_color.z = 0.0;
         sphere.basic.material.anmbient_color.w = 1.0;
 
+        let mut sphere_1 = Box::new(Sphere::new_with_pos(0.0, 0.0, -10.0, 7.0));
+        sphere_1.basic.material.anmbient_color.x = 0.0;
+        sphere_1.basic.material.anmbient_color.y = 1.0;
+        sphere_1.basic.material.anmbient_color.z = 1.0;
+        sphere_1.basic.material.anmbient_color.w = 1.0;
+
         let mut sphere2 = Box::new(Sphere::new_with_pos(-10.0, 10.0, -10.0, 4.0));
         sphere2.basic.material.anmbient_color.x = 0.0;
         sphere2.basic.material.anmbient_color.y = 1.0;
         sphere2.basic.material.anmbient_color.z = 0.0;
         sphere2.basic.material.anmbient_color.w = 1.0;
+
+        let mut sphere2_1 = Box::new(Sphere::new_with_pos(-12.0, 10.0, -15.0, 4.0));
+        sphere2_1.basic.material.anmbient_color.x = 1.0;
+        sphere2_1.basic.material.anmbient_color.y = 1.0;
+        sphere2_1.basic.material.anmbient_color.z = 0.0;
+        sphere2_1.basic.material.anmbient_color.w = 1.0;
 
         let mut sphere3 = Box::new(Sphere::new_with_pos(10.0, -10.0, -10.0, 3.0));
         sphere3.basic.material.anmbient_color.x = 0.0;
@@ -81,9 +98,18 @@ impl Raytracing
         sphere3.basic.material.anmbient_color.z = 1.0;
         sphere3.basic.material.anmbient_color.w = 1.0;
 
+        let mut sphere_away = Box::new(Sphere::new_with_pos(10.0, -10.0, 10.0, 3.0));
+        sphere_away.basic.material.anmbient_color.x = 1.0;
+        sphere_away.basic.material.anmbient_color.y = 1.0;
+        sphere_away.basic.material.anmbient_color.z = 1.0;
+        sphere_away.basic.material.anmbient_color.w = 1.0;
+
         self.scene.push(sphere);
+        self.scene.push(sphere_1);
         self.scene.push(sphere2);
+        self.scene.push(sphere2_1);
         self.scene.push(sphere3);
+        self.scene.push(sphere_away);
     }
 
     pub fn render(&self, x: i32, y: i32) -> PixelColor
@@ -98,20 +124,48 @@ impl Raytracing
         let mut g = 0;
         let mut b = 0;
 
+        //find hits (bbox based)
+        let mut hits: Vec<HitResult> = vec![];
         for item in &self.scene
         {
-            let intersection = item.intersect(&ray);
-
-            if let Some(intersection) = intersection
+            let dist = item.intersect_b_box(&ray);
+            if let Some(dist) = dist
             {
-                let r_float = (*item).get_material().anmbient_color.x * 255.0;
-                let g_float = (*item).get_material().anmbient_color.y * 255.0;
-                let b_float = (*item).get_material().anmbient_color.z * 255.0;
-                let alpha = (*item).get_material().anmbient_color.w;
+                hits.push(HitResult{ item: item.as_ref(), dist: dist });
+            }
+        }
+
+        //sort bbox dist (to get the nearest)
+        //hits.sort_by(|a, b| a.dist.partial_cmp(&b.dist).unwrap());
+        hits.sort_by(|a, b| b.dist.partial_cmp(&a.dist).unwrap());
+
+        //intersect with item
+        /*
+        if hits.len() >= 1
+        {
+            let item = hits[0];
+            let intersection = item.intersect(&ray);
+        }
+         */
+
+        for item in hits
+        {
+            let dist = item.item.intersect(&ray);
+
+            if let Some(dist) = dist
+            {
+                let r_float = (*item.item).get_material().anmbient_color.x * 255.0;
+                let g_float = (*item.item).get_material().anmbient_color.y * 255.0;
+                let b_float = (*item.item).get_material().anmbient_color.z * 255.0;
+                let alpha = (*item.item).get_material().anmbient_color.w;
 
                 r = r_float as u8;
                 g = g_float as u8;
                 b = b_float as u8;
+            }
+            else
+            {
+                println!("nope")
             }
         }
 

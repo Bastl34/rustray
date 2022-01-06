@@ -21,9 +21,11 @@ pub mod shape;
 
 pub mod renderer;
 pub mod raytracing;
+pub mod scene;
 
 use renderer::RendererManager;
 use raytracing::Raytracing;
+use scene::Scene;
 
 /*SDL stuff:
 

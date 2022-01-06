@@ -42,12 +42,16 @@ impl Sphere
 {
     pub fn new(r: f32) -> Sphere
     {
-        Sphere
+        let mut sphere = Sphere
         {
             basic: ShapeBasics::new(),
             name: String::from("Sphere"),
             ball: Ball::new(r)
-        }
+        };
+
+        sphere.calc_bbox();
+
+        sphere
     }
 
     pub fn new_with_pos(x: f32, y: f32, z: f32, r: f32) -> Sphere
@@ -60,6 +64,8 @@ impl Sphere
         };
 
         sphere.basic.trans = Isometry3::translation(x, y, z);
+
+        sphere.calc_bbox();
 
         sphere
     }
