@@ -41,8 +41,8 @@ fn main()
 
     let video_subsystem = sdl.video().unwrap();
 
-    let mut width: i32 = 100;
-    let mut height: i32 = 100;
+    let mut width: i32 = 800;
+    let mut height: i32 = 600;
 
     let mut window_x = 0;
     let mut window_y = 0;
@@ -109,6 +109,12 @@ fn main()
                     break 'main,
                 sdl2::event::Event::KeyDown { keycode: Some(Keycode::Space), .. } =>
                 {
+                    rendering.stop();
+
+                    render_canvas = sdl2::surface::Surface::new(width as u32, height as u32, PixelFormatEnum::RGBA32).unwrap().into_canvas().unwrap();
+                    render_canvas.set_draw_color(Color::RGB(255, 255, 255));
+                    render_canvas.clear();
+
                     rendering.restart(width, height);
                 },
                 //restart rendering on resize
@@ -185,12 +191,12 @@ fn main()
         {
             let pixels = rendering.get_rendered_pixels();
             let is_done = rendering.is_done();
-            let elapsed = rendering.check_and_get_elapsed_time();
+            let elapsed = rendering.check_and_get_elapsed_time() as f64 / 1000.0;
             let percentage = (pixels as f32 / (width * height) as f32) * 100.0;
 
             let window = canvas.window_mut();
 
-            let title = format!("Raytracer (FPS: {:.2}, Res: {}x{}, Complete: {:.2}%, Pixels: {}, Time: {}, Done: {})",fps, width, height, percentage, pixels, elapsed, is_done);
+            let title = format!("Raytracer (FPS: {:.2}, Res: {}x{}, Complete: {:.2}%, Pixels: {}, Time: {:.2}s, Done: {})",fps, width, height, percentage, pixels, elapsed, is_done);
 
             window.set_title(&title).unwrap();
 

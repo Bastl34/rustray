@@ -4,7 +4,7 @@ use std::sync::mpsc::Sender;
 use std::sync::mpsc::Receiver;
 use std::sync::Mutex;
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Instant, Duration};
 
 use std::collections::VecDeque;
 
@@ -13,8 +13,7 @@ extern crate num_cpus;
 use crate::raytracing::Raytracing;
 use crate::pixel_color::PixelColor;
 
-//const BLOCK_SIZE: i32 = 32;
-const BLOCK_SIZE: i32 = 25;
+const BLOCK_SIZE: i32 = 32;
 
 struct CellRange
 {
@@ -47,8 +46,8 @@ pub struct RendererManager
 
     pixels_rendered: Arc<Mutex<u64>>,
 
-    start_time: u128,
-    done_time: u128,
+    start_time: Instant,
+    done_time: Duration,
 
     raytracing: Arc<Raytracing>
 }
@@ -74,8 +73,8 @@ impl RendererManager
 
             pixels_rendered: std::sync::Arc::new(std::sync::Mutex::new(0)),
 
-            start_time: 0,
-            done_time: 0,
+            start_time: Instant::now(),
+            done_time: Duration::new(0, 0),
 
             raytracing: raytracing
         }
@@ -96,8 +95,8 @@ impl RendererManager
         println!("cores found: {}", cores);
 
         //start time
-        self.start_time = Instant::now().elapsed().as_millis();
-        self.done_time = 0;
+        self.start_time = Instant::now();
+        self.done_time = Duration::new(0, 0);
 
         //init pixel stat
         { *(self.pixels_rendered.lock().unwrap()) = 0; }
@@ -203,14 +202,18 @@ impl RendererManager
 
     pub fn check_and_get_elapsed_time(&mut self) -> u128
     {
-        if self.done_time == 0 && self.is_done()
+        if self.done_time.as_millis() > 0
         {
-            self.done_time = Instant::now().elapsed().as_millis();
+            return self.done_time.as_millis()
         }
 
-        self.done_time - self.start_time
-    }
+        if self.done_time.as_millis() == 0 && self.is_done()
+        {
+            self.done_time = self.start_time.elapsed();
+        }
 
+        self.start_time.elapsed().as_millis()
+    }
 
     pub fn get_message_receiver(&self) -> &Receiver<PixelColor>
     {
