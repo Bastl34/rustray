@@ -4,6 +4,7 @@ use parry3d::query::{Ray};
 use parry3d::bounding_volume::AABB;
 
 pub mod sphere;
+pub mod mesh;
 
 pub trait Shape
 {
@@ -11,13 +12,19 @@ pub trait Shape
     fn calc_bbox(&mut self);
     fn intersect_b_box(&self, ray: &Ray) -> Option<f32>;
     fn intersect(&self, ray: &Ray) -> Option<(f32, Vector3<f32>)>;
+
+    fn update(&mut self)
+    {
+        self.calc_bbox();
+    }
 }
 
 pub struct Material
 {
-    pub anmbient_color: Vector4<f32>,
-    pub diffuse_color: Vector4<f32>,
-    pub specular_color: Vector4<f32>,
+    pub anmbient_color: Vector3<f32>,
+    pub diffuse_color: Vector3<f32>,
+    pub specular_color: Vector3<f32>,
+    pub alpha: f32,
     pub shininess: f32
 }
 
@@ -27,10 +34,11 @@ impl Material
     {
         Material
         {
-            anmbient_color: Vector4::<f32>::new(1.0, 1.0, 1.0, 1.0),
-            diffuse_color: Vector4::<f32>::new(1.0, 1.0, 1.0, 1.0),
-            specular_color: Vector4::<f32>::new(1.0, 1.0, 1.0, 1.0),
-            shininess: 0.0,
+            anmbient_color: Vector3::<f32>::new(1.0, 1.0, 1.0),
+            diffuse_color: Vector3::<f32>::new(1.0, 1.0, 1.0),
+            specular_color: Vector3::<f32>::new(1.0, 1.0, 1.0),
+            alpha: 1.0,
+            shininess: 10.0,
         }
     }
 }

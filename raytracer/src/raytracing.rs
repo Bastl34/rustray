@@ -70,6 +70,10 @@ impl Raytracing
 
     pub fn render(&self, x: i32, y: i32) -> PixelColor
     {
+        let light_dir = Vector3::new(1.0f32, -1.0, 0.0).normalize();
+        let light_color = Vector3::new(1.0f32, 1.0, 1.0);
+        let light_intensity = 100.0f32;
+
         //map x/y to -1 <=> +1
         let sensor_x = ((((x as f32 + 0.5) / self.width as f32) * 2.0 - 1.0) * self.aspect_ratio) * self.fov_adjustment;
         let sensor_y = (1.0 - ((y as f32 + 0.5) / self.height as f32) * 2.0) * self.fov_adjustment;
@@ -98,20 +102,38 @@ impl Raytracing
 
         for item in hits
         {
-
             let intersection = item.item.intersect(&ray);
 
             if let Some(intersection) = intersection
             {
                 if intersection.0 < last_dist
                 {
-                    let r_float = (*item.item).get_material().anmbient_color.x * 255.0;
-                    let g_float = (*item.item).get_material().anmbient_color.y * 255.0;
-                    let b_float = (*item.item).get_material().anmbient_color.z * 255.0;
-                    let alpha = (*item.item).get_material().anmbient_color.w;
-    
+                    let hit_point = ray.origin + (ray.dir * intersection.0);
+                    let surface_normal = intersection.1;
+                    let direction_to_light = -light_dir;
+
+                    //let light_power = surface_normal.dot(&direction_to_light).max(0.0) * light_intensity;
+                    //let dot_light = surface_normal.dot(&direction_to_light).max(0.0);
+                    let dot_light = surface_normal.dot(&direction_to_light).max(0.0);
+                    //let light_power = surface_normal.dot(&direction_to_light).max(0.0) * light_intensity;
+                    let light_power = dot_light.powf(item.item.get_material().shininess);
+                    //let light_reflected = item.item.get_material().shininess / std::f32::consts::PI;
+
+                    let item_color = (*item.item).get_material().anmbient_color;
+
+                    //let color = item_color.cross(&light_color) * light_power * light_reflected;
+                    //let color = item_color.cross(&light_color) * light_power * light_intensity;
+                    let test = Vector3::new(item_color.x * light_color.x, item_color.y * light_color.y, item_color.z * light_color.z);
+                    let color = test * light_power * light_intensity;
+
+                    //todo: clamp
+
+                    let r_float = color.x * 255.0;
+                    let g_float = color.y * 255.0;
+                    let b_float = color.z * 255.0;
+
                     last_dist = intersection.0;
-    
+
                     //TODO: alpha blending
                     r = r_float as u8;
                     g = g_float as u8;
