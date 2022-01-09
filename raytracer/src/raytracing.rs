@@ -8,6 +8,8 @@ use crate::scene::Scene;
 use nalgebra::{Perspective3, Isometry3, Point3, Vector3};
 use parry3d::query::{Ray};
 
+const SHADOW_BIAS: f32 = 0.0001;
+
 pub struct HitResult<'a>
 {
     item: &'a dyn Shape,
@@ -115,23 +117,17 @@ impl Raytracing
 
     pub fn render(&self, x: i32, y: i32) -> PixelColor
     {
-        let light_dir = Vector3::new(1.0f32, -1.0, -1.0).normalize();    
-        let light_color = Vector3::new(1.0f32, 1.0, 1.0);
-        let light_intensity = 100.0f32;
-
-        let shadow_bias = 0.0001;
-
         //map x/y to -1 <=> +1
         let sensor_x = ((((x as f32 + 0.5) / self.width as f32) * 2.0 - 1.0) * self.aspect_ratio) * self.fov_adjustment;
         let sensor_y = (1.0 - ((y as f32 + 0.5) / self.height as f32) * 2.0) * self.fov_adjustment;
 
+        //create ray
         let ray = Ray::new(Point3::origin(), Vector3::new(sensor_x, sensor_y, -1.0));
 
+        //intersect
         let intersection = self.trace(&ray, false);
 
-        let mut r = 255;
-        let mut g = 0;
-        let mut b = 255;
+        let mut color = Vector3::new(0.0, 0.0, 0.0);
 
         if let Some(intersection) = intersection
         {
@@ -140,54 +136,45 @@ impl Raytracing
             let item = intersection.2;
 
             let surface_normal = normal;
-            let direction_to_light = (-light_dir).normalize();
-
-            let hit_point = ray.origin + (ray.dir * hit_dist);
-
-            let shadow_ray_start = hit_point + (surface_normal * shadow_bias);
-            let shadow_ray = Ray::new(shadow_ray_start, direction_to_light);
-            let in_light = self.trace(&shadow_ray, true).is_none();
-
-            //let hit_point = ray.origin + (ray.dir * intersection.0);
 
 
-            //let light_power = surface_normal.dot(&direction_to_light).max(0.0) * light_intensity;
-            //let dot_light = surface_normal.dot(&direction_to_light).max(0.0);
-            let dot_light = surface_normal.dot(&direction_to_light).max(0.0);
-            //let light_power = surface_normal.dot(&direction_to_light).max(0.0) * light_intensity;
-            let light_power = dot_light.powf(item.get_material().shininess);
-            //let light_reflected = item.item.get_material().shininess / std::f32::consts::PI;
-            //let light_reflected = 1.58 / std::f32::consts::PI;
+            for light in &self.scene.lights
+            {
+                
+                let direction_to_light = (-light.dir).normalize();
 
-            let intensity = if in_light { light_intensity } else { 0.0 };
+                let hit_point = ray.origin + (ray.dir * hit_dist);
+    
+                let shadow_ray_start = hit_point + (surface_normal * SHADOW_BIAS);
+                let shadow_ray = Ray::new(shadow_ray_start, direction_to_light);
+                let in_light = self.trace(&shadow_ray, true).is_none();
+    
+                //let hit_point = ray.origin + (ray.dir * intersection.0);
+    
+    
+                //let light_power = surface_normal.dot(&direction_to_light).max(0.0) * light_intensity;
+                //let dot_light = surface_normal.dot(&direction_to_light).max(0.0);
+                let dot_light = surface_normal.dot(&direction_to_light).max(0.0);
+                //let light_power = surface_normal.dot(&direction_to_light).max(0.0) * light_intensity;
+                let light_power = dot_light.powf(item.get_material().shininess);
+                //let light_reflected = item.item.get_material().shininess / std::f32::consts::PI;
+                //let light_reflected = 1.58 / std::f32::consts::PI;
+    
+                let intensity = if in_light { light.intensity } else { 0.0 };
+    
+                let item_color = (*item).get_material().anmbient_color;
+                let item_light_color = Vector3::new(item_color.x * light.color.x, item_color.y * light.color.y, item_color.z * light.color.z);
+    
+    
+                color = color + (item_light_color * light_power * intensity);
 
-            let item_color = (*item).get_material().anmbient_color;
-            let item_light_color = Vector3::new(item_color.x * light_color.x, item_color.y * light_color.y, item_color.z * light_color.z);
-
-            //let color = light_color.cross(&item_color) * light_power * light_intensity;
-            //let color = item_color.cross(&light_color) * light_power * light_reflected;
-            //let color = item_color.cross(&light_color) * light_power * light_intensity;
-            //let test = Vector3::new(item_color.x * light_color.x, item_color.y * light_color.y, item_color.z * light_color.z);
-            //let color = test * light_power * light_intensity;
-
-            
-            let color = item_light_color * light_power * intensity;
-
-            //todo: clamp
-
-            //let color = (*item.item).get_material().anmbient_color;
-
-            let r_float = color.x * 255.0;
-            let g_float = color.y * 255.0;
-            let b_float = color.z * 255.0;
-
-
-            //TODO: alpha blending
-            r = r_float as u8;
-            g = g_float as u8;
-            b = b_float as u8;
-
+            }
         }
+
+        //TODO: alpha blending + clamp
+        let r = (color.x * 255.0) as u8;
+        let g = (color.y * 255.0) as u8;
+        let b = (color.z * 255.0) as u8;
 
         PixelColor { r: r, g: g, b: b, x: x, y: y }
     }

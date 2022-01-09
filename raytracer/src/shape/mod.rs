@@ -38,7 +38,7 @@ impl Material
             diffuse_color: Vector3::<f32>::new(1.0, 1.0, 1.0),
             specular_color: Vector3::<f32>::new(1.0, 1.0, 1.0),
             alpha: 1.0,
-            shininess: 10.0,
+            shininess: 1.0,
         }
     }
 }

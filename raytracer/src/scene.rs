@@ -1,23 +1,71 @@
-use nalgebra::{Point3};
+use nalgebra::{Point3, Vector3};
 
 use crate::shape::Shape;
 
 use crate::shape::sphere::Sphere;
 use crate::shape::mesh::Mesh;
 
+pub enum LightType
+{
+    directional,
+    point    
+}
+
+pub struct Light
+{
+    pub pos: Vector3<f32>,
+    pub dir: Vector3<f32>,
+    pub color: Vector3<f32>,
+    pub intensity: f32,
+    pub light_type: LightType
+}
+
+
 pub struct Scene
 {
     pub items: Vec<Box<dyn Shape + Send + Sync>>,
+    pub lights: Vec<Box<Light>>,
 }
 
 impl Scene
 {
     pub fn new() -> Scene
     {
-        Scene { items: vec![] }
+        Scene
+        {
+            items: vec![],
+            lights: vec![]
+        }
     }
 
     pub fn init_with_some_objects(&mut self)
+    {
+        self.init_objects();
+        self.init_lights();
+    }
+
+    pub fn init_lights(&mut self)
+    {
+        self.lights.push(Box::new(Light
+        {
+            pos: Vector3::new(0.0, 0.0, 0.0),
+            dir: Vector3::new(1.0f32, -1.0, -1.0),
+            color: Vector3::new(1.0, 1.0, 1.0),
+            intensity: 1.0,
+            light_type: LightType::directional
+        }));
+
+        self.lights.push(Box::new(Light
+        {
+            pos: Vector3::new(10.0, 2.0, 0.0),
+            dir: Vector3::new(-1.0f32, -1.0, -1.0),
+            color: Vector3::new(1.0, 1.0, 1.0),
+            intensity: 1.0,
+            light_type: LightType::directional
+        }));
+    }
+
+    pub fn init_objects(&mut self)
     {
         let mut sphere = Box::new(Sphere::new_with_pos(0.0, 0.0, -5.0, 1.0));
         sphere.basic.material.anmbient_color.x = 1.0;
