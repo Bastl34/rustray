@@ -149,7 +149,6 @@ impl Raytracing
                     LightType::directional => direction_to_light = (-light.dir).normalize(),
                     LightType::point => direction_to_light = (light.pos - hit_point).normalize(),
                 }
-                
     
                 let shadow_ray_start = hit_point + (surface_normal * SHADOW_BIAS);
                 let shadow_ray = Ray::new(shadow_ray_start, direction_to_light);
