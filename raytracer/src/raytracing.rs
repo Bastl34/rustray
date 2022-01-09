@@ -3,7 +3,7 @@ use crate::pixel_color::PixelColor;
 
 use crate::shape::sphere::Sphere;
 
-use crate::scene::Scene;
+use crate::scene::{Scene, LightType};
 
 use nalgebra::{Perspective3, Isometry3, Point3, Vector3};
 use parry3d::query::{Ray};
@@ -136,18 +136,33 @@ impl Raytracing
             let item = intersection.2;
 
             let surface_normal = normal;
+            let hit_point = ray.origin + (ray.dir * hit_dist);
 
 
             for light in &self.scene.lights
             {
-                
-                let direction_to_light = (-light.dir).normalize();
+                //get direction to light based on light type
+                let direction_to_light;
 
-                let hit_point = ray.origin + (ray.dir * hit_dist);
+                match light.light_type
+                {
+                    LightType::directional => direction_to_light = (-light.dir).normalize(),
+                    LightType::point => direction_to_light = (light.pos - hit_point).normalize(),
+                }
+                
     
                 let shadow_ray_start = hit_point + (surface_normal * SHADOW_BIAS);
                 let shadow_ray = Ray::new(shadow_ray_start, direction_to_light);
-                let in_light = self.trace(&shadow_ray, true).is_none();
+                let shadow_intersection = self.trace(&shadow_ray, true);
+
+                let mut in_light = shadow_intersection.is_none();
+                if !in_light && light.light_type == LightType::point
+                {
+                    let light_dist: Vector3<f32> = light.pos - hit_point;
+                    let len = light_dist.norm();
+                    
+                    in_light = shadow_intersection.unwrap().0 > len
+                }
     
                 //let hit_point = ray.origin + (ray.dir * intersection.0);
     
@@ -160,7 +175,22 @@ impl Raytracing
                 //let light_reflected = item.item.get_material().shininess / std::f32::consts::PI;
                 //let light_reflected = 1.58 / std::f32::consts::PI;
     
-                let intensity = if in_light { light.intensity } else { 0.0 };
+                let intensity = if in_light
+                {
+                    match light.light_type
+                    {
+                        LightType::directional => light.intensity,
+                        LightType::point => 
+                        {
+                            let r2 = (light.pos - hit_point).norm() as f32;
+                            light.intensity / (4.0 * ::std::f32::consts::PI * r2)
+                        }
+                    }
+                }
+                else
+                {
+                    0.0
+                };
     
                 let item_color = (*item).get_material().anmbient_color;
                 let item_light_color = Vector3::new(item_color.x * light.color.x, item_color.y * light.color.y, item_color.z * light.color.z);

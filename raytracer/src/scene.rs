@@ -5,6 +5,7 @@ use crate::shape::Shape;
 use crate::shape::sphere::Sphere;
 use crate::shape::mesh::Mesh;
 
+#[derive(PartialEq)]
 pub enum LightType
 {
     directional,
@@ -13,13 +14,12 @@ pub enum LightType
 
 pub struct Light
 {
-    pub pos: Vector3<f32>,
+    pub pos: Point3<f32>,
     pub dir: Vector3<f32>,
     pub color: Vector3<f32>,
     pub intensity: f32,
     pub light_type: LightType
 }
-
 
 pub struct Scene
 {
@@ -48,7 +48,7 @@ impl Scene
     {
         self.lights.push(Box::new(Light
         {
-            pos: Vector3::new(0.0, 0.0, 0.0),
+            pos: Point3::new(0.0, 0.0, 0.0),
             dir: Vector3::new(1.0f32, -1.0, -1.0),
             color: Vector3::new(1.0, 1.0, 1.0),
             intensity: 1.0,
@@ -57,11 +57,11 @@ impl Scene
 
         self.lights.push(Box::new(Light
         {
-            pos: Vector3::new(10.0, 2.0, 0.0),
+            pos: Point3::new(10.0, 10.0, 0.0),
             dir: Vector3::new(-1.0f32, -1.0, -1.0),
             color: Vector3::new(1.0, 1.0, 1.0),
-            intensity: 1.0,
-            light_type: LightType::directional
+            intensity: 250.0,
+            light_type: LightType::point
         }));
     }
 
