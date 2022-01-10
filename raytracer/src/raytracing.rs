@@ -23,6 +23,8 @@ pub struct Raytracing
     width: u32,
     height: u32,
 
+    anti_aliasing: u8,
+
     aspect_ratio: f32,
 
     fov: f32,
@@ -42,7 +44,10 @@ impl Raytracing
 
             width: 0,
             height: 0,
+
             aspect_ratio: 0.0,
+
+            anti_aliasing: 64,
 
             fov: 0.0,
             fov_adjustment: 0.0,
@@ -117,13 +122,59 @@ impl Raytracing
 
     pub fn render(&self, x: i32, y: i32) -> PixelColor
     {
-        //map x/y to -1 <=> +1
-        let sensor_x = ((((x as f32 + 0.5) / self.width as f32) * 2.0 - 1.0) * self.aspect_ratio) * self.fov_adjustment;
-        let sensor_y = (1.0 - ((y as f32 + 0.5) / self.height as f32) * 2.0) * self.fov_adjustment;
+        let x_f = x as f32;
+        let y_f = y as f32;
 
-        //create ray
-        let ray = Ray::new(Point3::origin(), Vector3::new(sensor_x, sensor_y, -1.0));
+        let w = self.width as f32;
+        let h = self.height as f32;
 
+        let aa_f = self.anti_aliasing as f32;
+
+        let x_step = 2.0 / w;
+        let y_step = 2.0 / h;
+
+        let mut color = Vector3::new(0.0, 0.0, 0.0);
+
+        for x_i in 0..self.anti_aliasing
+        {
+            for y_i in 0..self.anti_aliasing
+            {
+                let x_trans = x_step * x_i as f32 * (1.0 / aa_f);
+                let y_trans = y_step * y_i as f32 * (1.0 / aa_f);
+
+                //let new_x = x_f + (x_step * x_i as f32 * (1.0 / aa_f));
+                //let new_y = y_f + (y_step * y_i as f32 * (1.0 / aa_f));
+
+                //println!("x: {}, y: {}", new_x, new_y);
+
+                //map x/y to -1 <=> +1
+                //let sensor_x = ((((new_x + 0.5) / w) * 2.0 - 1.0) * self.aspect_ratio) * self.fov_adjustment;
+                //let sensor_y = (1.0 - ((new_y + 0.5) / h) * 2.0) * self.fov_adjustment;
+
+                let sensor_x = (((((x_f + 0.5) / w) * 2.0 - 1.0) + x_trans) * self.aspect_ratio) * self.fov_adjustment;
+                let sensor_y = ((1.0 - ((y_f + 0.5) / h) * 2.0) + y_trans) * self.fov_adjustment;
+
+                //create ray
+                let ray = Ray::new(Point3::origin(), Vector3::new(sensor_x, sensor_y, -1.0));
+
+                color += self.get_color(ray);
+            }
+        }
+
+        //std::process::exit(0);
+        let aa = self.anti_aliasing as f32;
+        color /= aa * aa;
+
+        //TODO: alpha blending + clamp
+        let r = (color.x * 255.0) as u8;
+        let g = (color.y * 255.0) as u8;
+        let b = (color.z * 255.0) as u8;
+
+        PixelColor { r: r, g: g, b: b, x: x, y: y }
+    }
+
+    pub fn get_color(&self, ray: Ray) -> Vector3<f32>
+    {
         //intersect
         let intersection = self.trace(&ray, false);
 
@@ -200,11 +251,6 @@ impl Raytracing
             }
         }
 
-        //TODO: alpha blending + clamp
-        let r = (color.x * 255.0) as u8;
-        let g = (color.y * 255.0) as u8;
-        let b = (color.z * 255.0) as u8;
-
-        PixelColor { r: r, g: g, b: b, x: x, y: y }
+        color
     }
 }

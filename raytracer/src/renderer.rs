@@ -10,10 +10,15 @@ use std::collections::VecDeque;
 
 extern crate num_cpus;
 
+use rand::thread_rng;
+use rand::seq::SliceRandom;
+
+
 use crate::raytracing::Raytracing;
 use crate::pixel_color::PixelColor;
 
-const BLOCK_SIZE: i32 = 32;
+//const BLOCK_SIZE: i32 = 32;
+const BLOCK_SIZE: i32 = 2;
 
 struct CellRange
 {
@@ -141,6 +146,12 @@ impl RendererManager
             {
                 x += BLOCK_SIZE;
             }
+        }
+
+        //randomize
+        {
+            let mut deque = self.cell_list.lock().unwrap();
+            deque.make_contiguous().shuffle(&mut rand::thread_rng());
         }
 
         for _ in 0..cores
