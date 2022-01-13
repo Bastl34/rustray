@@ -8,7 +8,7 @@ use crate::scene::{Scene, LightType};
 use nalgebra::{Perspective3, Isometry3, Point3, Vector3};
 use parry3d::query::{Ray};
 
-const SHADOW_BIAS: f32 = 0.0001;
+const SHADOW_BIAS: f32 = 0.001;
 
 pub struct HitResult<'a>
 {
@@ -24,6 +24,7 @@ pub struct Raytracing
     height: u32,
 
     anti_aliasing: u8,
+    max_recursion: u16,
 
     aspect_ratio: f32,
 
@@ -47,7 +48,8 @@ impl Raytracing
 
             aspect_ratio: 0.0,
 
-            anti_aliasing: 64,
+            anti_aliasing: 8,
+            max_recursion: 5,
 
             fov: 0.0,
             fov_adjustment: 0.0,
@@ -88,7 +90,7 @@ impl Raytracing
             }
         }
 
-        if hits.len() == 0 
+        if hits.len() == 0
         {
             return None;
         }
@@ -157,7 +159,7 @@ impl Raytracing
                 //create ray
                 let ray = Ray::new(Point3::origin(), Vector3::new(sensor_x, sensor_y, -1.0));
 
-                color += self.get_color(ray);
+                color += self.get_color(ray, 1);
             }
         }
 
@@ -165,7 +167,12 @@ impl Raytracing
         let aa = self.anti_aliasing as f32;
         color /= aa * aa;
 
-        //TODO: alpha blending + clamp
+        //clamp
+        color.x.min(1.0);
+        color.y.min(1.0);
+        color.z.min(1.0);
+
+        //TODO: alpha blending
         let r = (color.x * 255.0) as u8;
         let g = (color.y * 255.0) as u8;
         let b = (color.z * 255.0) as u8;
@@ -173,7 +180,51 @@ impl Raytracing
         PixelColor { r: r, g: g, b: b, x: x, y: y }
     }
 
-    pub fn get_color(&self, ray: Ray) -> Vector3<f32>
+    pub fn create_reflection(&self, normal: Vector3<f32>, incident: Vector3<f32>, intersection: Point3<f32>) -> Ray
+    {
+        let origin = intersection + (normal * SHADOW_BIAS);
+        let dir = incident - (2.0 * incident.dot(&normal) * normal);
+
+        Ray::new(origin, dir)
+    }
+
+    pub fn create_transmission(&self, normal: Vector3<f32>, incident: Vector3<f32>, intersection: Point3<f32>, index: f32) -> Option<Ray>
+    {
+        let mut ref_n = normal;
+        let mut eta_t = index;
+        let mut eta_i = 1.0f32;
+        let mut i_dot_n = incident.dot(&normal);
+
+        if i_dot_n < 0.0
+        {
+            //Outside the surface
+            i_dot_n = -i_dot_n;
+        }
+        else
+        {
+            //Inside the surface; invert the normal and swap the indices of refraction
+            ref_n = -normal;
+            eta_t = 1.0;
+            eta_i = index;
+        }
+
+        let eta = eta_i / eta_t;
+        let k = 1.0 - (eta * eta) * (1.0 - i_dot_n * i_dot_n);
+        if k < 0.0
+        {
+            None
+        }
+        else
+        {
+            let origin = intersection + (ref_n * -SHADOW_BIAS);
+            let dir = (incident + i_dot_n * ref_n) * eta - ref_n * k.sqrt();
+
+            Some(Ray::new(origin, dir))
+        }
+    }
+
+
+    pub fn get_color(&self, ray: Ray, depth: u16) -> Vector3<f32>
     {
         //intersect
         let intersection = self.trace(&ray, false);
@@ -189,6 +240,7 @@ impl Raytracing
             let surface_normal = normal;
             let hit_point = ray.origin + (ray.dir * hit_dist);
 
+            let alpha = item.get_material().alpha;
 
             for light in &self.scene.lights
             {
@@ -197,26 +249,26 @@ impl Raytracing
 
                 match light.light_type
                 {
-                    LightType::directional => direction_to_light = (-light.dir).normalize(),
-                    LightType::point => direction_to_light = (light.pos - hit_point).normalize(),
+                    LightType::Directional => direction_to_light = (-light.dir).normalize(),
+                    LightType::Point => direction_to_light = (light.pos - hit_point).normalize(),
                 }
-    
+
                 let shadow_ray_start = hit_point + (surface_normal * SHADOW_BIAS);
                 let shadow_ray = Ray::new(shadow_ray_start, direction_to_light);
                 let shadow_intersection = self.trace(&shadow_ray, true);
 
                 let mut in_light = shadow_intersection.is_none();
-                if !in_light && light.light_type == LightType::point
+                if !in_light && light.light_type == LightType::Point
                 {
                     let light_dist: Vector3<f32> = light.pos - hit_point;
                     let len = light_dist.norm();
-                    
+
                     in_light = shadow_intersection.unwrap().0 > len
                 }
-    
+
                 //let hit_point = ray.origin + (ray.dir * intersection.0);
-    
-    
+
+
                 //let light_power = surface_normal.dot(&direction_to_light).max(0.0) * light_intensity;
                 //let dot_light = surface_normal.dot(&direction_to_light).max(0.0);
                 let dot_light = surface_normal.dot(&direction_to_light).max(0.0);
@@ -224,13 +276,30 @@ impl Raytracing
                 let light_power = dot_light.powf(item.get_material().shininess);
                 //let light_reflected = item.item.get_material().shininess / std::f32::consts::PI;
                 //let light_reflected = 1.58 / std::f32::consts::PI;
-    
+
+                let mut intensity = 0.0;
+                match light.light_type
+                {
+                    LightType::Directional => intensity = light.intensity,
+                    LightType::Point =>
+                    {
+                        let r2 = (light.pos - hit_point).norm() as f32;
+                        intensity = light.intensity / (4.0 * ::std::f32::consts::PI * r2)
+                    }
+                }
+
+                if !in_light
+                {
+                    intensity = intensity * (1.0 - shadow_intersection.unwrap().2.get_material().alpha);
+                }
+
+                /*
                 let intensity = if in_light
                 {
                     match light.light_type
                     {
-                        LightType::directional => light.intensity,
-                        LightType::point => 
+                        LightType::Directional => light.intensity,
+                        LightType::Point =>
                         {
                             let r2 = (light.pos - hit_point).norm() as f32;
                             light.intensity / (4.0 * ::std::f32::consts::PI * r2)
@@ -239,15 +308,43 @@ impl Raytracing
                 }
                 else
                 {
+                    //TODO SHADOW FOR ALPHA
                     0.0
                 };
-    
+                 */
+
                 let item_color = (*item).get_material().anmbient_color;
                 let item_light_color = Vector3::new(item_color.x * light.color.x, item_color.y * light.color.y, item_color.z * light.color.z);
-    
-    
-                color = color + (item_light_color * light_power * intensity);
 
+                //get color
+                color = color + (item_light_color * light_power * intensity);
+            }
+
+            //reflectivity
+            let reflectivity = item.get_material().reflectivity;
+            color = color * (1.0 - reflectivity);
+
+            if item.get_material().reflectivity > 0.0 && depth <= self.max_recursion
+            {
+                let reflection_ray = self.create_reflection(normal, ray.dir, hit_point);
+                let reflection_color = self.get_color(reflection_ray, depth + 1 );
+
+                color = color + (reflection_color * reflectivity);
+            }
+
+            //refraction
+            let refraction_index = item.get_material().refraction_index;
+
+            if alpha < 1.0 && depth <= self.max_recursion
+            {
+                let transmission_ray = self.create_transmission(normal, ray.dir, hit_point, refraction_index);
+
+                if let Some(transmission_ray) = transmission_ray
+                {
+                    let refraction_color = self.get_color(transmission_ray, depth + 1);
+
+                    color = (color * alpha) + (refraction_color * (1.0 - alpha));
+                }
             }
         }
 

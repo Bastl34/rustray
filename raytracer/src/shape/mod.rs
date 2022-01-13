@@ -25,7 +25,9 @@ pub struct Material
     pub diffuse_color: Vector3<f32>,
     pub specular_color: Vector3<f32>,
     pub alpha: f32,
-    pub shininess: f32
+    pub shininess: f32,
+    pub reflectivity: f32,
+    pub refraction_index: f32,
 }
 
 impl Material
@@ -39,6 +41,8 @@ impl Material
             specular_color: Vector3::<f32>::new(1.0, 1.0, 1.0),
             alpha: 1.0,
             shininess: 1.0,
+            reflectivity: 0.0,
+            refraction_index: 0.0,
         }
     }
 }

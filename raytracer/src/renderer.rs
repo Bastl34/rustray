@@ -95,7 +95,7 @@ impl RendererManager
     {
         println!("starting (w={}, h={})...", self.width, self.height);
         println!("block size: {}", BLOCK_SIZE);
-        
+
         let cores = num_cpus::get();
         println!("cores found: {}", cores);
 

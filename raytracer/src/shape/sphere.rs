@@ -32,12 +32,12 @@ impl Shape for Sphere
     {
         //self.basic.b_box.cast_ray(&self.basic.trans, ray, std::f32::MAX, true)
         let trans = Isometry3::<f32>::identity();
-        self.basic.b_box.cast_ray(&trans, ray, std::f32::MAX, true)
+        self.basic.b_box.cast_ray(&trans, ray, std::f32::MAX, false)
     }
 
     fn intersect(&self, ray: &Ray) -> Option<(f32, Vector3<f32>)>
     {
-        let res = self.ball.cast_ray_and_get_normal(&self.basic.trans, ray, std::f32::MAX, true);
+        let res = self.ball.cast_ray_and_get_normal(&self.basic.trans, ray, std::f32::MAX, false);
         if let Some(res) = res
         {
             return Some((res.toi, res.normal))
