@@ -8,7 +8,8 @@ enum Movement
 
 fn move_avatar(m: Movement)
 {
-    match m {
+    match m
+    {
         Movement::Up => println!("avatar moving up"),
         Movement::Down => println!("avatar moving down"),
         Movement::Left => println!("avatar moving left"),

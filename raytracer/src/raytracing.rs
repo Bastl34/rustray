@@ -48,7 +48,7 @@ impl Raytracing
 
             aspect_ratio: 0.0,
 
-            anti_aliasing: 8,
+            anti_aliasing: 1,
             max_recursion: 5,
 
             fov: 0.0,
@@ -122,6 +122,12 @@ impl Raytracing
         best_hit
     }
 
+    pub fn gamma_encode(&self, linear: f32) -> f32
+    {
+        const GAMMA: f32 = 2.2;
+        linear.powf(1.0 / GAMMA)
+    }
+
     pub fn render(&self, x: i32, y: i32) -> PixelColor
     {
         let x_f = x as f32;
@@ -173,9 +179,9 @@ impl Raytracing
         color.z.min(1.0);
 
         //TODO: alpha blending
-        let r = (color.x * 255.0) as u8;
-        let g = (color.y * 255.0) as u8;
-        let b = (color.z * 255.0) as u8;
+        let r = (self.gamma_encode(color.x) * 255.0) as u8;
+        let g = (self.gamma_encode(color.y) * 255.0) as u8;
+        let b = (self.gamma_encode(color.z) * 255.0) as u8;
 
         PixelColor { r: r, g: g, b: b, x: x, y: y }
     }
@@ -223,6 +229,35 @@ impl Raytracing
         }
     }
 
+    fn fresnel(&self, incident: Vector3<f32>, normal: Vector3<f32>, index: f32) -> f32
+    {
+        let i_dot_n = incident.dot(&normal);
+
+        let mut eta_i = 1.0;
+        let mut eta_t = index as f32;
+
+        if i_dot_n > 0.0
+        {
+            eta_i = eta_t;
+            eta_t = 1.0;
+        }
+    
+        let sin_t = eta_i / eta_t * (1.0 - i_dot_n * i_dot_n).max(0.0).sqrt();
+
+        if sin_t > 1.0
+        {
+            //Total internal reflection
+            return 1.0;
+        }
+        else
+        {
+            let cos_t = (1.0 - sin_t * sin_t).max(0.0).sqrt();
+            let cos_i = cos_t.abs();
+            let r_s = ((eta_t * cos_i) - (eta_i * cos_t)) / ((eta_t * cos_i) + (eta_i * cos_t));
+            let r_p = ((eta_i * cos_i) - (eta_t * cos_t)) / ((eta_i * cos_i) + (eta_t * cos_t));
+            return (r_s * r_s + r_p * r_p) / 2.0;
+        }
+    }
 
     pub fn get_color(&self, ray: Ray, depth: u16) -> Vector3<f32>
     {
@@ -320,6 +355,11 @@ impl Raytracing
                 color = color + (item_light_color * light_power * intensity);
             }
 
+            let refraction_index = item.get_material().refraction_index;
+
+            //TODO: fresnel
+            //let kr = self.fresnel(ray.dir, normal, refraction_index);
+
             //reflectivity
             let reflectivity = item.get_material().reflectivity;
             color = color * (1.0 - reflectivity);
@@ -333,8 +373,6 @@ impl Raytracing
             }
 
             //refraction
-            let refraction_index = item.get_material().refraction_index;
-
             if alpha < 1.0 && depth <= self.max_recursion
             {
                 let transmission_ray = self.create_transmission(normal, ray.dir, hit_point, refraction_index);

@@ -62,7 +62,7 @@ impl Scene
             pos: Point3::new(-5.0, -5.0, -5.0),
             dir: Vector3::new(1.0f32, 1.0, -1.0),
             color: Vector3::new(1.0, 1.0, 1.0),
-            intensity: 250.0,
+            intensity: 150.0,
             light_type: LightType::Point
         }));
 
@@ -71,7 +71,7 @@ impl Scene
             pos: Point3::new(5.0, 5.0, -10.0),
             dir: Vector3::new(-1.0f32, -1.0, -1.0),
             color: Vector3::new(1.0, 0.0, 0.0),
-            intensity: 250.0,
+            intensity: 150.0,
             light_type: LightType::Point
         }));
     }
@@ -82,7 +82,7 @@ impl Scene
         sphere.basic.material.anmbient_color.x = 1.0;
         sphere.basic.material.anmbient_color.y = 0.0;
         sphere.basic.material.anmbient_color.z = 0.0;
-        sphere.basic.material.reflectivity = 0.5;
+        sphere.basic.material.reflectivity = 0.3;
         sphere.basic.material.alpha = 0.1;
         sphere.basic.material.refraction_index = 1.5;
 
@@ -90,7 +90,7 @@ impl Scene
         sphere_1.basic.material.anmbient_color.x = 0.0;
         sphere_1.basic.material.anmbient_color.y = 1.0;
         sphere_1.basic.material.anmbient_color.z = 1.0;
-        sphere_1.basic.material.reflectivity = 0.5;
+        sphere_1.basic.material.reflectivity = 0.3;
         sphere_1.basic.material.alpha = 0.1;
         sphere_1.basic.material.refraction_index = 1.5;
 
