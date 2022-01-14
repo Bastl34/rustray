@@ -1,3 +1,7 @@
 target/
 Cargo.lock
 .DS_Store
+
+data/
+output.png
+output*.png

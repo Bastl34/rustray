@@ -2,5 +2,5 @@
 
 go to a specific directory and run:
 ```
-cargo watch -x run -i pos.data
+cargo watch -x run
 ```

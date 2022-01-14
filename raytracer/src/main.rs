@@ -1,5 +1,8 @@
 extern crate sdl2;
 extern crate rand;
+extern crate image;
+
+use chrono::{Datelike, Timelike, Utc};
 
 use std::io::Write;
 use std::time::Instant;
@@ -12,6 +15,8 @@ use sdl2::event::WindowEvent;
 use sdl2::pixels::PixelFormatEnum;
 
 use sdl2::video::WindowPos::Positioned;
+
+use image::{GenericImage, GenericImageView, ImageBuffer, RgbImage, Rgb};
 
 use std::fs::File;
 
@@ -35,6 +40,9 @@ http://nercury.github.io/rust/opengl/tutorial/2018/02/09/opengl-in-rust-from-scr
 
 */
 
+const DATA_PATH: &str = "data";
+const POS_PATH: &str = "data/pos.data";
+
 fn main()
 {
     let sdl = sdl2::init().unwrap();
@@ -48,7 +56,7 @@ fn main()
     let mut window_y = 0;
 
     //try to load window position
-    let data = std::fs::read_to_string("pos.data");
+    let data = std::fs::read_to_string(POS_PATH);
     if data.is_ok()
     {
         let res = data.unwrap();
@@ -69,6 +77,8 @@ fn main()
     canvas.set_draw_color(Color::RGB(255, 255, 255));
     canvas.clear();
     canvas.present();
+
+    let mut image: RgbImage = ImageBuffer::new(width as u32, height as u32);
 
     let mut render_canvas = sdl2::surface::Surface::new(width as u32, height as u32, PixelFormatEnum::RGBA32).unwrap().into_canvas().unwrap();
     render_canvas.set_draw_color(Color::RGB(255, 255, 255));
@@ -97,6 +107,8 @@ fn main()
 
     let mut fps_display_update: u128 = 0;
 
+    let mut completed = false;
+
     'main: loop
     {
         for event in event_pump.poll_iter()
@@ -116,6 +128,10 @@ fn main()
                     render_canvas.clear();
 
                     rendering.restart(width, height);
+
+                    image = ImageBuffer::new(width as u32, height as u32);
+
+                    completed = false;
                 },
                 //restart rendering on resize
                 sdl2::event::Event::Window { win_event: WindowEvent::Resized(w, h), ..} =>
@@ -140,8 +156,12 @@ fn main()
 
                     rendering.restart(width, height);
 
+                    image = ImageBuffer::new(width as u32, height as u32);
+
+                    completed = false;
+
                     //save to file
-                    let mut file = File::create("pos.data").unwrap();
+                    let mut file = File::create(POS_PATH).unwrap();
                     let _ = file.write(format!("{}x{}x{}x{}", window_x, window_y, width, height).as_bytes());
                 },
                 //save the window position
@@ -152,7 +172,7 @@ fn main()
                     window_y = y;
 
                     //save to file
-                    let mut file = File::create("pos.data").unwrap();
+                    let mut file = File::create(POS_PATH).unwrap();
                     let _ = file.write(format!("{}x{}x{}x{}", window_x, window_y, width, height).as_bytes());
                 },
                 _ => {},
@@ -173,6 +193,8 @@ fn main()
 
                 render_canvas.set_draw_color(Color::RGB(item.r, item.g, item.b));
                 render_canvas.draw_point(Point::new(item.x, item.y)).unwrap();
+
+                image.put_pixel(item.x as u32, item.y as u32, Rgb([item.r, item.g, item.b]));
             }
         }
 
@@ -201,7 +223,20 @@ fn main()
             window.set_title(&title).unwrap();
 
             fps_display_update = current_time;
+
+            if is_done && !completed
+            {
+                println!("rendering time: {}", elapsed);
+                completed = true;
+
+                //save
+                let now = Utc::now();
+
+                let filename = format!("{}/output_{}-{}-{} {}-{}-{}.png", DATA_PATH, now.year(), now.month(), now.day(), now.hour(), now.minute(), now.second());
+                image.save(filename).unwrap();
+            }
         }
+
     }
 
     rendering.stop();

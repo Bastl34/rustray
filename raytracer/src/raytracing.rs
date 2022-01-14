@@ -124,6 +124,7 @@ impl Raytracing
 
     pub fn gamma_encode(&self, linear: f32) -> f32
     {
+        return linear;
         const GAMMA: f32 = 2.2;
         linear.powf(1.0 / GAMMA)
     }
@@ -203,12 +204,12 @@ impl Raytracing
 
         if i_dot_n < 0.0
         {
-            //Outside the surface
+            //outside the surface
             i_dot_n = -i_dot_n;
         }
         else
         {
-            //Inside the surface; invert the normal and swap the indices of refraction
+            //inside the surface; invert the normal and swap the indices of refraction
             ref_n = -normal;
             eta_t = 1.0;
             eta_i = index;
@@ -241,12 +242,12 @@ impl Raytracing
             eta_i = eta_t;
             eta_t = 1.0;
         }
-    
+
         let sin_t = eta_i / eta_t * (1.0 - i_dot_n * i_dot_n).max(0.0).sqrt();
 
         if sin_t > 1.0
         {
-            //Total internal reflection
+            //total internal reflection
             return 1.0;
         }
         else
@@ -328,26 +329,6 @@ impl Raytracing
                     intensity = intensity * (1.0 - shadow_intersection.unwrap().2.get_material().alpha);
                 }
 
-                /*
-                let intensity = if in_light
-                {
-                    match light.light_type
-                    {
-                        LightType::Directional => light.intensity,
-                        LightType::Point =>
-                        {
-                            let r2 = (light.pos - hit_point).norm() as f32;
-                            light.intensity / (4.0 * ::std::f32::consts::PI * r2)
-                        }
-                    }
-                }
-                else
-                {
-                    //TODO SHADOW FOR ALPHA
-                    0.0
-                };
-                 */
-
                 let item_color = (*item).get_material().anmbient_color;
                 let item_light_color = Vector3::new(item_color.x * light.color.x, item_color.y * light.color.y, item_color.z * light.color.z);
 
@@ -358,7 +339,7 @@ impl Raytracing
             let refraction_index = item.get_material().refraction_index;
 
             //TODO: fresnel
-            //let kr = self.fresnel(ray.dir, normal, refraction_index);
+            let kr = self.fresnel(ray.dir, normal, refraction_index);
 
             //reflectivity
             let reflectivity = item.get_material().reflectivity;

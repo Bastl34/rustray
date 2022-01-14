@@ -99,18 +99,21 @@ impl Scene
         sphere2.basic.material.anmbient_color.y = 1.0;
         sphere2.basic.material.anmbient_color.z = 0.0;
         sphere2.basic.material.reflectivity = 0.5;
+        sphere2.basic.material.alpha = 0.1;
 
         let mut sphere2_1 = Box::new(Sphere::new_with_pos(-7.0, 0.0, -25.0, 4.0));
         sphere2_1.basic.material.anmbient_color.x = 1.0;
         sphere2_1.basic.material.anmbient_color.y = 1.0;
         sphere2_1.basic.material.anmbient_color.z = 0.0;
         sphere2_1.basic.material.reflectivity = 0.5;
+        sphere2_1.basic.material.alpha = 0.1;
 
         let mut sphere3 = Box::new(Sphere::new_with_pos(7.0, 0.0, -20.0, 3.0));
         sphere3.basic.material.anmbient_color.x = 0.0;
         sphere3.basic.material.anmbient_color.y = 0.0;
         sphere3.basic.material.anmbient_color.z = 1.0;
         sphere3.basic.material.reflectivity = 0.5;
+        sphere3.basic.material.alpha = 0.1;
 
         let mut sphere_away = Box::new(Sphere::new_with_pos(7.0, 0.0, 10.0, 3.0));
         sphere_away.basic.material.anmbient_color.x = 1.0;
@@ -205,17 +208,15 @@ impl Scene
 
         self.items.push(sphere);
         self.items.push(sphere_1);
-
-        /*
         self.items.push(sphere2);
         self.items.push(sphere2_1);
         self.items.push(sphere3);
         self.items.push(sphere_away);
-        */
         self.items.push(mesh);
         self.items.push(mesh2);
         self.items.push(mesh3);
         self.items.push(mesh4);
         self.items.push(mesh5);
+
     }
 }
