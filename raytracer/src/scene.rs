@@ -101,14 +101,14 @@ impl Scene
         sphere2.basic.material.reflectivity = 0.5;
         sphere2.basic.material.alpha = 0.1;
 
-        let mut sphere2_1 = Box::new(Sphere::new_with_pos(-7.0, 0.0, -25.0, 4.0));
+        let mut sphere2_1 = Box::new(Sphere::new_with_pos(-7.0, -4.0, -25.0, 4.0));
         sphere2_1.basic.material.anmbient_color.x = 1.0;
         sphere2_1.basic.material.anmbient_color.y = 1.0;
         sphere2_1.basic.material.anmbient_color.z = 0.0;
         sphere2_1.basic.material.reflectivity = 0.5;
         sphere2_1.basic.material.alpha = 0.1;
 
-        let mut sphere3 = Box::new(Sphere::new_with_pos(7.0, 0.0, -20.0, 3.0));
+        let mut sphere3 = Box::new(Sphere::new_with_pos(7.0, -4.0, -20.0, 3.0));
         sphere3.basic.material.anmbient_color.x = 0.0;
         sphere3.basic.material.anmbient_color.y = 0.0;
         sphere3.basic.material.anmbient_color.z = 1.0;
@@ -123,8 +123,8 @@ impl Scene
 
         let points = vec!
         [
-            Point3::new(-1000.0, -5.5, 0.0),
-            Point3::new(1000.0, -5.5, 0.0),
+            Point3::new(-1000.0, -5.5, 2.0),
+            Point3::new(1000.0, -5.5, 2.0),
             Point3::new(1000.0, -5.5, -50.0),
             Point3::new(-1000.0, -5.5, -50.0),
         ];
@@ -157,10 +157,10 @@ impl Scene
 
         let points3 = vec!
         [
-            Point3::new(-10.0, -500.0, 0.0),
+            Point3::new(-10.0, -500.0, 2.0),
             Point3::new(-10.0, -500.0, -50.0),
             Point3::new(-10.0, 500.0, -50.0),
-            Point3::new(-10.0, 500.0, 0.0),
+            Point3::new(-10.0, 500.0, 2.0),
         ];
 
         let indices3 = vec![[0u32, 1, 2], [0, 2, 3]];
@@ -174,10 +174,10 @@ impl Scene
 
         let points4 = vec!
         [
-            Point3::new(10.0, -500.0, 0.0),
+            Point3::new(10.0, -500.0, 2.0),
             Point3::new(10.0, -500.0, -50.0),
             Point3::new(10.0, 500.0, -50.0),
-            Point3::new(10.0, 500.0, 0.0),
+            Point3::new(10.0, 500.0, 2.0),
         ];
 
         let indices4 = vec![[0u32, 1, 2], [0, 2, 3]];
@@ -191,8 +191,8 @@ impl Scene
 
         let points5 = vec!
         [
-            Point3::new(-1000.0, 5.5, 0.0),
-            Point3::new(1000.0, 5.5, 0.0),
+            Point3::new(-1000.0, 5.5, 2.0),
+            Point3::new(1000.0, 5.5, 2.0),
             Point3::new(1000.0, 5.5, -50.0),
             Point3::new(-1000.0, 5.5, -50.0),
         ];
@@ -206,6 +206,23 @@ impl Scene
         mesh5.basic.material.anmbient_color.z = 1.0;
         mesh5.basic.material.reflectivity = 0.5;
 
+        let points6 = vec!
+        [
+            Point3::new(-1000.0, -50.0, 2.0),
+            Point3::new(1000.0, -50.0, 2.0),
+            Point3::new(1000.0, 50.0, 2.0),
+            Point3::new(-1000.0, 50.0, 2.0),
+        ];
+
+        let indices6 = vec![[0u32, 1, 2], [0, 2, 3]];
+
+        let mut mesh6 = Box::new(Mesh::new_with_data(points6, indices6));
+
+        mesh6.basic.material.anmbient_color.x = 1.0;
+        mesh6.basic.material.anmbient_color.y = 0.5;
+        mesh6.basic.material.anmbient_color.z = 0.5;
+        mesh6.basic.material.reflectivity = 0.5;
+
         self.items.push(sphere);
         self.items.push(sphere_1);
         self.items.push(sphere2);
@@ -217,6 +234,7 @@ impl Scene
         self.items.push(mesh3);
         self.items.push(mesh4);
         self.items.push(mesh5);
+        self.items.push(mesh6);
 
     }
 }

@@ -262,8 +262,11 @@ impl Raytracing
 
     pub fn get_color(&self, ray: Ray, depth: u16) -> Vector3<f32>
     {
+        let mut r = ray;
+        r.dir = r.dir.normalize();
+
         //intersect
-        let intersection = self.trace(&ray, false);
+        let intersection = self.trace(&r, false);
 
         let mut color = Vector3::new(0.0, 0.0, 0.0);
 
@@ -274,7 +277,7 @@ impl Raytracing
             let item = intersection.2;
 
             let surface_normal = normal;
-            let hit_point = ray.origin + (ray.dir * hit_dist);
+            let hit_point = r.origin + (r.dir * hit_dist);
 
             let alpha = item.get_material().alpha;
 
@@ -302,7 +305,7 @@ impl Raytracing
                     in_light = shadow_intersection.unwrap().0 > len
                 }
 
-                //let hit_point = ray.origin + (ray.dir * intersection.0);
+                //let hit_point = r.origin + (r.dir * intersection.0);
 
 
                 //let light_power = surface_normal.dot(&direction_to_light).max(0.0) * light_intensity;
@@ -339,7 +342,7 @@ impl Raytracing
             let refraction_index = item.get_material().refraction_index;
 
             //TODO: fresnel
-            let kr = self.fresnel(ray.dir, normal, refraction_index);
+            let kr = self.fresnel(r.dir, normal, refraction_index);
 
             //reflectivity
             let reflectivity = item.get_material().reflectivity;
@@ -347,7 +350,7 @@ impl Raytracing
 
             if item.get_material().reflectivity > 0.0 && depth <= self.max_recursion
             {
-                let reflection_ray = self.create_reflection(normal, ray.dir, hit_point);
+                let reflection_ray = self.create_reflection(normal, r.dir, hit_point);
                 let reflection_color = self.get_color(reflection_ray, depth + 1 );
 
                 color = color + (reflection_color * reflectivity);
@@ -356,7 +359,7 @@ impl Raytracing
             //refraction
             if alpha < 1.0 && depth <= self.max_recursion
             {
-                let transmission_ray = self.create_transmission(normal, ray.dir, hit_point, refraction_index);
+                let transmission_ray = self.create_transmission(normal, r.dir, hit_point, refraction_index);
 
                 if let Some(transmission_ray) = transmission_ray
                 {
