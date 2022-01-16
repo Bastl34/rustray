@@ -1,7 +1,6 @@
 use std::thread::JoinHandle;
 use std::sync::mpsc;
-use std::sync::mpsc::Sender;
-use std::sync::mpsc::Receiver;
+use std::sync::mpsc::{Sender, Receiver};
 use std::sync::Mutex;
 use std::sync::Arc;
 use std::time::{Instant, Duration};
@@ -10,7 +9,6 @@ use std::collections::VecDeque;
 
 extern crate num_cpus;
 
-use rand::thread_rng;
 use rand::seq::SliceRandom;
 
 
@@ -287,7 +285,7 @@ impl RendererManager
 
                             { *(pixels_rendered.lock().unwrap()) += 1; }
 
-                            tx.send(pixel_val).unwrap();
+                            let _ = tx.send(pixel_val);
                         }
                     }
                 }

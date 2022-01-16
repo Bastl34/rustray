@@ -4,8 +4,8 @@ extern crate image;
 
 use chrono::{Datelike, Timelike, Utc};
 
-use std::io::Write;
-use std::time::Instant;
+use std::{io::Write, thread};
+use std::time::{Instant, Duration};
 
 use sdl2::rect::Point;
 use sdl2::pixels::Color;
@@ -122,11 +122,13 @@ fn main()
                 sdl2::event::Event::KeyDown { keycode: Some(Keycode::Space), .. } =>
                 {
                     rendering.stop();
+                    thread::sleep(Duration::from_millis(100));
 
                     render_canvas = sdl2::surface::Surface::new(width as u32, height as u32, PixelFormatEnum::RGBA32).unwrap().into_canvas().unwrap();
                     render_canvas.set_draw_color(Color::RGB(255, 255, 255));
                     render_canvas.clear();
 
+                    rendering.stop();
                     rendering.restart(width, height);
 
                     image = ImageBuffer::new(width as u32, height as u32);
@@ -142,6 +144,7 @@ fn main()
 
                     //reset rendering canvas and buffer canvas
                     rendering.stop();
+                    thread::sleep(Duration::from_millis(100));
 
                     canvas.set_draw_color(Color::RGB(255, 255, 255));
                     canvas.clear();
@@ -194,7 +197,11 @@ fn main()
                 render_canvas.set_draw_color(Color::RGB(item.r, item.g, item.b));
                 render_canvas.draw_point(Point::new(item.x, item.y)).unwrap();
 
-                image.put_pixel(item.x as u32, item.y as u32, Rgb([item.r, item.g, item.b]));
+                //check range to prevent draing something outside while resizing
+                if item.x < image.width() as i32 && item.y < image.height() as i32
+                {
+                    image.put_pixel(item.x as u32, item.y as u32, Rgb([item.r, item.g, item.b]));
+                }
             }
         }
 

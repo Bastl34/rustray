@@ -77,51 +77,6 @@ impl Raytracing
         self.view = Isometry3::look_at_rh(&eye, &target, &Vector3::y());
     }
 
-    pub fn trace(&self, ray: &Ray, stop_on_first_hit: bool) -> Option<(f32, Vector3<f32>, &dyn Shape)>
-    {
-        //find hits (bbox based)
-        let mut hits: Vec<HitResult> = vec![];
-        for item in &self.scene.items
-        {
-            let dist = item.intersect_b_box(&ray);
-            if let Some(dist) = dist
-            {
-                hits.push(HitResult{ item: item.as_ref(), dist: dist });
-            }
-        }
-
-        if hits.len() == 0
-        {
-            return None;
-        }
-
-        //sort bbox dist (to get the nearest)
-        hits.sort_by(|a, b| a.dist.partial_cmp(&b.dist).unwrap());
-
-        let mut best_hit: Option<(f32, Vector3<f32>, & dyn Shape)> = None;
-
-        for item in hits
-        {
-            let intersection = item.item.intersect(&ray);
-
-            if let Some(intersection) = intersection
-            {
-                if best_hit.is_none() || best_hit.is_some() && intersection.0 < best_hit.unwrap().0
-                {
-                    best_hit = Some((intersection.0, intersection.1, item.item));
-                }
-            }
-
-            //if it should return on first hit
-            if best_hit.is_some() && stop_on_first_hit
-            {
-                return best_hit;
-            }
-        }
-
-        best_hit
-    }
-
     pub fn gamma_encode(&self, linear: f32) -> f32
     {
         const GAMMA: f32 = 2.2;
@@ -177,7 +132,7 @@ impl Raytracing
             let r = (self.gamma_encode(color.x) * 255.0) as u8;
             let g = (self.gamma_encode(color.y) * 255.0) as u8;
             let b = (self.gamma_encode(color.z) * 255.0) as u8;
-    
+
             PixelColor { r: r, g: g, b: b, x: x, y: y }
         }
         else
@@ -185,9 +140,57 @@ impl Raytracing
             let r = (color.x * 255.0) as u8;
             let g = (color.y * 255.0) as u8;
             let b = (color.z * 255.0) as u8;
-    
+
             PixelColor { r: r, g: g, b: b, x: x, y: y }
         }
+    }
+
+    pub fn trace(&self, ray: &Ray, stop_on_first_hit: bool) -> Option<(f32, Vector3<f32>, &dyn Shape)>
+    {
+        //find hits (bbox based)
+        let mut hits: Vec<HitResult> = vec![];
+        for item in &self.scene.items
+        {
+            let dist = item.intersect_b_box(&ray);
+            if let Some(dist) = dist
+            {
+                if item.get_material().alpha > 0.0
+                {
+                    hits.push(HitResult{ item: item.as_ref(), dist: dist });
+                }
+            }
+        }
+
+        if hits.len() == 0
+        {
+            return None;
+        }
+
+        //sort bbox dist (to get the nearest)
+        hits.sort_by(|a, b| a.dist.partial_cmp(&b.dist).unwrap());
+
+        let mut best_hit: Option<(f32, Vector3<f32>, & dyn Shape)> = None;
+
+        for item in hits
+        {
+            let intersection = item.item.intersect(&ray);
+
+            if let Some(intersection) = intersection
+            {
+                if best_hit.is_none() || best_hit.is_some() && intersection.0 < best_hit.unwrap().0
+                {
+                    best_hit = Some((intersection.0, intersection.1, item.item));
+                }
+            }
+
+            //if it should return on first hit
+            if best_hit.is_some() && stop_on_first_hit
+            {
+                return best_hit;
+            }
+        }
+
+        best_hit
     }
 
     pub fn create_reflection(&self, normal: Vector3<f32>, incident: Vector3<f32>, intersection: Point3<f32>) -> Ray
@@ -371,11 +374,11 @@ impl Raytracing
 
                     if kr < 1.0
                     {
-                        color = (color * alpha) + (refraction_color * (1.0 - kr) * (1.0 - alpha));  
+                        color = (color * alpha) + (refraction_color * (1.0 - kr) * (1.0 - alpha));
                     }
                     else
                     {
-                        color = (color * alpha) + (refraction_color * (1.0 - alpha));    
+                        color = (color * alpha) + (refraction_color * (1.0 - alpha));
                     }
                 }
             }

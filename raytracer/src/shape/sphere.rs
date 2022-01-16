@@ -4,9 +4,7 @@ use nalgebra::Vector3;
 use parry3d::query::{Ray, RayCast};
 use parry3d::shape::Ball;
 
-use crate::shape::Shape;
-use crate::shape::ShapeBasics;
-use crate::shape::Material;
+use crate::shape::{Shape, ShapeBasics, Material};
 
 pub struct Sphere
 {
