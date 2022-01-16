@@ -16,7 +16,7 @@ use sdl2::pixels::PixelFormatEnum;
 
 use sdl2::video::WindowPos::Positioned;
 
-use image::{GenericImage, GenericImageView, ImageBuffer, RgbImage, Rgb};
+use image::{ImageBuffer, RgbImage, Rgb};
 
 use std::fs::File;
 

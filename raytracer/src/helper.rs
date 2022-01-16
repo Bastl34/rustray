@@ -1,5 +1,4 @@
 use rand::Rng;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 pub fn rand<T: std::cmp::PartialOrd + rand::distributions::uniform::SampleUniform>(from: T, to: T) -> T
 {

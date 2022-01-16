@@ -1,8 +1,6 @@
 use crate::shape::Shape;
 use crate::pixel_color::PixelColor;
 
-use crate::shape::sphere::Sphere;
-
 use crate::scene::{Scene, LightType};
 
 use nalgebra::{Perspective3, Isometry3, Point3, Vector3};
@@ -25,6 +23,7 @@ pub struct Raytracing
 
     anti_aliasing: u8,
     max_recursion: u16,
+    gamma_correction: bool,
 
     aspect_ratio: f32,
 
@@ -50,6 +49,7 @@ impl Raytracing
 
             anti_aliasing: 1,
             max_recursion: 5,
+            gamma_correction: false,
 
             fov: 0.0,
             fov_adjustment: 0.0,
@@ -124,7 +124,6 @@ impl Raytracing
 
     pub fn gamma_encode(&self, linear: f32) -> f32
     {
-        return linear;
         const GAMMA: f32 = 2.2;
         linear.powf(1.0 / GAMMA)
     }
@@ -151,11 +150,6 @@ impl Raytracing
                 let x_trans = x_step * x_i as f32 * (1.0 / aa_f);
                 let y_trans = y_step * y_i as f32 * (1.0 / aa_f);
 
-                //let new_x = x_f + (x_step * x_i as f32 * (1.0 / aa_f));
-                //let new_y = y_f + (y_step * y_i as f32 * (1.0 / aa_f));
-
-                //println!("x: {}, y: {}", new_x, new_y);
-
                 //map x/y to -1 <=> +1
                 //let sensor_x = ((((new_x + 0.5) / w) * 2.0 - 1.0) * self.aspect_ratio) * self.fov_adjustment;
                 //let sensor_y = (1.0 - ((new_y + 0.5) / h) * 2.0) * self.fov_adjustment;
@@ -170,7 +164,6 @@ impl Raytracing
             }
         }
 
-        //std::process::exit(0);
         let aa = self.anti_aliasing as f32;
         color /= aa * aa;
 
@@ -179,12 +172,22 @@ impl Raytracing
         color.y.min(1.0);
         color.z.min(1.0);
 
-        //TODO: alpha blending
-        let r = (self.gamma_encode(color.x) * 255.0) as u8;
-        let g = (self.gamma_encode(color.y) * 255.0) as u8;
-        let b = (self.gamma_encode(color.z) * 255.0) as u8;
-
-        PixelColor { r: r, g: g, b: b, x: x, y: y }
+        if self.gamma_correction
+        {
+            let r = (self.gamma_encode(color.x) * 255.0) as u8;
+            let g = (self.gamma_encode(color.y) * 255.0) as u8;
+            let b = (self.gamma_encode(color.z) * 255.0) as u8;
+    
+            PixelColor { r: r, g: g, b: b, x: x, y: y }
+        }
+        else
+        {
+            let r = (color.x * 255.0) as u8;
+            let g = (color.y * 255.0) as u8;
+            let b = (color.z * 255.0) as u8;
+    
+            PixelColor { r: r, g: g, b: b, x: x, y: y }
+        }
     }
 
     pub fn create_reflection(&self, normal: Vector3<f32>, incident: Vector3<f32>, intersection: Point3<f32>) -> Ray
@@ -316,7 +319,7 @@ impl Raytracing
                 //let light_reflected = item.item.get_material().shininess / std::f32::consts::PI;
                 //let light_reflected = 1.58 / std::f32::consts::PI;
 
-                let mut intensity = 0.0;
+                let mut intensity;
                 match light.light_type
                 {
                     LightType::Directional => intensity = light.intensity,
@@ -341,7 +344,7 @@ impl Raytracing
 
             let refraction_index = item.get_material().refraction_index;
 
-            //TODO: fresnel
+            //fresnel
             let kr = self.fresnel(r.dir, normal, refraction_index);
 
             //reflectivity
@@ -353,6 +356,7 @@ impl Raytracing
                 let reflection_ray = self.create_reflection(normal, r.dir, hit_point);
                 let reflection_color = self.get_color(reflection_ray, depth + 1 );
 
+                //color = color + (reflection_color * reflectivity * kr);
                 color = color + (reflection_color * reflectivity);
             }
 
@@ -365,8 +369,19 @@ impl Raytracing
                 {
                     let refraction_color = self.get_color(transmission_ray, depth + 1);
 
-                    color = (color * alpha) + (refraction_color * (1.0 - alpha));
+                    if kr < 1.0
+                    {
+                        color = (color * alpha) + (refraction_color * (1.0 - kr) * (1.0 - alpha));  
+                    }
+                    else
+                    {
+                        color = (color * alpha) + (refraction_color * (1.0 - alpha));    
+                    }
                 }
+            }
+            else if alpha < 1.0
+            {
+                color = color * alpha;
             }
         }
 

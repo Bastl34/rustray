@@ -78,7 +78,7 @@ impl Scene
 
     pub fn init_objects(&mut self)
     {
-        let mut sphere = Box::new(Sphere::new_with_pos(0.0, 0.0, -12.0, 1.0));
+        let mut sphere = Box::new(Sphere::new_with_pos(1.0, 0.0, -10.0, 1.0));
         sphere.basic.material.anmbient_color.x = 1.0;
         sphere.basic.material.anmbient_color.y = 0.0;
         sphere.basic.material.anmbient_color.z = 0.0;
@@ -99,21 +99,24 @@ impl Scene
         sphere2.basic.material.anmbient_color.y = 1.0;
         sphere2.basic.material.anmbient_color.z = 0.0;
         sphere2.basic.material.reflectivity = 0.5;
-        sphere2.basic.material.alpha = 0.1;
+        sphere2.basic.material.alpha = 0.8;
+        sphere2.basic.material.refraction_index = 1.5;
 
         let mut sphere2_1 = Box::new(Sphere::new_with_pos(-7.0, -4.0, -25.0, 4.0));
         sphere2_1.basic.material.anmbient_color.x = 1.0;
         sphere2_1.basic.material.anmbient_color.y = 1.0;
         sphere2_1.basic.material.anmbient_color.z = 0.0;
         sphere2_1.basic.material.reflectivity = 0.5;
-        sphere2_1.basic.material.alpha = 0.1;
+        sphere2_1.basic.material.alpha = 0.8;
+        sphere2_1.basic.material.refraction_index = 1.5;
 
         let mut sphere3 = Box::new(Sphere::new_with_pos(7.0, -4.0, -20.0, 3.0));
         sphere3.basic.material.anmbient_color.x = 0.0;
         sphere3.basic.material.anmbient_color.y = 0.0;
         sphere3.basic.material.anmbient_color.z = 1.0;
         sphere3.basic.material.reflectivity = 0.5;
-        sphere3.basic.material.alpha = 0.1;
+        sphere3.basic.material.alpha = 0.8;
+        sphere3.basic.material.refraction_index = 1.5;
 
         let mut sphere_away = Box::new(Sphere::new_with_pos(7.0, 0.0, 10.0, 3.0));
         sphere_away.basic.material.anmbient_color.x = 1.0;

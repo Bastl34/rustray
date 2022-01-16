@@ -1,4 +1,4 @@
-use nalgebra::{Isometry3, Matrix4, Vector4, Vector3};
+use nalgebra::{Isometry3, Matrix4, Vector3};
 use parry3d::query::{Ray};
 
 use parry3d::bounding_volume::AABB;
