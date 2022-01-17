@@ -190,7 +190,9 @@ impl RendererManager
     pub fn restart(&mut self, width: i32, height: i32)
     {
         self.stop();
+
         self.update_resolution(width, height);
+
         self.start();
     }
 

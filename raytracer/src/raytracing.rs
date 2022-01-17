@@ -54,6 +54,7 @@ impl Raytracing
             fov: 0.0,
             fov_adjustment: 0.0,
 
+            //TODO: use projection mat instead of manual calc
             projection: Perspective3::<f32>::new(1.0f32, 0.0f32, 0.001, 1000.0),
             view: Isometry3::<f32>::identity()
         }

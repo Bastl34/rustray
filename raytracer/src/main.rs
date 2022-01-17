@@ -1,3 +1,5 @@
+//#![feature(get_mut_unchecked)]
+
 extern crate sdl2;
 extern crate rand;
 extern crate image;
@@ -98,9 +100,11 @@ fn main()
     scene.init_with_some_objects();
 
     let mut raytracing = Raytracing::new(scene);
+
     raytracing.init_camera(width as u32, height as u32);
 
     let raytracing_arc = std::sync::Arc::new(raytracing);
+
 
     let mut rendering = RendererManager::new(width, height, raytracing_arc);
     rendering.start();
@@ -128,7 +132,6 @@ fn main()
                     render_canvas.set_draw_color(Color::RGB(255, 255, 255));
                     render_canvas.clear();
 
-                    rendering.stop();
                     rendering.restart(width, height);
 
                     image = ImageBuffer::new(width as u32, height as u32);
@@ -138,13 +141,13 @@ fn main()
                 //restart rendering on resize
                 sdl2::event::Event::Window { win_event: WindowEvent::Resized(w, h), ..} =>
                 {
-                    //apply
-                    width = w;
-                    height = h;
-
                     //reset rendering canvas and buffer canvas
                     rendering.stop();
                     thread::sleep(Duration::from_millis(100));
+
+                    //apply
+                    width = w;
+                    height = h;
 
                     canvas.set_draw_color(Color::RGB(255, 255, 255));
                     canvas.clear();
@@ -153,9 +156,6 @@ fn main()
                     render_canvas = sdl2::surface::Surface::new(width as u32, height as u32, PixelFormatEnum::RGBA32).unwrap().into_canvas().unwrap();
                     render_canvas.set_draw_color(Color::RGB(255, 255, 255));
                     render_canvas.clear();
-
-                    //TODO
-                    //test.init_camera(width as u32, height as u32);
 
                     rendering.restart(width, height);
 
