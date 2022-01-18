@@ -228,17 +228,17 @@ impl Scene
         mesh_behind.basic.material.anmbient_color.z = 0.5;
         mesh_behind.basic.material.reflectivity = 0.5;
 
-        self.items.push(sphere_back);
-        self.items.push(sphere_front);
-        self.items.push(sphere_left);
-        self.items.push(sphere_right);
-        self.items.push(sphere_not_visible);
-        self.items.push(sphere_mirror);
-        self.items.push(mesh_floor);
-        self.items.push(mesh_back);
-        self.items.push(mesh_left);
+        //self.items.push(sphere_back);
+        //self.items.push(sphere_front);
+        //self.items.push(sphere_left);
+        //self.items.push(sphere_right);
+        //self.items.push(sphere_not_visible);
+        //self.items.push(sphere_mirror);
+        //self.items.push(mesh_floor);
+        //self.items.push(mesh_back);
+        //self.items.push(mesh_left);
         self.items.push(mesh_right);
-        self.items.push(mesh_top);
-        self.items.push(mesh_behind);
+        //self.items.push(mesh_top);
+        //self.items.push(mesh_behind);
     }
 }

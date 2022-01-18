@@ -1,4 +1,4 @@
-use nalgebra::{Isometry3, Matrix4, Vector3};
+use nalgebra::{Isometry3, Matrix4, Vector3, Point2};
 use parry3d::query::{Ray};
 
 use parry3d::bounding_volume::AABB;
@@ -12,6 +12,8 @@ pub trait Shape
     fn calc_bbox(&mut self);
     fn intersect_b_box(&self, ray: &Ray) -> Option<f32>;
     fn intersect(&self, ray: &Ray) -> Option<(f32, Vector3<f32>)>;
+
+    fn get_uv(&self, hit: Vector3<f32>, face_id: u32) -> Point2<f32>;
 
     fn update(&mut self)
     {

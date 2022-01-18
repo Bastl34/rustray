@@ -1,5 +1,4 @@
-use nalgebra::Isometry3;
-use nalgebra::Vector3;
+use nalgebra::{Isometry3, Vector3, Point2};
 
 use parry3d::query::{Ray, RayCast};
 use parry3d::shape::Ball;
@@ -30,17 +29,28 @@ impl Shape for Sphere
     {
         //self.basic.b_box.cast_ray(&self.basic.trans, ray, std::f32::MAX, true)
         let trans = Isometry3::<f32>::identity();
-        self.basic.b_box.cast_ray(&trans, ray, std::f32::MAX, false)
+        let solid = !(self.basic.material.alpha < 1.0);
+        self.basic.b_box.cast_ray(&trans, ray, std::f32::MAX, solid)
     }
 
     fn intersect(&self, ray: &Ray) -> Option<(f32, Vector3<f32>)>
     {
-        let res = self.ball.cast_ray_and_get_normal(&self.basic.trans, ray, std::f32::MAX, false);
+        let solid = !(self.basic.material.alpha < 1.0);
+        let res = self.ball.cast_ray_and_get_normal(&self.basic.trans, ray, std::f32::MAX, solid);
         if let Some(res) = res
         {
             return Some((res.toi, res.normal))
         }
         None
+    }
+
+    fn get_uv(&self, hit: Vector3<f32>, face_id: u32) -> Point2<f32>
+    {
+        Point2::<f32>::new
+        (
+            (1.0 + (hit.z.atan2(hit.x) as f32) / std::f32::consts::PI) * 0.5,
+            (hit.y / self.ball.radius).acos() as f32 / std::f32::consts::PI
+        )
     }
 }
 

@@ -1,7 +1,7 @@
-use nalgebra::{Vector3, Point3, Isometry3};
+use nalgebra::{Vector3, Point3, Point2, Isometry3};
 
 use parry3d::query::{Ray, RayCast};
-use parry3d::shape::TriMesh;
+use parry3d::shape::{TriMesh, FeatureId};
 
 use crate::shape::{Shape, ShapeBasics, Material};
 
@@ -27,19 +27,32 @@ impl Shape for Mesh
 
     fn intersect_b_box(&self, ray: &Ray) -> Option<f32>
     {
-        //self.basic.b_box.cast_ray(&self.basic.trans, ray, std::f32::MAX, true)
         let trans = Isometry3::<f32>::identity();
-        self.basic.b_box.cast_ray(&trans, ray, std::f32::MAX, false)
+        let solid = !(self.basic.material.alpha < 1.0);
+        self.basic.b_box.cast_ray(&trans, ray, std::f32::MAX, solid)
     }
 
     fn intersect(&self, ray: &Ray) -> Option<(f32, Vector3<f32>)>
     {
-        let res = self.mesh.cast_ray_and_get_normal(&self.basic.trans, ray, std::f32::MAX, false);
+        let solid = !(self.basic.material.alpha < 1.0);
+        let res = self.mesh.cast_ray_and_get_normal(&self.basic.trans, ray, std::f32::MAX, solid);
         if let Some(res) = res
         {
+            println!("{:?}", res.feature);
+            if let FeatureId::Face(i) = res.feature
+            {
+                //println!("{}", i);
+            }
+
             return Some((res.toi, res.normal))
         }
         None
+    }
+
+    fn get_uv(&self, hit: Vector3<f32>, face_id: u32) -> Point2<f32>
+    {
+        //TODO
+        Point2::<f32>::new(0.0, 0.0)
     }
 }
 
