@@ -16,7 +16,8 @@
 //mod options;
 //mod crates_modules;
 //mod traits;
-mod smartpointer;
+//mod smartpointer;
+mod rwlock;
 
 //use strings as test;
 //use tuples as test;
@@ -31,7 +32,8 @@ mod smartpointer;
 //use cli as test;
 //use threads as test;
 //use traits as test;
-use smartpointer as test;
+//use smartpointer as test;
+use rwlock as test;
 
 fn main()
 {

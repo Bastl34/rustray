@@ -2,7 +2,7 @@ use std::thread::JoinHandle;
 use std::sync::mpsc;
 use std::sync::mpsc::{Sender, Receiver};
 use std::sync::Mutex;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 use std::time::{Instant, Duration};
 
 use std::collections::VecDeque;
@@ -52,12 +52,12 @@ pub struct RendererManager
     start_time: Instant,
     done_time: Duration,
 
-    raytracing: Arc<Raytracing>
+    raytracing: Arc<RwLock<Raytracing>>
 }
 
 impl RendererManager
 {
-    pub fn new(width: i32, height: i32, raytracing: Arc<Raytracing>) -> RendererManager
+    pub fn new(width: i32, height: i32, raytracing: Arc<RwLock<Raytracing>>) -> RendererManager
     {
         let (tx, rx) = mpsc::channel();
 
@@ -247,6 +247,8 @@ impl RendererManager
 
         let handle = std::thread::spawn(move ||
         {
+            let rt = raytracing.read().unwrap();
+
             let mut running = true;
             'outer: while running
             {
@@ -283,7 +285,7 @@ impl RendererManager
                                 break 'outer;
                             }
 
-                            let pixel_val = raytracing.render(x,y);
+                            let pixel_val = rt.render(x,y);
 
                             { *(pixels_rendered.lock().unwrap()) += 1; }
 

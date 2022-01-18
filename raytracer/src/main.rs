@@ -103,10 +103,9 @@ fn main()
 
     raytracing.init_camera(width as u32, height as u32);
 
-    let raytracing_arc = std::sync::Arc::new(raytracing);
+    let raytracing_arc = std::sync::Arc::new(std::sync::RwLock::new(raytracing));
 
-
-    let mut rendering = RendererManager::new(width, height, raytracing_arc);
+    let mut rendering = RendererManager::new(width, height, raytracing_arc.clone());
     rendering.start();
 
     let mut fps_display_update: u128 = 0;
@@ -156,6 +155,11 @@ fn main()
                     render_canvas = sdl2::surface::Surface::new(width as u32, height as u32, PixelFormatEnum::RGBA32).unwrap().into_canvas().unwrap();
                     render_canvas.set_draw_color(Color::RGB(255, 255, 255));
                     render_canvas.clear();
+
+                    {
+                        let mut rt = raytracing_arc.write().unwrap();
+                        rt.init_camera(width as u32, height as u32);
+                    }
 
                     rendering.restart(width, height);
 

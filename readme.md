@@ -7,5 +7,5 @@ cargo watch -x run
 
 use cargo watch to run release version:
 ```
-cargo watch -s "cargo run --release" -w src\
+cargo watch -s "cargo run --release" -w src/
 ```
