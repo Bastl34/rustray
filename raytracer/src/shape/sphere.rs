@@ -1,4 +1,4 @@
-use nalgebra::{Isometry3, Vector3, Point2};
+use nalgebra::{Isometry3, Vector3, Point2, Point3};
 
 use parry3d::query::{Ray, RayCast};
 use parry3d::shape::Ball;
@@ -15,9 +15,19 @@ pub struct Sphere
 
 impl Shape for Sphere
 {
+    fn get_name(&self) -> &String
+    {
+        &self.name
+    }
+
     fn get_material(&self) -> &Material
     {
         &self.basic.material
+    }
+
+    fn get_basic(&self) -> &ShapeBasics
+    {
+        &self.basic
     }
 
     fn calc_bbox(&mut self)
@@ -33,23 +43,28 @@ impl Shape for Sphere
         self.basic.b_box.cast_ray(&trans, ray, std::f32::MAX, solid)
     }
 
-    fn intersect(&self, ray: &Ray) -> Option<(f32, Vector3<f32>)>
+    fn intersect(&self, ray: &Ray) -> Option<(f32, Vector3<f32>, u32)>
     {
         let solid = !(self.basic.material.alpha < 1.0);
         let res = self.ball.cast_ray_and_get_normal(&self.basic.trans, ray, std::f32::MAX, solid);
         if let Some(res) = res
         {
-            return Some((res.toi, res.normal))
+            return Some((res.toi, res.normal, 0))
         }
         None
     }
 
-    fn get_uv(&self, hit: Vector3<f32>, face_id: u32) -> Point2<f32>
+    fn get_uv(&self, hit: Point3<f32>, _face_id: u32) -> Point2<f32>
     {
+        // https://gamedev.stackexchange.com/questions/114412/how-to-get-uv-coordinates-for-sphere-cylindrical-projection
+
+        let n = (hit - (&self.basic.trans * Point3::<f32>::new(0.0, 0.0, 0.0))).normalize();
+        //let n = Vector3::<f32>::new(hit.x, hit.y, hit.z).normalize();
+
         Point2::<f32>::new
         (
-            (1.0 + (hit.z.atan2(hit.x) as f32) / std::f32::consts::PI) * 0.5,
-            (hit.y / self.ball.radius).acos() as f32 / std::f32::consts::PI
+            (1.0 + (n.z.atan2(n.x) as f32) / std::f32::consts::PI) * 0.5,
+            (n.y / self.ball.radius).acos() as f32 / std::f32::consts::PI
         )
     }
 }
@@ -70,15 +85,16 @@ impl Sphere
         sphere
     }
 
-    pub fn new_with_pos(x: f32, y: f32, z: f32, r: f32) -> Sphere
+    pub fn new_with_pos(name: &str, x: f32, y: f32, z: f32, r: f32) -> Sphere
     {
         let mut sphere = Sphere
         {
             basic: ShapeBasics::new(),
-            name: String::from("Sphere"),
+            name: String::from(name),
             ball: Ball::new(r)
         };
 
+        //sphere.basic.trans = Isometry3::translation(x, y, z) * Isometry3::rotation(Vector3::new(0.0, 4.0, 0.0));
         sphere.basic.trans = Isometry3::translation(x, y, z);
 
         sphere.calc_bbox();

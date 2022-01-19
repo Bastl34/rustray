@@ -146,7 +146,7 @@ impl Raytracing
         }
     }
 
-    pub fn trace(&self, ray: &Ray, stop_on_first_hit: bool) -> Option<(f32, Vector3<f32>, &dyn Shape)>
+    pub fn trace(&self, ray: &Ray, stop_on_first_hit: bool) -> Option<(f32, Vector3<f32>, &dyn Shape, u32)>
     {
         //find hits (bbox based)
         let mut hits: Vec<HitResult> = vec![];
@@ -170,7 +170,7 @@ impl Raytracing
         //sort bbox dist (to get the nearest)
         hits.sort_by(|a, b| a.dist.partial_cmp(&b.dist).unwrap());
 
-        let mut best_hit: Option<(f32, Vector3<f32>, & dyn Shape)> = None;
+        let mut best_hit: Option<(f32, Vector3<f32>, &dyn Shape, u32)> = None;
 
         for item in hits
         {
@@ -180,7 +180,7 @@ impl Raytracing
             {
                 if best_hit.is_none() || best_hit.is_some() && intersection.0 < best_hit.unwrap().0
                 {
-                    best_hit = Some((intersection.0, intersection.1, item.item));
+                    best_hit = Some((intersection.0, intersection.1, item.item, intersection.2));
                 }
             }
 
@@ -267,6 +267,21 @@ impl Raytracing
         }
     }
 
+    fn wrap(&self, val: f32, bound: u32) -> u32
+    {
+        let signed_bound = bound as i32;
+        let float_coord = val * bound as f32;
+        let wrapped_coord = (float_coord as i32) % signed_bound;
+        if wrapped_coord < 0
+        {
+            (wrapped_coord + signed_bound) as u32
+        }
+        else
+        {
+            wrapped_coord as u32
+        }
+    }
+
     pub fn get_color(&self, ray: Ray, depth: u16) -> Vector3<f32>
     {
         let mut r = ray;
@@ -282,6 +297,8 @@ impl Raytracing
             let hit_dist = intersection.0;
             let normal = intersection.1;
             let item = intersection.2;
+            let face = intersection.3;
+
 
             let surface_normal = normal;
             let hit_point = r.origin + (r.dir * hit_dist);
@@ -339,7 +356,24 @@ impl Raytracing
                     intensity = intensity * (1.0 - shadow_intersection.unwrap().2.get_material().alpha);
                 }
 
-                let item_color = (*item).get_material().anmbient_color;
+                let mut item_color = (*item).get_material().anmbient_color;
+
+                //texture
+                if (*item).get_basic().has_texture()
+                {
+                    let uv = (*item).get_uv(hit_point, face);
+
+                    let tex_dims = (*item).get_basic().texture_dimension();
+                    let tex_x = self.wrap(uv.x, tex_dims.0);
+                    let tex_y = self.wrap(uv.y, tex_dims.1);
+
+                    let tex_color = (*item).get_basic().get_texture_pixel(tex_x, tex_y);
+
+                    item_color.x *= tex_color.x;
+                    item_color.y *= tex_color.y;
+                    item_color.z *= tex_color.z;
+                }
+
                 let item_light_color = Vector3::new(item_color.x * light.color.x, item_color.y * light.color.y, item_color.z * light.color.z);
 
                 //get color

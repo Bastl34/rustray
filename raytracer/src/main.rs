@@ -98,6 +98,7 @@ fn main()
 
     let mut scene = Scene::new();
     scene.init_with_some_objects();
+    scene.print();
 
     let mut raytracing = Raytracing::new(scene);
 
