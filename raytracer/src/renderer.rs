@@ -247,8 +247,6 @@ impl RendererManager
 
         let handle = std::thread::spawn(move ||
         {
-            let rt = raytracing.read().unwrap();
-
             let mut running = true;
             'outer: while running
             {
@@ -285,6 +283,7 @@ impl RendererManager
                                 break 'outer;
                             }
 
+                            let rt = raytracing.read().unwrap();
                             let pixel_val = rt.render(x,y);
 
                             { *(pixels_rendered.lock().unwrap()) += 1; }

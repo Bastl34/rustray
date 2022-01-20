@@ -70,6 +70,15 @@ impl Scene
 
         self.lights.push(Box::new(Light
         {
+            pos: Point3::new(-2.0, -2.0, -15.0),
+            dir: Vector3::new(1.0f32, 1.0, -1.0),
+            color: Vector3::new(1.0, 1.0, 1.0),
+            intensity: 150.0,
+            light_type: LightType::Point
+        }));
+
+        self.lights.push(Box::new(Light
+        {
             pos: Point3::new(5.0, 5.0, -10.0),
             dir: Vector3::new(-1.0f32, -1.0, -1.0),
             color: Vector3::new(1.0, 0.0, 0.0),
@@ -150,7 +159,7 @@ impl Scene
         mesh_floor.basic.material.anmbient_color.x = 0.5;
         mesh_floor.basic.material.anmbient_color.y = 0.5;
         mesh_floor.basic.material.anmbient_color.z = 1.0;
-        mesh_floor.basic.material.reflectivity = 0.5;
+        mesh_floor.basic.material.reflectivity = 0.4;
         mesh_floor.basic.load_texture("scene/checkerboard.png");
 
         //back
@@ -166,7 +175,7 @@ impl Scene
         mesh_back.basic.material.anmbient_color.x = 0.5;
         mesh_back.basic.material.anmbient_color.y = 0.5;
         mesh_back.basic.material.anmbient_color.z = 1.0;
-        mesh_back.basic.material.reflectivity = 0.5;
+        mesh_back.basic.material.reflectivity = 0.4;
 
         //left
         let mut mesh_left = Box::new(Mesh::new_plane
@@ -181,7 +190,7 @@ impl Scene
         mesh_left.basic.material.anmbient_color.x = 1.0;
         mesh_left.basic.material.anmbient_color.y = 0.0;
         mesh_left.basic.material.anmbient_color.z = 0.0;
-        mesh_left.basic.material.reflectivity = 0.5;
+        mesh_left.basic.material.reflectivity = 0.4;
 
         //right
         let mut mesh_right = Box::new(Mesh::new_plane
@@ -196,7 +205,7 @@ impl Scene
         mesh_right.basic.material.anmbient_color.x = 0.0;
         mesh_right.basic.material.anmbient_color.y = 1.0;
         mesh_right.basic.material.anmbient_color.z = 0.0;
-        mesh_right.basic.material.reflectivity = 0.5;
+        mesh_right.basic.material.reflectivity = 0.4;
 
         //top
         let mut mesh_top = Box::new(Mesh::new_plane
@@ -211,7 +220,7 @@ impl Scene
         mesh_top.basic.material.anmbient_color.x = 0.5;
         mesh_top.basic.material.anmbient_color.y = 0.5;
         mesh_top.basic.material.anmbient_color.z = 1.0;
-        mesh_top.basic.material.reflectivity = 0.5;
+        mesh_top.basic.material.reflectivity = 0.4;
 
         //behind
         let mut mesh_behind = Box::new(Mesh::new_plane
@@ -226,7 +235,7 @@ impl Scene
         mesh_behind.basic.material.anmbient_color.x = 1.0;
         mesh_behind.basic.material.anmbient_color.y = 0.5;
         mesh_behind.basic.material.anmbient_color.z = 0.5;
-        mesh_behind.basic.material.reflectivity = 0.5;
+        mesh_behind.basic.material.reflectivity = 0.4;
 
         let mut mesh_front = Box::new(Mesh::new_plane
         (
@@ -240,10 +249,10 @@ impl Scene
         mesh_front.basic.material.anmbient_color.x = 1.0;
         mesh_front.basic.material.anmbient_color.y = 1.0;
         mesh_front.basic.material.anmbient_color.z = 1.0;
-        mesh_front.basic.material.reflectivity = 0.5;
+        mesh_front.basic.material.reflectivity = 0.3;
         mesh_front.basic.load_texture("scene/2k_earth_daymap.jpg");
 
-        /*
+/*
         self.items.push(sphere_back);
         self.items.push(sphere_front);
         self.items.push(sphere_left);
@@ -251,8 +260,7 @@ impl Scene
         self.items.push(sphere_not_visible);
         self.items.push(sphere_mirror);
         self.items.push(sphere_texture);
-        */
-
+*/
 
         self.items.push(mesh_floor);
         self.items.push(mesh_back);
@@ -264,24 +272,33 @@ impl Scene
 
         //self.items.push(mesh_front);
 
-        self.load("scene/kBert_thumbsup.obj");
+        self.load("scene/kBert_thumbsup_bevel.obj");
+
+        //let mut k_bert = self.get_by_name("kBert_Cube").unwrap();
+        //k_bert.borrow_mut().
+        //k_bert.borrow_mut().get_material().reflectivity = 0.5;
     }
 
     pub fn load(&mut self, path: &str)
     {
         let options = &tobj::LoadOptions
         {
-
+            triangulate: true,
             ..Default::default()
         };
 
         let (models, materials) = tobj::load_obj(&path, options).unwrap();
         let materials = materials.unwrap();
 
-
         for (_i, m) in models.iter().enumerate()
         {
             let mesh = &m.mesh;
+
+            if mesh.texcoord_indices.len() > 0 && mesh.indices.len() != mesh.texcoord_indices.len()
+            {
+                println!("Error can not load {}, because of indices mismatch", m.name.as_str());
+                continue;
+            }
 
             let mut verts: Vec<Point3::<f32>> = vec![];
             let mut uvs: Vec<Point2<f32>> = vec![];
@@ -289,57 +306,45 @@ impl Scene
             let mut indices:Vec<[u32; 3]> = vec![];
             let mut uv_indices: Vec<[u32; 3]> = vec![];
 
-            let mut next_face = 0;
-            for face in 0..mesh.face_arities.len()
+            //vertices
+            for vtx in 0..mesh.positions.len() / 3
             {
-                let end = next_face + mesh.face_arities[face] as usize;
+                let x = mesh.positions[3 * vtx];
+                let y = mesh.positions[3 * vtx + 1];
+                let z = mesh.positions[3 * vtx + 2];
 
-                let face_indices = &mesh.indices[next_face..end];
-
-                if face_indices.len() == 3
-                {
-                    indices.push([face_indices[0], face_indices[1], face_indices[2]]);
-                }
-                else if face_indices.len() == 4
-                {
-                    indices.push([face_indices[0], face_indices[1], face_indices[2]]);
-                    indices.push([face_indices[0], face_indices[2], face_indices[3]]);
-                }
-
-                if !mesh.texcoord_indices.is_empty()
-                {
-                    let texcoord_face_indices = &mesh.texcoord_indices[next_face..end];
-
-                    if texcoord_face_indices.len() == 3
-                    {
-                        uv_indices.push([texcoord_face_indices[0], texcoord_face_indices[1], texcoord_face_indices[2]]);
-                    }
-                    else if texcoord_face_indices.len() == 4
-                    {
-                        uv_indices.push([texcoord_face_indices[0], texcoord_face_indices[1], texcoord_face_indices[2]]);
-                        uv_indices.push([texcoord_face_indices[0], texcoord_face_indices[2], texcoord_face_indices[3]]);
-                    }
-                }
-
-                for vtx in 0..mesh.positions.len() / 3
-                {
-                    let x = mesh.positions[3 * vtx];
-                    let y = mesh.positions[3 * vtx + 1];
-                    let z = mesh.positions[3 * vtx + 2];
-
-                    verts.push(Point3::<f32>::new(x, y, z));
-                }
-
-                for vtx in 0..mesh.texcoords.len() / 2
-                {
-                    let x = mesh.texcoords[2 * vtx];
-                    let y = mesh.texcoords[2 * vtx + 1];
-
-                    uvs.push(Point2::<f32>::new(x, y));
-                }
-
-                next_face = end;
+                verts.push(Point3::<f32>::new(x, y, z));
             }
+
+            //tex coords
+            for vtx in 0..mesh.texcoords.len() / 2
+            {
+                let x = mesh.texcoords[2 * vtx];
+                let y = mesh.texcoords[2 * vtx + 1];
+
+                uvs.push(Point2::<f32>::new(x, y));
+            }
+
+            //indices
+            for vtx in 0..mesh.indices.len() / 3
+            {
+                let i0 = mesh.indices[3 * vtx];
+                let i1 = mesh.indices[3 * vtx + 1];
+                let i2 = mesh.indices[3 * vtx + 2];
+
+                indices.push([i0, i1, i2]);
+            }            
+
+            //tex coords indices
+            for vtx in 0..mesh.texcoord_indices.len() / 3
+            {
+                let i0 = mesh.texcoord_indices[3 * vtx];
+                let i1 = mesh.texcoord_indices[3 * vtx + 1];
+                let i2 = mesh.texcoord_indices[3 * vtx + 2];
+
+                uv_indices.push([i0, i1, i2]);
+            }            
+            
 
             if verts.len() > 0
             {
@@ -356,6 +361,10 @@ impl Scene
                     item.basic.material.diffuse_color = Vector3::<f32>::new(mat.diffuse[0], mat.diffuse[1], mat.diffuse[2]);
                     item.basic.material.refraction_index = mat.optical_density;
                     item.basic.material.alpha = mat.dissolve;
+
+                    //TODO:
+                    item.basic.material.reflectivity = 0.5;
+                    item.basic.material.alpha = 0.5;
 
                     if let Some(illumination) = mat.illumination_model
                     {
@@ -383,8 +392,6 @@ impl Scene
                 }
 
                 item.basic.material.print();
-
-                //item.basic.trans = Isometry3::translation(0.0, -0.0, -1.0);
 
                 self.items.push(Box::new(item));
             }
