@@ -379,8 +379,8 @@ impl Raytracing
                 let item_light_color = Vector3::new(item_color.x * light.color.x, item_color.y * light.color.y, item_color.z * light.color.z);
 
                 //get color
-                //color = color + (item_light_color * light_power * intensity);
-                color = color + (item_light_color * intensity);
+                color = color + (item_light_color * light_power * intensity);
+                //color = color + (item_light_color * intensity);
             }
 
             let refraction_index = item.get_material().refraction_index;
