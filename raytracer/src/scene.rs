@@ -1,9 +1,11 @@
-use nalgebra::{Point3, Vector3};
+use nalgebra::{Point2, Point3, Vector3, Isometry3};
 
 use crate::shape::Shape;
 
 use crate::shape::sphere::Sphere;
 use crate::shape::mesh::Mesh;
+
+use std::path::Path;
 
 #[derive(PartialEq)]
 pub enum LightType
@@ -241,6 +243,7 @@ impl Scene
         mesh_front.basic.material.reflectivity = 0.5;
         mesh_front.basic.load_texture("scene/2k_earth_daymap.jpg");
 
+        /*
         self.items.push(sphere_back);
         self.items.push(sphere_front);
         self.items.push(sphere_left);
@@ -248,6 +251,9 @@ impl Scene
         self.items.push(sphere_not_visible);
         self.items.push(sphere_mirror);
         self.items.push(sphere_texture);
+        */
+
+
         self.items.push(mesh_floor);
         self.items.push(mesh_back);
         self.items.push(mesh_left);
@@ -255,7 +261,135 @@ impl Scene
         self.items.push(mesh_top);
         self.items.push(mesh_behind);
 
+
         //self.items.push(mesh_front);
+
+        self.load("scene/kBert_thumbsup.obj");
+    }
+
+    pub fn load(&mut self, path: &str)
+    {
+        let options = &tobj::LoadOptions
+        {
+
+            ..Default::default()
+        };
+
+        let (models, materials) = tobj::load_obj(&path, options).unwrap();
+        let materials = materials.unwrap();
+
+
+        for (_i, m) in models.iter().enumerate()
+        {
+            let mesh = &m.mesh;
+
+            let mut verts: Vec<Point3::<f32>> = vec![];
+            let mut uvs: Vec<Point2<f32>> = vec![];
+
+            let mut indices:Vec<[u32; 3]> = vec![];
+            let mut uv_indices: Vec<[u32; 3]> = vec![];
+
+            let mut next_face = 0;
+            for face in 0..mesh.face_arities.len()
+            {
+                let end = next_face + mesh.face_arities[face] as usize;
+
+                let face_indices = &mesh.indices[next_face..end];
+
+                if face_indices.len() == 3
+                {
+                    indices.push([face_indices[0], face_indices[1], face_indices[2]]);
+                }
+                else if face_indices.len() == 4
+                {
+                    indices.push([face_indices[0], face_indices[1], face_indices[2]]);
+                    indices.push([face_indices[0], face_indices[2], face_indices[3]]);
+                }
+
+                if !mesh.texcoord_indices.is_empty()
+                {
+                    let texcoord_face_indices = &mesh.texcoord_indices[next_face..end];
+
+                    if texcoord_face_indices.len() == 3
+                    {
+                        uv_indices.push([texcoord_face_indices[0], texcoord_face_indices[1], texcoord_face_indices[2]]);
+                    }
+                    else if texcoord_face_indices.len() == 4
+                    {
+                        uv_indices.push([texcoord_face_indices[0], texcoord_face_indices[1], texcoord_face_indices[2]]);
+                        uv_indices.push([texcoord_face_indices[0], texcoord_face_indices[2], texcoord_face_indices[3]]);
+                    }
+                }
+
+                for vtx in 0..mesh.positions.len() / 3
+                {
+                    let x = mesh.positions[3 * vtx];
+                    let y = mesh.positions[3 * vtx + 1];
+                    let z = mesh.positions[3 * vtx + 2];
+
+                    verts.push(Point3::<f32>::new(x, y, z));
+                }
+
+                for vtx in 0..mesh.texcoords.len() / 2
+                {
+                    let x = mesh.texcoords[2 * vtx];
+                    let y = mesh.texcoords[2 * vtx + 1];
+
+                    uvs.push(Point2::<f32>::new(x, y));
+                }
+
+                next_face = end;
+            }
+
+            if verts.len() > 0
+            {
+                let mut item = Mesh::new_with_data(m.name.as_str(), verts, indices, uvs, uv_indices);
+
+                //apply material
+                if let Some(mat_id) = mesh.material_id
+                {
+                    let mat: &tobj::Material = &materials[mat_id];
+
+                    //item.basic.material.shininess = mat.shininess;
+                    item.basic.material.anmbient_color = Vector3::<f32>::new(mat.ambient[0], mat.ambient[1], mat.ambient[2]);
+                    item.basic.material.specular_color = Vector3::<f32>::new(mat.specular[0], mat.specular[1], mat.specular[2]);
+                    item.basic.material.diffuse_color = Vector3::<f32>::new(mat.diffuse[0], mat.diffuse[1], mat.diffuse[2]);
+                    item.basic.material.refraction_index = mat.optical_density;
+                    item.basic.material.alpha = mat.dissolve;
+
+                    if let Some(illumination) = mat.illumination_model
+                    {
+                        if illumination > 2
+                        {
+                            item.basic.material.reflectivity = 0.5;
+                        }
+                    }
+
+                    //texture
+                    if !mat.diffuse_texture.is_empty()
+                    {
+                        let mut tex_path = mat.diffuse_texture.clone();
+
+                        if Path::new(&tex_path).is_relative()
+                        {
+                            let parent = Path::new(path).parent();
+                            if let Some(parent) = parent
+                            {
+                                tex_path = parent.join(tex_path).to_str().unwrap().to_string();
+                            }
+                        }
+                        item.basic.load_texture(&tex_path);
+                    }
+                }
+
+                item.basic.material.print();
+
+                //item.basic.trans = Isometry3::translation(0.0, -0.0, -1.0);
+
+                self.items.push(Box::new(item));
+            }
+
+        }
     }
 
     pub fn print(&self)

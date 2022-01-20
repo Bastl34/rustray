@@ -26,6 +26,7 @@ pub trait Shape
     }
 }
 
+#[derive(Debug)]
 pub struct Material
 {
     pub anmbient_color: Vector3<f32>,
@@ -56,11 +57,24 @@ impl Material
             texture: DynamicImage::new_rgb8(0,0)
         }
     }
+
+    pub fn print(&self)
+    {
+        println!("anmbient_color: {:?}", self.anmbient_color);
+        println!("diffuse_color: {:?}", self.diffuse_color);
+        println!("specular_color: {:?}", self.specular_color);
+        println!("alpha: {:?}", self.alpha);
+        println!("shininess: {:?}", self.shininess);
+        println!("reflectivity: {:?}", self.reflectivity);
+        println!("refraction_index: {:?}", self.refraction_index);
+        println!("texture: {:?}", self.texture.width() > 0);
+
+    }
 }
 
 pub struct ShapeBasics
 {
-    trans: Isometry3<f32>,
+    pub trans: Isometry3<f32>,
     tran_inverse: Matrix4<f32>,
 
     b_box: AABB,

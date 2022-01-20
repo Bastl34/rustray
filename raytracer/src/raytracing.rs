@@ -297,8 +297,7 @@ impl Raytracing
             let hit_dist = intersection.0;
             let normal = intersection.1;
             let item = intersection.2;
-            let face = intersection.3;
-
+            let face_id = intersection.3;
 
             let surface_normal = normal;
             let hit_point = r.origin + (r.dir * hit_dist);
@@ -356,12 +355,15 @@ impl Raytracing
                     intensity = intensity * (1.0 - shadow_intersection.unwrap().2.get_material().alpha);
                 }
 
+                //TODO: intensity is sometimes > 1.0
+
+                //TODO: specular, diffuse, ambient
                 let mut item_color = (*item).get_material().anmbient_color;
 
                 //texture
                 if (*item).get_basic().has_texture()
                 {
-                    let uv = (*item).get_uv(hit_point, face);
+                    let uv = (*item).get_uv(hit_point, face_id);
 
                     let tex_dims = (*item).get_basic().texture_dimension();
                     let tex_x = self.wrap(uv.x, tex_dims.0);
@@ -377,7 +379,8 @@ impl Raytracing
                 let item_light_color = Vector3::new(item_color.x * light.color.x, item_color.y * light.color.y, item_color.z * light.color.z);
 
                 //get color
-                color = color + (item_light_color * light_power * intensity);
+                //color = color + (item_light_color * light_power * intensity);
+                color = color + (item_light_color * intensity);
             }
 
             let refraction_index = item.get_material().refraction_index;

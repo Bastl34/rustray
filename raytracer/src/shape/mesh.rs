@@ -52,10 +52,8 @@ impl Shape for Mesh
         if let Some(res) = res
         {
             let mut face_id = 0;
-            //println!("{:?}", res.feature);
             if let FeatureId::Face(i) = res.feature
             {
-                //println!("{}", i);
                 face_id = i;
             }
 
@@ -145,14 +143,17 @@ impl Mesh
 
         mesh.calc_bbox();
 
+        //mesh.mesh.recover_topology();
+        //mesh.mesh.compute_pseudo_normals();
+
         mesh
     }
 
     pub fn new_plane(name: &str, x0: Point3<f32>, x1: Point3<f32>, x2: Point3<f32>, x3: Point3<f32>) -> Mesh
     {
-        let points_front = vec![ x0, x1, x2, x3, ];
+        let points = vec![ x0, x1, x2, x3, ];
 
-        let uvs_front = vec!
+        let uvs = vec!
         [
             Point2::new(0.0, 0.0),
             Point2::new(1.0, 0.0),
@@ -160,14 +161,9 @@ impl Mesh
             Point2::new(0.0, 1.0),
         ];
 
-        let indices_front = vec![[0u32, 1, 2], [0, 2, 3]];
-        let uv_indices_front = vec![[0u32, 1, 2], [0, 2, 3]];
+        let indices = vec![[0u32, 1, 2], [0, 2, 3]];
+        let uv_indices = vec![[0u32, 1, 2], [0, 2, 3]];
 
-        Mesh::new_with_data(name, points_front, indices_front, uvs_front, uv_indices_front)
-    }
-
-    pub fn load(path: &str)
-    {
-        let (models, materials) = tobj::load_obj(&path, &tobj::LoadOptions::default()).unwrap();
+        Mesh::new_with_data(name, points, indices, uvs, uv_indices)
     }
 }
