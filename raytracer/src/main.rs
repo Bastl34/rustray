@@ -43,6 +43,7 @@ http://nercury.github.io/rust/opengl/tutorial/2018/02/09/opengl-in-rust-from-scr
 */
 
 const DATA_PATH: &str = "data";
+const IMAGE_PATH: &str = "data/output";
 const POS_PATH: &str = "data/pos.data";
 
 fn main()
@@ -244,7 +245,7 @@ fn main()
                 //save
                 let now = Utc::now();
 
-                let filename = format!("{}/output_{}-{}-{} {}-{}-{}.png", DATA_PATH, now.year(), now.month(), now.day(), now.hour(), now.minute(), now.second());
+                let filename = format!("{}/output_{}-{}-{} {}-{}-{}.png", IMAGE_PATH, now.year(), now.month(), now.day(), now.hour(), now.minute(), now.second());
                 image.save(filename).unwrap();
             }
         }

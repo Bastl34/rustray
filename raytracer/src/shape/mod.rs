@@ -29,7 +29,7 @@ pub trait Shape
 #[derive(Debug)]
 pub struct Material
 {
-    pub anmbient_color: Vector3<f32>,
+    pub ambient_color: Vector3<f32>,
     pub diffuse_color: Vector3<f32>,
     pub specular_color: Vector3<f32>,
     pub alpha: f32,
@@ -37,7 +37,13 @@ pub struct Material
     pub reflectivity: f32,
     pub refraction_index: f32,
 
-    pub texture: DynamicImage
+    pub texture_ambient: DynamicImage,
+    pub texture_diffuse: DynamicImage,
+    pub texture_specular: DynamicImage,
+    pub texture_normal: DynamicImage,
+    pub texture_alpha: DynamicImage,
+
+    pub normal_map_strength: f32,
 }
 
 impl Material
@@ -46,7 +52,7 @@ impl Material
     {
         Material
         {
-            anmbient_color: Vector3::<f32>::new(1.0, 1.0, 1.0),
+            ambient_color: Vector3::<f32>::new(1.0, 1.0, 1.0),
             diffuse_color: Vector3::<f32>::new(1.0, 1.0, 1.0),
             specular_color: Vector3::<f32>::new(1.0, 1.0, 1.0),
             alpha: 1.0,
@@ -54,22 +60,44 @@ impl Material
             reflectivity: 0.0,
             refraction_index: 0.0,
 
-            texture: DynamicImage::new_rgb8(0,0)
+            texture_ambient: DynamicImage::new_rgb8(0,0),
+            texture_diffuse: DynamicImage::new_rgb8(0,0),
+            texture_specular: DynamicImage::new_rgb8(0,0),
+            texture_normal: DynamicImage::new_rgb8(0,0),
+            texture_alpha: DynamicImage::new_rgb8(0,0),
+
+            normal_map_strength: 1.0,
         }
     }
 
     pub fn print(&self)
     {
-        println!("anmbient_color: {:?}", self.anmbient_color);
+        println!("ambient_color: {:?}", self.ambient_color);
         println!("diffuse_color: {:?}", self.diffuse_color);
         println!("specular_color: {:?}", self.specular_color);
         println!("alpha: {:?}", self.alpha);
         println!("shininess: {:?}", self.shininess);
         println!("reflectivity: {:?}", self.reflectivity);
         println!("refraction_index: {:?}", self.refraction_index);
-        println!("texture: {:?}", self.texture.width() > 0);
 
+        println!("texture_ambient: {:?}", self.texture_ambient.width() > 0);
+        println!("texture_diffuse: {:?}", self.texture_diffuse.width() > 0);
+        println!("texture_specular: {:?}", self.texture_specular.width() > 0);
+        println!("texture_normal: {:?}", self.texture_normal.width() > 0);
+        println!("texture_alpha: {:?}", self.texture_alpha.width() > 0);
+
+        println!("normal_map_strength: {:?}", self.normal_map_strength);
     }
+}
+
+#[derive(Clone, Copy)]
+pub enum TextureType
+{
+    Diffuse,
+    Ambient,
+    Specular,
+    Normal,
+    Alpha
 }
 
 pub struct ShapeBasics
@@ -100,29 +128,61 @@ impl ShapeBasics
         self.trans.to_homogeneous()
     }
 
-    pub fn load_texture(&mut self, path: &str)
+    pub fn load_texture(&mut self, path: &str, tex_type: TextureType)
     {
-        self.material.texture = image::open(path).unwrap();
+        let tex = image::open(path).unwrap();
+        match tex_type
+        {
+            TextureType::Diffuse => { self.material.texture_diffuse = tex; },
+            TextureType::Ambient => { self.material.texture_ambient = tex; },
+            TextureType::Specular => { self.material.texture_specular = tex; },
+            TextureType::Normal => { self.material.texture_normal = tex; },
+            TextureType::Alpha => { self.material.texture_alpha = tex; },
+        }
     }
 
-    pub fn has_texture(&self) -> bool
+    pub fn has_texture(&self, tex_type: TextureType) -> bool
     {
-        self.material.texture.dimensions().0 > 0
+        match tex_type
+        {
+            TextureType::Diffuse => self.material.texture_diffuse.dimensions().0 > 0,
+            TextureType::Ambient => self.material.texture_ambient.dimensions().0 > 0,
+            TextureType::Specular => self.material.texture_specular.dimensions().0 > 0,
+            TextureType::Normal => self.material.texture_normal.dimensions().0 > 0,
+            TextureType::Alpha => self.material.texture_alpha.dimensions().0 > 0,
+        }
     }
 
-    pub fn texture_dimension(&self) -> (u32, u32)
+    pub fn texture_dimension(&self, tex_type: TextureType) -> (u32, u32)
     {
-        self.material.texture.dimensions()
+        match tex_type
+        {
+            TextureType::Diffuse => self.material.texture_diffuse.dimensions(),
+            TextureType::Ambient => self.material.texture_ambient.dimensions(),
+            TextureType::Specular => self.material.texture_specular.dimensions(),
+            TextureType::Normal => self.material.texture_normal.dimensions(),
+            TextureType::Alpha => self.material.texture_alpha.dimensions(),
+        }
     }
 
-    pub fn get_texture_pixel(&self, x: u32, y: u32) -> Vector3<f32>
+    pub fn get_texture_pixel(&self, x: u32, y: u32, tex_type: TextureType) -> Vector3<f32>
     {
-        if !self.has_texture()
+        if !self.has_texture(tex_type)
         {
             return Vector3::<f32>::new(0.0, 0.0, 0.0);
         }
 
-        let pixel = self.material.texture.get_pixel(x, y);
+        let pixel;
+
+        match tex_type
+        {
+            TextureType::Diffuse => { pixel = self.material.texture_diffuse.get_pixel(x, y); },
+            TextureType::Ambient => { pixel = self.material.texture_ambient.get_pixel(x, y); },
+            TextureType::Specular => { pixel = self.material.texture_specular.get_pixel(x, y); },
+            TextureType::Normal => { pixel = self.material.texture_normal.get_pixel(x, y); },
+            TextureType::Alpha => { pixel = self.material.texture_alpha.get_pixel(x, y); },
+        }
+
         let rgb = pixel.to_rgb();
 
         Vector3::<f32>::new

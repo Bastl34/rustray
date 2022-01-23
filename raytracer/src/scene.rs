@@ -1,6 +1,6 @@
-use nalgebra::{Point2, Point3, Vector3, Isometry3};
+use nalgebra::{Point2, Point3, Vector3};
 
-use crate::shape::Shape;
+use crate::shape::{Shape, TextureType};
 
 use crate::shape::sphere::Sphere;
 use crate::shape::mesh::Mesh;
@@ -79,7 +79,8 @@ impl Scene
 
         self.lights.push(Box::new(Light
         {
-            pos: Point3::new(5.0, 5.0, -10.0),
+            //pos: Point3::new(5.0, 5.0, -10.0),
+            pos: Point3::new(5.0, 5.0, -1.0),
             dir: Vector3::new(-1.0f32, -1.0, -1.0),
             color: Vector3::new(1.0, 0.0, 0.0),
             intensity: 150.0,
@@ -91,58 +92,63 @@ impl Scene
     {
         // ******************** some spheres ********************
         let mut sphere_back = Box::new(Sphere::new_with_pos("sphere_back", 1.0, 0.0, -10.0, 1.0));
-        sphere_back.basic.material.anmbient_color.x = 1.0;
-        sphere_back.basic.material.anmbient_color.y = 0.0;
-        sphere_back.basic.material.anmbient_color.z = 0.0;
+        sphere_back.basic.material.ambient_color.x = 1.0;
+        sphere_back.basic.material.ambient_color.y = 0.0;
+        sphere_back.basic.material.ambient_color.z = 0.0;
         sphere_back.basic.material.reflectivity = 0.3;
         sphere_back.basic.material.alpha = 0.1;
         sphere_back.basic.material.refraction_index = 1.5;
 
         let mut sphere_front = Box::new(Sphere::new_with_pos("sphere_front", 0.0, 0.0, -5.0, 3.0));
-        sphere_front.basic.material.anmbient_color.x = 1.0;
-        sphere_front.basic.material.anmbient_color.y = 1.0;
-        sphere_front.basic.material.anmbient_color.z = 1.0;
+        sphere_front.basic.material.ambient_color.x = 1.0;
+        sphere_front.basic.material.ambient_color.y = 1.0;
+        sphere_front.basic.material.ambient_color.z = 1.0;
         sphere_front.basic.material.reflectivity = 0.3;
         sphere_front.basic.material.alpha = 0.1;
         sphere_front.basic.material.refraction_index = 1.5;
 
         let mut sphere_left = Box::new(Sphere::new_with_pos("sphere_left", -7.0, 0.0, -20.0, 4.0));
-        sphere_left.basic.material.anmbient_color.x = 0.0;
-        sphere_left.basic.material.anmbient_color.y = 1.0;
-        sphere_left.basic.material.anmbient_color.z = 0.0;
+        sphere_left.basic.material.ambient_color.x = 0.0;
+        sphere_left.basic.material.ambient_color.y = 1.0;
+        sphere_left.basic.material.ambient_color.z = 0.0;
         sphere_left.basic.material.reflectivity = 0.5;
         sphere_left.basic.material.alpha = 0.8;
         sphere_left.basic.material.refraction_index = 1.5;
 
         let mut sphere_right = Box::new(Sphere::new_with_pos("sphere_right", 7.0, -2.5, -18.0, 3.0));
-        sphere_right.basic.material.anmbient_color.x = 0.0;
-        sphere_right.basic.material.anmbient_color.y = 0.0;
-        sphere_right.basic.material.anmbient_color.z = 1.0;
+        sphere_right.basic.material.ambient_color.x = 0.0;
+        sphere_right.basic.material.ambient_color.y = 0.0;
+        sphere_right.basic.material.ambient_color.z = 1.0;
         sphere_right.basic.material.reflectivity = 0.5;
         sphere_right.basic.material.alpha = 0.8;
         sphere_right.basic.material.refraction_index = 1.5;
 
         let mut sphere_mirror = Box::new(Sphere::new_with_pos("sphere_mirror", -6.0, 2.5, -7.0, 1.0));
-        sphere_mirror.basic.material.anmbient_color.x = 1.0;
-        sphere_mirror.basic.material.anmbient_color.y = 1.0;
-        sphere_mirror.basic.material.anmbient_color.z = 1.0;
+        sphere_mirror.basic.material.ambient_color.x = 1.0;
+        sphere_mirror.basic.material.ambient_color.y = 1.0;
+        sphere_mirror.basic.material.ambient_color.z = 1.0;
         sphere_mirror.basic.material.reflectivity = 1.0;
         sphere_mirror.basic.material.alpha = 1.0;
         sphere_mirror.basic.material.refraction_index = 1.5;
 
-        let mut sphere_texture = Box::new(Sphere::new_with_pos("sphere_texture", 6.0, -1.0, -5.0, 1.0));
-        sphere_texture.basic.material.anmbient_color.x = 1.0;
-        sphere_texture.basic.material.anmbient_color.y = 1.0;
-        sphere_texture.basic.material.anmbient_color.z = 1.0;
-        sphere_texture.basic.material.reflectivity = 0.3;
-        sphere_texture.basic.material.alpha = 0.7;
-        sphere_mirror.basic.material.refraction_index = 1.5;
-        sphere_texture.basic.load_texture("scene/2k_earth_daymap.jpg");
+        //let mut sphere_texture = Box::new(Sphere::new_with_pos("sphere_texture", 6.0, -1.0, -5.0, 1.0));
+        let mut sphere_texture = Box::new(Sphere::new_with_pos("sphere_texture", 0.0, -1.0, -12.0, 4.0));
+        sphere_texture.basic.material.ambient_color.x = 1.0;
+        sphere_texture.basic.material.ambient_color.y = 1.0;
+        sphere_texture.basic.material.ambient_color.z = 1.0;
+        sphere_texture.basic.material.reflectivity = 0.7;
+        sphere_texture.basic.material.alpha = 0.5;
+        sphere_texture.basic.material.refraction_index = 1.5;
+        //sphere_texture.basic.load_texture("scene/checkerboard.png", TextureType::Diffuse);
+        sphere_texture.basic.load_texture("scene/earth/2k_earth_daymap.jpg", TextureType::Diffuse);
+        sphere_texture.basic.load_texture("scene/earth/2k_earth_normal_map.jpg", TextureType::Normal);
+        //sphere_texture.basic.load_texture("scene/white.png", TextureType::Normal);
+        //sphere_texture.basic.load_texture("scene/checkerboard.png", TextureType::Normal);
 
         let mut sphere_not_visible = Box::new(Sphere::new_with_pos("sphere_not_visible", 7.0, 0.0, 10.0, 3.0));
-        sphere_not_visible.basic.material.anmbient_color.x = 1.0;
-        sphere_not_visible.basic.material.anmbient_color.y = 1.0;
-        sphere_not_visible.basic.material.anmbient_color.z = 1.0;
+        sphere_not_visible.basic.material.ambient_color.x = 1.0;
+        sphere_not_visible.basic.material.ambient_color.y = 1.0;
+        sphere_not_visible.basic.material.ambient_color.z = 1.0;
         sphere_not_visible.basic.material.reflectivity = 0.5;
 
         // ******************** some meshes ********************
@@ -156,11 +162,11 @@ impl Scene
             Point3::new(-10.0, -5.5, -20.0),
         ));
 
-        mesh_floor.basic.material.anmbient_color.x = 0.5;
-        mesh_floor.basic.material.anmbient_color.y = 0.5;
-        mesh_floor.basic.material.anmbient_color.z = 1.0;
+        mesh_floor.basic.material.ambient_color.x = 0.5;
+        mesh_floor.basic.material.ambient_color.y = 0.5;
+        mesh_floor.basic.material.ambient_color.z = 1.0;
         mesh_floor.basic.material.reflectivity = 0.4;
-        mesh_floor.basic.load_texture("scene/checkerboard.png");
+        mesh_floor.basic.load_texture("scene/checkerboard.png", TextureType::Diffuse);
 
         //back
         let mut mesh_back = Box::new(Mesh::new_plane
@@ -172,9 +178,9 @@ impl Scene
             Point3::new(-10.0, 5.5, -20.0),
         ));
 
-        mesh_back.basic.material.anmbient_color.x = 0.5;
-        mesh_back.basic.material.anmbient_color.y = 0.5;
-        mesh_back.basic.material.anmbient_color.z = 1.0;
+        mesh_back.basic.material.ambient_color.x = 0.5;
+        mesh_back.basic.material.ambient_color.y = 0.5;
+        mesh_back.basic.material.ambient_color.z = 1.0;
         mesh_back.basic.material.reflectivity = 0.4;
 
         //left
@@ -187,10 +193,13 @@ impl Scene
             Point3::new(-10.0, 5.5, 2.0),
         ));
 
-        mesh_left.basic.material.anmbient_color.x = 1.0;
-        mesh_left.basic.material.anmbient_color.y = 0.0;
-        mesh_left.basic.material.anmbient_color.z = 0.0;
+        mesh_left.basic.material.ambient_color.x = 1.0;
+        mesh_left.basic.material.ambient_color.y = 0.0;
+        mesh_left.basic.material.ambient_color.z = 0.0;
         mesh_left.basic.material.reflectivity = 0.4;
+        //mesh_left.basic.load_texture("scene/wall/Wall_Stone_022_basecolor.jpg", TextureType::Diffuse);
+        //mesh_left.basic.load_texture("scene/wall/Wall_Stone_022_normal.jpg", TextureType::Normal);
+        //mesh_left.basic.material.normal_map_strength = 1.0;
 
         //right
         let mut mesh_right = Box::new(Mesh::new_plane
@@ -202,9 +211,9 @@ impl Scene
             Point3::new(10.0, 5.5, 2.0),
         ));
 
-        mesh_right.basic.material.anmbient_color.x = 0.0;
-        mesh_right.basic.material.anmbient_color.y = 1.0;
-        mesh_right.basic.material.anmbient_color.z = 0.0;
+        mesh_right.basic.material.ambient_color.x = 0.0;
+        mesh_right.basic.material.ambient_color.y = 1.0;
+        mesh_right.basic.material.ambient_color.z = 0.0;
         mesh_right.basic.material.reflectivity = 0.4;
 
         //top
@@ -217,9 +226,9 @@ impl Scene
             Point3::new(-10.0, 5.5, -20.0),
         ));
 
-        mesh_top.basic.material.anmbient_color.x = 0.5;
-        mesh_top.basic.material.anmbient_color.y = 0.5;
-        mesh_top.basic.material.anmbient_color.z = 1.0;
+        mesh_top.basic.material.ambient_color.x = 0.5;
+        mesh_top.basic.material.ambient_color.y = 0.5;
+        mesh_top.basic.material.ambient_color.z = 1.0;
         mesh_top.basic.material.reflectivity = 0.4;
 
         //behind
@@ -232,9 +241,9 @@ impl Scene
             Point3::new(-10.0, 5.5, 2.0),
         ));
 
-        mesh_behind.basic.material.anmbient_color.x = 1.0;
-        mesh_behind.basic.material.anmbient_color.y = 0.5;
-        mesh_behind.basic.material.anmbient_color.z = 0.5;
+        mesh_behind.basic.material.ambient_color.x = 1.0;
+        mesh_behind.basic.material.ambient_color.y = 0.5;
+        mesh_behind.basic.material.ambient_color.z = 0.5;
         mesh_behind.basic.material.reflectivity = 0.4;
 
         let mut mesh_front = Box::new(Mesh::new_plane
@@ -246,11 +255,10 @@ impl Scene
             Point3::new(-5.0, 2.5, -10.0),
         ));
 
-        mesh_front.basic.material.anmbient_color.x = 1.0;
-        mesh_front.basic.material.anmbient_color.y = 1.0;
-        mesh_front.basic.material.anmbient_color.z = 1.0;
+        mesh_front.basic.material.ambient_color.x = 1.0;
+        mesh_front.basic.material.ambient_color.y = 1.0;
+        mesh_front.basic.material.ambient_color.z = 1.0;
         mesh_front.basic.material.reflectivity = 0.3;
-        mesh_front.basic.load_texture("scene/2k_earth_daymap.jpg");
 
 /*
         self.items.push(sphere_back);
@@ -262,6 +270,8 @@ impl Scene
         self.items.push(sphere_texture);
 */
 
+        self.items.push(sphere_texture);
+
         self.items.push(mesh_floor);
         self.items.push(mesh_back);
         self.items.push(mesh_left);
@@ -272,7 +282,7 @@ impl Scene
 
         //self.items.push(mesh_front);
 
-        self.load("scene/kBert_thumbsup_bevel.obj");
+        //self.load("scene/kBert_thumbsup_bevel.obj");
 
         //let mut k_bert = self.get_by_name("kBert_Cube").unwrap();
         //k_bert.borrow_mut().
@@ -345,7 +355,6 @@ impl Scene
                 uv_indices.push([i0, i1, i2]);
             }            
             
-
             if verts.len() > 0
             {
                 let mut item = Mesh::new_with_data(m.name.as_str(), verts, indices, uvs, uv_indices);
@@ -356,7 +365,7 @@ impl Scene
                     let mat: &tobj::Material = &materials[mat_id];
 
                     //item.basic.material.shininess = mat.shininess;
-                    item.basic.material.anmbient_color = Vector3::<f32>::new(mat.ambient[0], mat.ambient[1], mat.ambient[2]);
+                    item.basic.material.ambient_color = Vector3::<f32>::new(mat.ambient[0], mat.ambient[1], mat.ambient[2]);
                     item.basic.material.specular_color = Vector3::<f32>::new(mat.specular[0], mat.specular[1], mat.specular[2]);
                     item.basic.material.diffuse_color = Vector3::<f32>::new(mat.diffuse[0], mat.diffuse[1], mat.diffuse[2]);
                     item.basic.material.refraction_index = mat.optical_density;
@@ -387,7 +396,7 @@ impl Scene
                                 tex_path = parent.join(tex_path).to_str().unwrap().to_string();
                             }
                         }
-                        item.basic.load_texture(&tex_path);
+                        item.basic.load_texture(&tex_path, TextureType::Diffuse);
                     }
                 }
 

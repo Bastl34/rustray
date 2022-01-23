@@ -1,9 +1,9 @@
-use crate::shape::Shape;
+use crate::shape::{Shape, TextureType};
 use crate::pixel_color::PixelColor;
 
 use crate::scene::{Scene, LightType};
 
-use nalgebra::{Perspective3, Isometry3, Point3, Vector3};
+use nalgebra::{Perspective3, Isometry3, Point3, Vector3, Matrix3};
 use parry3d::query::{Ray};
 
 const SHADOW_BIAS: f32 = 0.001;
@@ -282,6 +282,25 @@ impl Raytracing
         }
     }
 
+    pub fn get_tex_color(&self, item: &dyn Shape, hit_point: Point3<f32>, face_id: u32, tex_type: TextureType) -> Option<Vector3<f32>>
+    {
+        //texture
+        if (*item).get_basic().has_texture(tex_type)
+        {
+            let uv = (*item).get_uv(hit_point, face_id);
+
+            let tex_dims = (*item).get_basic().texture_dimension(tex_type);
+            let tex_x = self.wrap(uv.x, tex_dims.0);
+            let tex_y = self.wrap(uv.y, tex_dims.1);
+
+            let tex_color = (*item).get_basic().get_texture_pixel(tex_x, tex_y, tex_type);
+
+            return Some(tex_color);
+        }
+
+        None
+    }
+
     pub fn get_color(&self, ray: Ray, depth: u16) -> Vector3<f32>
     {
         let mut r = ray;
@@ -299,8 +318,45 @@ impl Raytracing
             let item = intersection.2;
             let face_id = intersection.3;
 
-            let surface_normal = normal;
+            let mut surface_normal = normal;
             let hit_point = r.origin + (r.dir * hit_dist);
+
+            //normal mapping
+            let normal_tex_color = self.get_tex_color(item, hit_point, face_id, TextureType::Normal);
+            if let Some(normal_tex_color) = normal_tex_color
+            {
+                let mut tangent = normal.cross(&Vector3::<f32>::new(0.0, 1.0, 0.0));
+
+                if tangent.magnitude()  <= 0.0001
+                {
+                    tangent = normal.cross(&Vector3::<f32>::new(0.0, 0.0, 1.0));
+                }
+
+                tangent = tangent.normalize();
+                let bitangent = normal.cross(&tangent).normalize();
+
+                //to tagent space -- n * 2 - 1
+                let mut normal_map = normal_tex_color;
+                normal_map.x = (normal_map.x * 2.0) - 1.0;
+                normal_map.y = (normal_map.y * 2.0) - 1.0;
+                normal_map.z = (normal_map.z * 2.0) - 1.0;
+
+                normal_map.x *= item.get_material().normal_map_strength;
+                normal_map.y *= item.get_material().normal_map_strength;
+
+                normal_map = normal_map.normalize();
+
+                let tbn = Matrix3::<f32>::from_columns(&[tangent, bitangent, normal]);
+
+                surface_normal = (tbn * normal_map).normalize();
+
+                //https://stackoverflow.com/questions/41015574/raytracing-normal-mapping
+                //http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-13-normal-mapping/
+                //https://lettier.github.io/3d-game-shaders-for-beginners/normal-mapping.html
+
+                //strengthen:
+                //https://computergraphics.stackexchange.com/questions/5411/correct-way-to-set-normal-strength/5412
+            }
 
             let alpha = item.get_material().alpha;
 
@@ -358,22 +414,15 @@ impl Raytracing
                 //TODO: intensity is sometimes > 1.0
 
                 //TODO: specular, diffuse, ambient
-                let mut item_color = (*item).get_material().anmbient_color;
+                let mut item_color = (*item).get_material().ambient_color;
 
-                //texture
-                if (*item).get_basic().has_texture()
+                //diffuse texture
+                let diffuse_tex_color = self.get_tex_color(item, hit_point, face_id, TextureType::Diffuse);
+                if let Some(diffuse_tex_color) = diffuse_tex_color
                 {
-                    let uv = (*item).get_uv(hit_point, face_id);
-
-                    let tex_dims = (*item).get_basic().texture_dimension();
-                    let tex_x = self.wrap(uv.x, tex_dims.0);
-                    let tex_y = self.wrap(uv.y, tex_dims.1);
-
-                    let tex_color = (*item).get_basic().get_texture_pixel(tex_x, tex_y);
-
-                    item_color.x *= tex_color.x;
-                    item_color.y *= tex_color.y;
-                    item_color.z *= tex_color.z;
+                    item_color.x *= diffuse_tex_color.x;
+                    item_color.y *= diffuse_tex_color.y;
+                    item_color.z *= diffuse_tex_color.z;   
                 }
 
                 let item_light_color = Vector3::new(item_color.x * light.color.x, item_color.y * light.color.y, item_color.z * light.color.z);
@@ -386,7 +435,7 @@ impl Raytracing
             let refraction_index = item.get_material().refraction_index;
 
             //fresnel
-            let kr = self.fresnel(r.dir, normal, refraction_index);
+            let kr = self.fresnel(r.dir, surface_normal, refraction_index);
 
             //reflectivity
             let reflectivity = item.get_material().reflectivity;
@@ -394,7 +443,7 @@ impl Raytracing
 
             if item.get_material().reflectivity > 0.0 && depth <= self.max_recursion
             {
-                let reflection_ray = self.create_reflection(normal, r.dir, hit_point);
+                let reflection_ray = self.create_reflection(surface_normal, r.dir, hit_point);
                 let reflection_color = self.get_color(reflection_ray, depth + 1 );
 
                 //color = color + (reflection_color * reflectivity * kr);
@@ -404,7 +453,7 @@ impl Raytracing
             //refraction
             if alpha < 1.0 && depth <= self.max_recursion
             {
-                let transmission_ray = self.create_transmission(normal, r.dir, hit_point, refraction_index);
+                let transmission_ray = self.create_transmission(surface_normal, r.dir, hit_point, refraction_index);
 
                 if let Some(transmission_ray) = transmission_ray
                 {
