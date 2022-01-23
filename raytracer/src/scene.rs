@@ -132,18 +132,21 @@ impl Scene
         sphere_mirror.basic.material.refraction_index = 1.5;
 
         //let mut sphere_texture = Box::new(Sphere::new_with_pos("sphere_texture", 6.0, -1.0, -5.0, 1.0));
-        let mut sphere_texture = Box::new(Sphere::new_with_pos("sphere_texture", 0.0, -1.0, -12.0, 4.0));
+        let mut sphere_texture = Box::new(Sphere::new_with_pos("sphere_texture", 0.0, -1.0, -7.0, 4.0));
         sphere_texture.basic.material.ambient_color.x = 1.0;
         sphere_texture.basic.material.ambient_color.y = 1.0;
         sphere_texture.basic.material.ambient_color.z = 1.0;
-        sphere_texture.basic.material.reflectivity = 0.7;
-        sphere_texture.basic.material.alpha = 0.5;
-        sphere_texture.basic.material.refraction_index = 1.5;
+        //sphere_texture.basic.material.reflectivity = 0.7;
+        sphere_texture.basic.material.reflectivity = 0.0;
+        sphere_texture.basic.material.alpha = 1.0;
+        sphere_texture.basic.material.refraction_index = 1.0;
         //sphere_texture.basic.load_texture("scene/checkerboard.png", TextureType::Diffuse);
-        sphere_texture.basic.load_texture("scene/earth/2k_earth_daymap.jpg", TextureType::Diffuse);
-        sphere_texture.basic.load_texture("scene/earth/2k_earth_normal_map.jpg", TextureType::Normal);
+        //sphere_texture.basic.load_texture("scene/earth/2k_earth_daymap.jpg", TextureType::Diffuse);
+        //sphere_texture.basic.load_texture("scene/earth/2k_earth_normal_map.jpg", TextureType::Normal);
         //sphere_texture.basic.load_texture("scene/white.png", TextureType::Normal);
         //sphere_texture.basic.load_texture("scene/checkerboard.png", TextureType::Normal);
+        sphere_texture.basic.load_texture("scene/leather/Leather_Weave_006_basecolor.jpg", TextureType::Diffuse);
+        sphere_texture.basic.load_texture("scene/leather/Leather_Weave_006_opacity.jpg", TextureType::Alpha);
 
         let mut sphere_not_visible = Box::new(Sphere::new_with_pos("sphere_not_visible", 7.0, 0.0, 10.0, 3.0));
         sphere_not_visible.basic.material.ambient_color.x = 1.0;

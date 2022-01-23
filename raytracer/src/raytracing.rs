@@ -358,8 +358,15 @@ impl Raytracing
                 //https://computergraphics.stackexchange.com/questions/5411/correct-way-to-set-normal-strength/5412
             }
 
-            let alpha = item.get_material().alpha;
+            //alpha mapping
+            let mut alpha = item.get_material().alpha;
+            let alpha_tex_color = self.get_tex_color(item, hit_point, face_id, TextureType::Alpha);
+            if let Some(alpha_tex_color) = alpha_tex_color
+            {
+                alpha *= alpha_tex_color.x;
+            }
 
+            //color
             for light in &self.scene.lights
             {
                 //get direction to light based on light type
@@ -406,9 +413,23 @@ impl Raytracing
                     }
                 }
 
+                //shadow intensity
                 if !in_light
                 {
-                    intensity = intensity * (1.0 - shadow_intersection.unwrap().2.get_material().alpha);
+                    let shadow_obj = shadow_intersection.unwrap().2;
+                    let mut shadow_source_alpha = shadow_obj.get_material().alpha;
+
+                    let shadow_face_id = shadow_intersection.unwrap().3;
+
+                    let shadow_hit_point = shadow_ray.origin + (shadow_ray.dir * shadow_intersection.unwrap().0);
+
+                    let shadow_alpha_tex_color = self.get_tex_color(shadow_obj, shadow_hit_point, shadow_face_id, TextureType::Alpha);
+                    if let Some(shadow_alpha_tex_color) = shadow_alpha_tex_color
+                    {
+                        shadow_source_alpha *= shadow_alpha_tex_color.x;
+                    }
+
+                    intensity = intensity * (1.0 - shadow_source_alpha);
                 }
 
                 //TODO: intensity is sometimes > 1.0

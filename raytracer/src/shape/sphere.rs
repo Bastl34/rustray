@@ -3,7 +3,7 @@ use nalgebra::{Isometry3, Vector3, Point2, Point3, ComplexField};
 use parry3d::query::{Ray, RayCast};
 use parry3d::shape::Ball;
 
-use crate::shape::{Shape, ShapeBasics, Material};
+use crate::shape::{Shape, ShapeBasics, Material, TextureType};
 
 pub struct Sphere
 {
@@ -39,13 +39,13 @@ impl Shape for Sphere
     {
         //self.basic.b_box.cast_ray(&self.basic.trans, ray, std::f32::MAX, true)
         let trans = Isometry3::<f32>::identity();
-        let solid = !(self.basic.material.alpha < 1.0);
+        let solid = !(self.basic.material.alpha < 1.0 || self.basic.has_texture(TextureType::Alpha));
         self.basic.b_box.cast_ray(&trans, ray, std::f32::MAX, solid)
     }
 
     fn intersect(&self, ray: &Ray) -> Option<(f32, Vector3<f32>, u32)>
     {
-        let solid = !(self.basic.material.alpha < 1.0);
+        let solid = !(self.basic.material.alpha < 1.0 || self.basic.has_texture(TextureType::Alpha));
         let res = self.ball.cast_ray_and_get_normal(&self.basic.trans, ray, std::f32::MAX, solid);
         if let Some(res) = res
         {

@@ -58,7 +58,7 @@ impl Material
             alpha: 1.0,
             shininess: 1.0,
             reflectivity: 0.0,
-            refraction_index: 0.0,
+            refraction_index: 1.0,
 
             texture_ambient: DynamicImage::new_rgb8(0,0),
             texture_diffuse: DynamicImage::new_rgb8(0,0),
