@@ -165,9 +165,10 @@ impl Scene
             Point3::new(-10.0, -5.5, -20.0),
         ));
 
-        mesh_floor.basic.material.ambient_color.x = 0.5;
-        mesh_floor.basic.material.ambient_color.y = 0.5;
-        mesh_floor.basic.material.ambient_color.z = 1.0;
+        mesh_floor.basic.material.diffuse_color = Vector3::<f32>::new(0.5, 0.5, 1.0);
+        mesh_floor.basic.material.specular_color = mesh_floor.basic.material.diffuse_color * 0.8;
+        mesh_floor.basic.material.ambient_color = mesh_floor.basic.material.diffuse_color * 0.01;
+        
         mesh_floor.basic.material.reflectivity = 0.4;
         mesh_floor.basic.load_texture("scene/checkerboard.png", TextureType::Diffuse);
 
@@ -181,9 +182,10 @@ impl Scene
             Point3::new(-10.0, 5.5, -20.0),
         ));
 
-        mesh_back.basic.material.ambient_color.x = 0.5;
-        mesh_back.basic.material.ambient_color.y = 0.5;
-        mesh_back.basic.material.ambient_color.z = 1.0;
+        mesh_back.basic.material.diffuse_color = Vector3::<f32>::new(0.5, 0.5, 1.0);
+        mesh_back.basic.material.specular_color = mesh_back.basic.material.diffuse_color * 0.8;
+        mesh_back.basic.material.ambient_color = mesh_back.basic.material.diffuse_color * 0.01;
+        
         mesh_back.basic.material.reflectivity = 0.4;
 
         //left
@@ -196,9 +198,11 @@ impl Scene
             Point3::new(-10.0, 5.5, 2.0),
         ));
 
-        mesh_left.basic.material.ambient_color.x = 1.0;
-        mesh_left.basic.material.ambient_color.y = 0.0;
-        mesh_left.basic.material.ambient_color.z = 0.0;
+        
+        mesh_left.basic.material.diffuse_color = Vector3::<f32>::new(1.0, 0.0, 0.0);
+        mesh_left.basic.material.specular_color = mesh_left.basic.material.diffuse_color * 0.8;
+        mesh_left.basic.material.ambient_color = mesh_left.basic.material.diffuse_color * 0.01;
+        
         mesh_left.basic.material.reflectivity = 0.4;
         //mesh_left.basic.load_texture("scene/wall/Wall_Stone_022_basecolor.jpg", TextureType::Diffuse);
         //mesh_left.basic.load_texture("scene/wall/Wall_Stone_022_normal.jpg", TextureType::Normal);
@@ -213,10 +217,10 @@ impl Scene
             Point3::new(10.0, 5.5, -20.0),
             Point3::new(10.0, 5.5, 2.0),
         ));
-
-        mesh_right.basic.material.ambient_color.x = 0.0;
-        mesh_right.basic.material.ambient_color.y = 1.0;
-        mesh_right.basic.material.ambient_color.z = 0.0;
+        
+        mesh_right.basic.material.diffuse_color = Vector3::<f32>::new(0.0, 1.0, 0.0);
+        mesh_right.basic.material.specular_color = mesh_right.basic.material.diffuse_color * 0.8;
+        mesh_right.basic.material.ambient_color = mesh_right.basic.material.diffuse_color * 0.01;
         mesh_right.basic.material.reflectivity = 0.4;
 
         //top
@@ -229,9 +233,9 @@ impl Scene
             Point3::new(-10.0, 5.5, -20.0),
         ));
 
-        mesh_top.basic.material.ambient_color.x = 0.5;
-        mesh_top.basic.material.ambient_color.y = 0.5;
-        mesh_top.basic.material.ambient_color.z = 1.0;
+        mesh_top.basic.material.diffuse_color = Vector3::<f32>::new(0.5, 0.5, 1.0);
+        mesh_top.basic.material.specular_color = mesh_top.basic.material.diffuse_color * 0.8;
+        mesh_top.basic.material.ambient_color = mesh_top.basic.material.diffuse_color * 0.01;
         mesh_top.basic.material.reflectivity = 0.4;
 
         //behind
@@ -244,9 +248,9 @@ impl Scene
             Point3::new(-10.0, 5.5, 2.0),
         ));
 
-        mesh_behind.basic.material.ambient_color.x = 1.0;
-        mesh_behind.basic.material.ambient_color.y = 0.5;
-        mesh_behind.basic.material.ambient_color.z = 0.5;
+        mesh_behind.basic.material.diffuse_color = Vector3::<f32>::new(1.0, 0.5, 0.5);
+        mesh_behind.basic.material.specular_color = mesh_behind.basic.material.diffuse_color * 0.8;
+        mesh_behind.basic.material.ambient_color = mesh_behind.basic.material.diffuse_color * 0.01;
         mesh_behind.basic.material.reflectivity = 0.4;
 
         let mut mesh_front = Box::new(Mesh::new_plane
@@ -258,9 +262,10 @@ impl Scene
             Point3::new(-5.0, 2.5, -10.0),
         ));
 
-        mesh_front.basic.material.ambient_color.x = 1.0;
-        mesh_front.basic.material.ambient_color.y = 1.0;
-        mesh_front.basic.material.ambient_color.z = 1.0;
+        mesh_front.basic.material.diffuse_color = Vector3::<f32>::new(1.0, 1.0, 1.0);
+        mesh_front.basic.material.specular_color = mesh_front.basic.material.diffuse_color * 0.8;
+        mesh_front.basic.material.ambient_color = mesh_front.basic.material.diffuse_color * 0.01;
+                
         mesh_front.basic.material.reflectivity = 0.3;
 
 /*
@@ -273,7 +278,7 @@ impl Scene
         self.items.push(sphere_texture);
 */
 
-        self.items.push(sphere_texture);
+        //self.items.push(sphere_texture);
 
         self.items.push(mesh_floor);
         self.items.push(mesh_back);
@@ -285,7 +290,7 @@ impl Scene
 
         //self.items.push(mesh_front);
 
-        //self.load("scene/kBert_thumbsup_bevel.obj");
+        self.load("scene/kBert_thumbsup_bevel.obj");
 
         //let mut k_bert = self.get_by_name("kBert_Cube").unwrap();
         //k_bert.borrow_mut().
@@ -367,7 +372,7 @@ impl Scene
                 {
                     let mat: &tobj::Material = &materials[mat_id];
 
-                    //item.basic.material.shininess = mat.shininess;
+                    item.basic.material.shininess = mat.shininess;
                     item.basic.material.ambient_color = Vector3::<f32>::new(mat.ambient[0], mat.ambient[1], mat.ambient[2]);
                     item.basic.material.specular_color = Vector3::<f32>::new(mat.specular[0], mat.specular[1], mat.specular[2]);
                     item.basic.material.diffuse_color = Vector3::<f32>::new(mat.diffuse[0], mat.diffuse[1], mat.diffuse[2]);

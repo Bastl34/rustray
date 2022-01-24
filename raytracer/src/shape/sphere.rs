@@ -1,4 +1,4 @@
-use nalgebra::{Isometry3, Vector3, Point2, Point3, ComplexField};
+use nalgebra::{Isometry3, Vector3, Point2, Point3};
 
 use parry3d::query::{Ray, RayCast};
 use parry3d::shape::Ball;

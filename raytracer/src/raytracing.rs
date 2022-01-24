@@ -14,6 +14,13 @@ pub struct HitResult<'a>
     dist: f32,
 }
 
+pub enum LightningColorType
+{
+    Ambient,
+    Diffuse,
+    Specular
+}
+
 pub struct Raytracing
 {
     scene: Scene,
@@ -301,8 +308,49 @@ impl Raytracing
         None
     }
 
+    pub fn get_item_color(&self, item: &dyn Shape, hit_point: Point3<f32>, face_id: u32, color_type: LightningColorType) -> Vector3<f32>
+    {
+        let mat = (*item).get_material();
+
+        let mut item_color;
+        let tex_type;
+        match color_type
+        {
+            LightningColorType::Ambient =>
+            {
+                item_color = mat.ambient_color;
+                tex_type = TextureType::Ambient;
+            },
+            LightningColorType::Diffuse =>
+            {
+                item_color = mat.diffuse_color;
+                tex_type = TextureType::Diffuse;
+            },
+            LightningColorType::Specular => 
+            {
+                item_color = mat.specular_color;
+                tex_type = TextureType::Specular;
+            },
+        }
+
+        //texture color
+        let tex_color = self.get_tex_color(item, hit_point, face_id, tex_type);
+
+        if let Some(tex_color) = tex_color
+        {
+            item_color.x *= tex_color.x;
+            item_color.y *= tex_color.y;
+            item_color.z *= tex_color.z;   
+        }
+
+        item_color
+    }
+
     pub fn get_color(&self, ray: Ray, depth: u16) -> Vector3<f32>
     {
+        //TODO:
+        let eye_dir = Vector3::<f32>::new(0.0, 0.0, 0.0);
+
         let mut r = ray;
         r.dir = r.dir.normalize();
 
@@ -366,7 +414,15 @@ impl Raytracing
                 alpha *= alpha_tex_color.x;
             }
 
-            //color
+            //ambient, diffuse, specular colors
+            let ambient_color = self.get_item_color(item, hit_point, face_id, LightningColorType::Ambient);
+            let diffuse_color = self.get_item_color(item, hit_point, face_id, LightningColorType::Diffuse);
+            let specular_color = self.get_item_color(item, hit_point, face_id, LightningColorType::Specular);
+
+            //ambient
+            //color = ambient_color;
+
+            //diffuse/specular color
             for light in &self.scene.lights
             {
                 //get direction to light based on light type
@@ -391,8 +447,36 @@ impl Raytracing
                     in_light = shadow_intersection.unwrap().0 > len
                 }
 
+                /*
+                let mut item_color = (*item).get_material().ambient_color;
+
+                //diffuse texture
+                let diffuse_tex_color = self.get_tex_color(item, hit_point, face_id, TextureType::Diffuse);
+                if let Some(diffuse_tex_color) = diffuse_tex_color
+                {
+                    item_color.x *= diffuse_tex_color.x;
+                    item_color.y *= diffuse_tex_color.y;
+                    item_color.z *= diffuse_tex_color.z;   
+                }
+                */
+
+                //lambert shading
+                let dot_light = surface_normal.dot(&direction_to_light).max(0.0);
+
+			    let diffuse = diffuse_color * dot_light;
+
                 //let hit_point = r.origin + (r.dir * intersection.0);
 
+                //phong shading
+                let h = (eye_dir + direction_to_light).normalize();
+                let dot_viewer = h.dot(&surface_normal).max(0.0);
+
+                let light_power = dot_viewer.powf(item.get_material().shininess);
+                //let light_power = dot_viewer.powf(25.0);
+
+			    let specular = specular_color * light_power;
+
+                /*
 
                 //let light_power = surface_normal.dot(&direction_to_light).max(0.0) * light_intensity;
                 //let dot_light = surface_normal.dot(&direction_to_light).max(0.0);
@@ -401,6 +485,7 @@ impl Raytracing
                 let light_power = dot_light.powf(item.get_material().shininess);
                 //let light_reflected = item.item.get_material().shininess / std::f32::consts::PI;
                 //let light_reflected = 1.58 / std::f32::consts::PI;
+                */
 
                 let mut intensity;
                 match light.light_type
@@ -413,7 +498,7 @@ impl Raytracing
                     }
                 }
 
-                //shadow intensity
+                //shadow intensity (including alpha map based shadow check)
                 if !in_light
                 {
                     let shadow_obj = shadow_intersection.unwrap().2;
@@ -433,24 +518,20 @@ impl Raytracing
                 }
 
                 //TODO: intensity is sometimes > 1.0
+                //intensity = intensity.max(1.0);
 
                 //TODO: specular, diffuse, ambient
-                let mut item_color = (*item).get_material().ambient_color;
 
-                //diffuse texture
-                let diffuse_tex_color = self.get_tex_color(item, hit_point, face_id, TextureType::Diffuse);
-                if let Some(diffuse_tex_color) = diffuse_tex_color
-                {
-                    item_color.x *= diffuse_tex_color.x;
-                    item_color.y *= diffuse_tex_color.y;
-                    item_color.z *= diffuse_tex_color.z;   
-                }
 
-                let item_light_color = Vector3::new(item_color.x * light.color.x, item_color.y * light.color.y, item_color.z * light.color.z);
+                //let item_light_color = Vector3::new(ambient_color.x * light.color.x, ambient_color.y * light.color.y, ambient_color.z * light.color.z);
 
                 //get color
-                color = color + (item_light_color * light_power * intensity);
+                //color = color + (item_light_color * light_power * intensity);
                 //color = color + (item_light_color * intensity);
+
+                color.x = color.x + ((light.color.x * (specular.x + diffuse.x)) * intensity);
+                color.y = color.y + ((light.color.y * (specular.y + diffuse.y)) * intensity);
+                color.z = color.z + ((light.color.z * (specular.z + diffuse.z)) * intensity);
             }
 
             let refraction_index = item.get_material().refraction_index;
