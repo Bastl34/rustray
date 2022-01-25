@@ -57,7 +57,7 @@ impl Scene
             intensity: 1.0,
             light_type: LightType::Directional
         }));
-         */
+        */
 
         self.lights.push(Box::new(Light
         {
@@ -145,6 +145,12 @@ impl Scene
         let mut sphere_not_visible = Box::new(Sphere::new_with_pos("sphere_not_visible", 7.0, 0.0, 10.0, 3.0));
         sphere_not_visible.basic.material.diffuse_color = Vector3::<f32>::new(1.0, 1.0, 1.0);
 
+        let mut sphere_far_away = Box::new(Sphere::new_with_pos("sphere_front", 0.0, 0.0, -50.0, 30.0));
+        sphere_far_away.basic.material.diffuse_color = Vector3::<f32>::new(1.0, 1.0, 1.0);
+        sphere_far_away.basic.material.specular_color = sphere_front.basic.material.diffuse_color * 0.8;
+        sphere_far_away.basic.material.reflectivity = 0.3;
+        sphere_far_away.basic.material.alpha = 1.0;
+
         // ******************** some meshes ********************
         //floor
         let mut mesh_floor = Box::new(Mesh::new_plane
@@ -158,7 +164,6 @@ impl Scene
 
         mesh_floor.basic.material.diffuse_color = Vector3::<f32>::new(0.5, 0.5, 1.0);
         mesh_floor.basic.material.specular_color = mesh_floor.basic.material.diffuse_color * 0.8;
-        mesh_floor.basic.material.ambient_color = mesh_floor.basic.material.diffuse_color * 0.01;
         
         mesh_floor.basic.material.reflectivity = 0.4;
         mesh_floor.basic.load_texture("scene/checkerboard.png", TextureType::Diffuse);
@@ -173,11 +178,24 @@ impl Scene
             Point3::new(-10.0, 5.5, -20.0),
         ));
 
+        let uvs = vec!
+        [
+            Point2::new(0.0, 0.0),
+            Point2::new(3.0, 0.0),
+            Point2::new(3.0, 3.0),
+            Point2::new(0.0, 3.0),
+        ];
+
+        mesh_back.uvs = uvs.clone();
+
         mesh_back.basic.material.diffuse_color = Vector3::<f32>::new(0.5, 0.5, 1.0);
         mesh_back.basic.material.specular_color = mesh_back.basic.material.diffuse_color * 0.8;
-        mesh_back.basic.material.ambient_color = mesh_back.basic.material.diffuse_color * 0.01;
         
         mesh_back.basic.material.reflectivity = 0.4;
+
+        mesh_back.basic.load_texture("scene/floor/base.gif", TextureType::Diffuse);
+        //mesh_back.basic.load_texture("scene/floor/bump.gif", TextureType::Normal);
+        //mesh_back.basic.load_texture("scene/floor/specular.gif", TextureType::Specular);
 
         //left
         let mut mesh_left = Box::new(Mesh::new_plane
@@ -189,15 +207,16 @@ impl Scene
             Point3::new(-10.0, 5.5, 2.0),
         ));
 
+        mesh_left.uvs = uvs.clone();
         
         mesh_left.basic.material.diffuse_color = Vector3::<f32>::new(1.0, 0.0, 0.0);
         mesh_left.basic.material.specular_color = mesh_left.basic.material.diffuse_color * 0.8;
-        mesh_left.basic.material.ambient_color = mesh_left.basic.material.diffuse_color * 0.01;
         
         mesh_left.basic.material.reflectivity = 0.4;
-        mesh_left.basic.load_texture("scene/wall/Wall_Stone_022_basecolor.jpg", TextureType::Diffuse);
-        mesh_left.basic.load_texture("scene/wall/Wall_Stone_022_normal.jpg", TextureType::Normal);
-        mesh_left.basic.material.normal_map_strength = 10.0;
+        //mesh_left.basic.load_texture("scene/wall/Wall_Stone_022_basecolor.jpg", TextureType::Diffuse);
+        //mesh_left.basic.load_texture("scene/wall/Wall_Stone_022_normal.jpg", TextureType::Normal);
+        //mesh_left.basic.material.normal_map_strength = 10.0;
+        mesh_left.basic.load_texture("scene/floor/base.gif", TextureType::Diffuse);
 
         //right
         let mut mesh_right = Box::new(Mesh::new_plane
@@ -208,11 +227,13 @@ impl Scene
             Point3::new(10.0, 5.5, -20.0),
             Point3::new(10.0, 5.5, 2.0),
         ));
+
+        mesh_right.uvs = uvs.clone();
         
         mesh_right.basic.material.diffuse_color = Vector3::<f32>::new(0.0, 1.0, 0.0);
         mesh_right.basic.material.specular_color = mesh_right.basic.material.diffuse_color * 0.8;
-        mesh_right.basic.material.ambient_color = mesh_right.basic.material.diffuse_color * 0.01;
         mesh_right.basic.material.reflectivity = 0.4;
+        mesh_right.basic.load_texture("scene/floor/base.gif", TextureType::Diffuse);
 
         //top
         let mut mesh_top = Box::new(Mesh::new_plane
@@ -224,10 +245,12 @@ impl Scene
             Point3::new(-10.0, 5.5, -20.0),
         ));
 
+        mesh_top.uvs = uvs.clone();
+
         mesh_top.basic.material.diffuse_color = Vector3::<f32>::new(0.5, 0.5, 1.0);
         mesh_top.basic.material.specular_color = mesh_top.basic.material.diffuse_color * 0.8;
-        mesh_top.basic.material.ambient_color = mesh_top.basic.material.diffuse_color * 0.01;
         mesh_top.basic.material.reflectivity = 0.4;
+        mesh_top.basic.load_texture("scene/floor/base.gif", TextureType::Diffuse);
 
         //behind
         let mut mesh_behind = Box::new(Mesh::new_plane
@@ -241,7 +264,6 @@ impl Scene
 
         mesh_behind.basic.material.diffuse_color = Vector3::<f32>::new(1.0, 0.5, 0.5);
         mesh_behind.basic.material.specular_color = mesh_behind.basic.material.diffuse_color * 0.8;
-        mesh_behind.basic.material.ambient_color = mesh_behind.basic.material.diffuse_color * 0.01;
         mesh_behind.basic.material.reflectivity = 0.4;
 
         let mut mesh_front = Box::new(Mesh::new_plane
@@ -255,7 +277,6 @@ impl Scene
 
         mesh_front.basic.material.diffuse_color = Vector3::<f32>::new(1.0, 1.0, 1.0);
         mesh_front.basic.material.specular_color = mesh_front.basic.material.diffuse_color * 0.8;
-        mesh_front.basic.material.ambient_color = mesh_front.basic.material.diffuse_color * 0.01;
                 
         mesh_front.basic.material.reflectivity = 0.3;
 
@@ -270,15 +291,19 @@ impl Scene
         self.items.push(sphere_texture);
         */
 
+        //self.items.push(sphere_far_away);
+
 
         //self.items.push(sphere_texture);
 
+        
         self.items.push(mesh_floor);
         self.items.push(mesh_back);
         self.items.push(mesh_left);
         self.items.push(mesh_right);
         self.items.push(mesh_top);
         self.items.push(mesh_behind);
+        
 
 
         //self.items.push(mesh_front);

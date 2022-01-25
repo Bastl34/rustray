@@ -6,7 +6,27 @@ use crate::scene::{Scene, LightType};
 use nalgebra::{Perspective3, Isometry3, Point3, Vector3, Matrix3};
 use parry3d::query::{Ray};
 
+use rand::seq::SliceRandom;
+
 const SHADOW_BIAS: f32 = 0.001;
+
+/*
+some resources:
+
+Raytracing in general:
+https://bheisler.github.io/post/writing-raytracer-in-rust-part-1/
+
+normal mapping:
+https://stackoverflow.com/questions/41015574/raytracing-normal-mapping
+http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-13-normal-mapping/
+https://lettier.github.io/3d-game-shaders-for-beginners/normal-mapping.html
+
+strengthen for normal mapping:
+https://computergraphics.stackexchange.com/questions/5411/correct-way-to-set-normal-strength/5412
+
+DoF:
+http://courses.washington.edu/css552/2016.Winter/FinalProjects/2.DOF/Final_Project_Presentation.pdf
+*/
 
 pub struct HitResult<'a>
 {
@@ -29,6 +49,11 @@ pub struct Raytracing
     height: u32,
 
     anti_aliasing: u8,
+    samples: u16,
+
+    focal_length: f32,
+    aperture_size: f32,
+
     max_recursion: u16,
     gamma_correction: bool,
 
@@ -54,7 +79,12 @@ impl Raytracing
 
             aspect_ratio: 0.0,
 
-            anti_aliasing: 1,
+            anti_aliasing: 1, //8
+            samples: 1, //64
+
+            focal_length: 8.0,
+            aperture_size: 1.0, //64.0
+
             max_recursion: 6,
             gamma_correction: false,
 
@@ -106,29 +136,79 @@ impl Raytracing
 
         let mut color = Vector3::new(0.0, 0.0, 0.0);
 
+        let mut samples = vec![];
+
         for x_i in 0..self.anti_aliasing
         {
             for y_i in 0..self.anti_aliasing
             {
-                let x_trans = x_step * x_i as f32 * (1.0 / aa_f);
-                let y_trans = y_step * y_i as f32 * (1.0 / aa_f);
-
-                //map x/y to -1 <=> +1
-                //let sensor_x = ((((new_x + 0.5) / w) * 2.0 - 1.0) * self.aspect_ratio) * self.fov_adjustment;
-                //let sensor_y = (1.0 - ((new_y + 0.5) / h) * 2.0) * self.fov_adjustment;
-
-                let sensor_x = (((((x_f + 0.5) / w) * 2.0 - 1.0) + x_trans) * self.aspect_ratio) * self.fov_adjustment;
-                let sensor_y = ((1.0 - ((y_f + 0.5) / h) * 2.0) + y_trans) * self.fov_adjustment;
-
-                //create ray
-                let ray = Ray::new(Point3::origin(), Vector3::new(sensor_x, sensor_y, -1.0));
-
-                color += self.get_color(ray, 1);
+                samples.push((x_i, y_i));
             }
         }
 
-        let aa = self.anti_aliasing as f32;
-        color /= aa * aa;
+        //randomize
+        samples.shuffle(&mut rand::thread_rng());
+
+        //truncate by samples-amout
+        samples.truncate(self.samples as usize);
+
+        for sample in &samples
+        {
+            let x_i = sample.0;
+            let y_i = sample.1;
+
+            //let x_trans = x_step * x_i as f32 * (1.0 / aa_f);
+            //let y_trans = y_step * y_i as f32 * (1.0 / aa_f);
+
+            //calculate the movement arrount the x/y pos to render (based on anti aliasing and apperture)
+            let mut x_trans = (x_step * x_i as f32 * (1.0 / aa_f)) - (x_step / 2.0);
+            let mut y_trans = (y_step * y_i as f32 * (1.0 / aa_f)) - (y_step / 2.0);
+
+            let ray;
+
+            //DoF (depth of field)
+            if self.aperture_size > 1.0 && self.focal_length > 1.0
+            {
+                x_trans *= self.aperture_size;
+                y_trans *= self.aperture_size;
+
+                let origin = Point3::<f32>::origin();
+
+                //let temp_x = ((((x as f32 + 0.5) / w) * 2.0 - 1.0) * self.aspect_ratio) * self.fov_adjustment;
+                //let temp_y = (1.0 - ((y as f32 + 0.5) / h) * 2.0) * self.fov_adjustment;
+    
+                let sensor_x = (((((x_f + 0.5) / w) * 2.0 - 1.0)) * self.aspect_ratio) * self.fov_adjustment;
+                let sensor_y = ((1.0 - ((y_f + 0.5) / h) * 2.0)) * self.fov_adjustment;
+    
+                let dist_perpendicular = 1.0;
+                let mut pixel_pos = Point3::new(sensor_x, sensor_y, -dist_perpendicular);
+                let dist = (pixel_pos - origin).magnitude();
+                let dir = (pixel_pos - origin).normalize();
+    
+                let p = origin + ((dist_perpendicular/(dist/(dist + self.focal_length)))*dir);
+    
+                let ray_sensor_x = (((((x_f + 0.5) / w) * 2.0 - 1.0) + x_trans) * self.aspect_ratio) * self.fov_adjustment;
+                let ray_sensor_y = ((1.0 - ((y_f + 0.5) / h) * 2.0) + y_trans) * self.fov_adjustment;
+                pixel_pos = Point3::new(ray_sensor_x, ray_sensor_y, -dist_perpendicular);
+    
+                let ray_dir = p - pixel_pos;
+
+                ray = Ray::new(pixel_pos, ray_dir);
+            }
+            //with or without anti aliasing and without DoF
+            else
+            {
+                //map x/y to -1 <=> +1
+                let sensor_x = (((((x_f + 0.5) / w) * 2.0 - 1.0) + x_trans) * self.aspect_ratio) * self.fov_adjustment;
+                let sensor_y = ((1.0 - ((y_f + 0.5) / h) * 2.0) + y_trans) * self.fov_adjustment;
+
+                ray = Ray::new(Point3::origin(), Vector3::new(sensor_x, sensor_y, -1.0));
+            }
+
+            color += self.get_color(ray, 1);
+        }
+
+        color /= samples.len() as f32;
 
         //clamp
         color.x.min(1.0);
@@ -397,13 +477,6 @@ impl Raytracing
                 let tbn = Matrix3::<f32>::from_columns(&[tangent, bitangent, normal]);
 
                 surface_normal = (tbn * normal_map).normalize();
-
-                //https://stackoverflow.com/questions/41015574/raytracing-normal-mapping
-                //http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-13-normal-mapping/
-                //https://lettier.github.io/3d-game-shaders-for-beginners/normal-mapping.html
-
-                //strengthen:
-                //https://computergraphics.stackexchange.com/questions/5411/correct-way-to-set-normal-strength/5412
             }
 
             //alpha mapping
@@ -434,46 +507,19 @@ impl Raytracing
                     LightType::Point => direction_to_light = (light.pos - hit_point).normalize(),
                 }
 
-                /*
-                let mut item_color = (*item).get_material().ambient_color;
-
-                //diffuse texture
-                let diffuse_tex_color = self.get_tex_color(item, hit_point, face_id, TextureType::Diffuse);
-                if let Some(diffuse_tex_color) = diffuse_tex_color
-                {
-                    item_color.x *= diffuse_tex_color.x;
-                    item_color.y *= diffuse_tex_color.y;
-                    item_color.z *= diffuse_tex_color.z;   
-                }
-                */
-
                 //lambert shading
                 let dot_light = surface_normal.dot(&direction_to_light).max(0.0);
 
 			    let diffuse = diffuse_color * dot_light;
-
-                //let hit_point = r.origin + (r.dir * intersection.0);
 
                 //phong shading
                 let h = (eye_dir + direction_to_light).normalize();
                 let dot_viewer = h.dot(&surface_normal).max(0.0);
 
                 let light_power = dot_viewer.powf(item.get_material().shininess);
-                //let light_power = dot_viewer.powf(25.0);
-
 			    let specular = specular_color * light_power;
 
-                /*
-
-                //let light_power = surface_normal.dot(&direction_to_light).max(0.0) * light_intensity;
-                //let dot_light = surface_normal.dot(&direction_to_light).max(0.0);
-                let dot_light = surface_normal.dot(&direction_to_light).max(0.0);
-                //let light_power = surface_normal.dot(&direction_to_light).max(0.0) * light_intensity;
-                let light_power = dot_light.powf(item.get_material().shininess);
-                //let light_reflected = item.item.get_material().shininess / std::f32::consts::PI;
-                //let light_reflected = 1.58 / std::f32::consts::PI;
-                */
-
+                //light intensity
                 let mut intensity;
                 match light.light_type
                 {
@@ -486,15 +532,13 @@ impl Raytracing
                 }
 
                 //shadow
-                let mut in_light = true;
-
                 if item.get_material().receive_shadow
                 {
                     let shadow_ray_start = hit_point + (surface_normal * SHADOW_BIAS);
                     let shadow_ray = Ray::new(shadow_ray_start, direction_to_light);
                     let shadow_intersection = self.trace(&shadow_ray, true, true);
     
-                    in_light = shadow_intersection.is_none();
+                    let mut in_light = shadow_intersection.is_none();
                     if !in_light && light.light_type == LightType::Point
                     {
                         let light_dist: Vector3<f32> = light.pos - hit_point;
@@ -523,20 +567,7 @@ impl Raytracing
                     }
                 }
 
-
-
-                //TODO: intensity is sometimes > 1.0
-                //intensity = intensity.max(1.0);
-
-                //TODO: specular, diffuse, ambient
-
-
-                //let item_light_color = Vector3::new(ambient_color.x * light.color.x, ambient_color.y * light.color.y, ambient_color.z * light.color.z);
-
-                //get color
-                //color = color + (item_light_color * light_power * intensity);
-                //color = color + (item_light_color * intensity);
-
+                //color based on components
                 color.x = color.x + ((light.color.x * (specular.x + diffuse.x)) * intensity);
                 color.y = color.y + ((light.color.y * (specular.y + diffuse.y)) * intensity);
                 color.z = color.z + ((light.color.z * (specular.z + diffuse.z)) * intensity);

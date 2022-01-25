@@ -50,6 +50,8 @@ fn main()
 {
     let sdl = sdl2::init().unwrap();
 
+    sdl2::hint::set("SDL_HINT_VIDEO_ALLOW_SCREENSAVER", "1");
+
     let video_subsystem = sdl.video().unwrap();
 
     let mut width: i32 = 800;

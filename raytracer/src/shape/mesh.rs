@@ -8,12 +8,12 @@ use crate::shape::{Shape, ShapeBasics, Material, TextureType};
 pub struct Mesh
 {
     pub basic: ShapeBasics,
-    name: String,
+    pub name: String,
 
-    mesh: TriMesh,
+    pub mesh: TriMesh,
 
-    uvs: Vec<Point2<f32>>,
-    uv_indices: Vec<[u32; 3]>
+    pub uvs: Vec<Point2<f32>>,
+    pub uv_indices: Vec<[u32; 3]>
 }
 
 impl Shape for Mesh
