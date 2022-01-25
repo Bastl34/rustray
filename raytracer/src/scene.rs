@@ -92,53 +92,47 @@ impl Scene
     {
         // ******************** some spheres ********************
         let mut sphere_back = Box::new(Sphere::new_with_pos("sphere_back", 1.0, 0.0, -10.0, 1.0));
-        sphere_back.basic.material.ambient_color.x = 1.0;
-        sphere_back.basic.material.ambient_color.y = 0.0;
-        sphere_back.basic.material.ambient_color.z = 0.0;
+        sphere_back.basic.material.diffuse_color = Vector3::<f32>::new(1.0, 0.0, 0.0);
+        sphere_back.basic.material.specular_color = sphere_back.basic.material.diffuse_color * 0.8;
         sphere_back.basic.material.reflectivity = 0.3;
         sphere_back.basic.material.alpha = 0.1;
         sphere_back.basic.material.refraction_index = 1.5;
 
         let mut sphere_front = Box::new(Sphere::new_with_pos("sphere_front", 0.0, 0.0, -5.0, 3.0));
-        sphere_front.basic.material.ambient_color.x = 1.0;
-        sphere_front.basic.material.ambient_color.y = 1.0;
-        sphere_front.basic.material.ambient_color.z = 1.0;
+        sphere_front.basic.material.diffuse_color = Vector3::<f32>::new(1.0, 1.0, 1.0);
+        sphere_front.basic.material.specular_color = sphere_front.basic.material.diffuse_color * 0.8;
         sphere_front.basic.material.reflectivity = 0.3;
         sphere_front.basic.material.alpha = 0.1;
         sphere_front.basic.material.refraction_index = 1.5;
 
         let mut sphere_left = Box::new(Sphere::new_with_pos("sphere_left", -7.0, 0.0, -20.0, 4.0));
-        sphere_left.basic.material.ambient_color.x = 0.0;
-        sphere_left.basic.material.ambient_color.y = 1.0;
-        sphere_left.basic.material.ambient_color.z = 0.0;
+        sphere_left.basic.material.diffuse_color = Vector3::<f32>::new(0.0, 1.0, 0.0);
+        sphere_left.basic.material.specular_color = sphere_left.basic.material.diffuse_color * 0.8;
         sphere_left.basic.material.reflectivity = 0.5;
         sphere_left.basic.material.alpha = 0.8;
         sphere_left.basic.material.refraction_index = 1.5;
 
         let mut sphere_right = Box::new(Sphere::new_with_pos("sphere_right", 7.0, -2.5, -18.0, 3.0));
-        sphere_right.basic.material.ambient_color.x = 0.0;
-        sphere_right.basic.material.ambient_color.y = 0.0;
-        sphere_right.basic.material.ambient_color.z = 1.0;
+        sphere_right.basic.material.diffuse_color = Vector3::<f32>::new(0.0, 0.0, 1.0);
+        sphere_right.basic.material.specular_color = sphere_right.basic.material.diffuse_color * 0.8;
         sphere_right.basic.material.reflectivity = 0.5;
         sphere_right.basic.material.alpha = 0.8;
         sphere_right.basic.material.refraction_index = 1.5;
 
         let mut sphere_mirror = Box::new(Sphere::new_with_pos("sphere_mirror", -6.0, 2.5, -7.0, 1.0));
-        sphere_mirror.basic.material.ambient_color.x = 1.0;
-        sphere_mirror.basic.material.ambient_color.y = 1.0;
-        sphere_mirror.basic.material.ambient_color.z = 1.0;
+        sphere_mirror.basic.material.diffuse_color = Vector3::<f32>::new(1.0, 1.0, 1.0);
+        sphere_mirror.basic.material.specular_color = sphere_mirror.basic.material.diffuse_color * 0.8;
         sphere_mirror.basic.material.reflectivity = 1.0;
         sphere_mirror.basic.material.alpha = 1.0;
         sphere_mirror.basic.material.refraction_index = 1.5;
 
         //let mut sphere_texture = Box::new(Sphere::new_with_pos("sphere_texture", 6.0, -1.0, -5.0, 1.0));
         let mut sphere_texture = Box::new(Sphere::new_with_pos("sphere_texture", 0.0, -1.0, -7.0, 4.0));
-        sphere_texture.basic.material.ambient_color.x = 1.0;
-        sphere_texture.basic.material.ambient_color.y = 1.0;
-        sphere_texture.basic.material.ambient_color.z = 1.0;
+        sphere_texture.basic.material.diffuse_color = Vector3::<f32>::new(1.0, 1.0, 1.0);
+        sphere_texture.basic.material.specular_color = sphere_texture.basic.material.diffuse_color * 0.8;
         //sphere_texture.basic.material.reflectivity = 0.7;
         sphere_texture.basic.material.reflectivity = 0.0;
-        sphere_texture.basic.material.alpha = 1.0;
+        sphere_texture.basic.material.alpha = 0.1;
         sphere_texture.basic.material.refraction_index = 1.0;
         //sphere_texture.basic.load_texture("scene/checkerboard.png", TextureType::Diffuse);
         //sphere_texture.basic.load_texture("scene/earth/2k_earth_daymap.jpg", TextureType::Diffuse);
@@ -149,10 +143,7 @@ impl Scene
         sphere_texture.basic.load_texture("scene/leather/Leather_Weave_006_opacity.jpg", TextureType::Alpha);
 
         let mut sphere_not_visible = Box::new(Sphere::new_with_pos("sphere_not_visible", 7.0, 0.0, 10.0, 3.0));
-        sphere_not_visible.basic.material.ambient_color.x = 1.0;
-        sphere_not_visible.basic.material.ambient_color.y = 1.0;
-        sphere_not_visible.basic.material.ambient_color.z = 1.0;
-        sphere_not_visible.basic.material.reflectivity = 0.5;
+        sphere_not_visible.basic.material.diffuse_color = Vector3::<f32>::new(1.0, 1.0, 1.0);
 
         // ******************** some meshes ********************
         //floor
@@ -204,9 +195,9 @@ impl Scene
         mesh_left.basic.material.ambient_color = mesh_left.basic.material.diffuse_color * 0.01;
         
         mesh_left.basic.material.reflectivity = 0.4;
-        //mesh_left.basic.load_texture("scene/wall/Wall_Stone_022_basecolor.jpg", TextureType::Diffuse);
-        //mesh_left.basic.load_texture("scene/wall/Wall_Stone_022_normal.jpg", TextureType::Normal);
-        //mesh_left.basic.material.normal_map_strength = 1.0;
+        mesh_left.basic.load_texture("scene/wall/Wall_Stone_022_basecolor.jpg", TextureType::Diffuse);
+        mesh_left.basic.load_texture("scene/wall/Wall_Stone_022_normal.jpg", TextureType::Normal);
+        mesh_left.basic.material.normal_map_strength = 10.0;
 
         //right
         let mut mesh_right = Box::new(Mesh::new_plane
@@ -268,7 +259,8 @@ impl Scene
                 
         mesh_front.basic.material.reflectivity = 0.3;
 
-/*
+
+        /*
         self.items.push(sphere_back);
         self.items.push(sphere_front);
         self.items.push(sphere_left);
@@ -276,7 +268,8 @@ impl Scene
         self.items.push(sphere_not_visible);
         self.items.push(sphere_mirror);
         self.items.push(sphere_texture);
-*/
+        */
+
 
         //self.items.push(sphere_texture);
 
@@ -380,8 +373,10 @@ impl Scene
                     item.basic.material.alpha = mat.dissolve;
 
                     //TODO:
-                    item.basic.material.reflectivity = 0.5;
-                    item.basic.material.alpha = 0.5;
+                    //item.basic.material.reflectivity = 0.5;
+                    //item.basic.material.alpha = 0.5;
+
+                    item.basic.material.ambient_color = item.basic.material.diffuse_color * 0.01;
 
                     if let Some(illumination) = mat.illumination_model
                     {

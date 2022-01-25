@@ -44,6 +44,9 @@ pub struct Material
     pub texture_alpha: DynamicImage,
 
     pub normal_map_strength: f32,
+
+    pub cast_shadow: bool,
+    pub receive_shadow: bool,
 }
 
 impl Material
@@ -52,9 +55,9 @@ impl Material
     {
         Material
         {
-            ambient_color: Vector3::<f32>::new(1.0, 1.0, 1.0),
+            ambient_color: Vector3::<f32>::new(0.0, 0.0, 0.0),
             diffuse_color: Vector3::<f32>::new(1.0, 1.0, 1.0),
-            specular_color: Vector3::<f32>::new(1.0, 1.0, 1.0),
+            specular_color: Vector3::<f32>::new(0.8, 0.8, 0.8),
             alpha: 1.0,
             shininess: 150.0,
             reflectivity: 0.0,
@@ -67,6 +70,9 @@ impl Material
             texture_alpha: DynamicImage::new_rgb8(0,0),
 
             normal_map_strength: 1.0,
+
+            cast_shadow: true,
+            receive_shadow: true
         }
     }
 
@@ -87,6 +93,9 @@ impl Material
         println!("texture_alpha: {:?}", self.texture_alpha.width() > 0);
 
         println!("normal_map_strength: {:?}", self.normal_map_strength);
+
+        println!("cast_shadow: {:?}", self.cast_shadow);
+        println!("receive_shadow: {:?}", self.receive_shadow);
     }
 }
 

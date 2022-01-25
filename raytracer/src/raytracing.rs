@@ -55,7 +55,7 @@ impl Raytracing
             aspect_ratio: 0.0,
 
             anti_aliasing: 1,
-            max_recursion: 5,
+            max_recursion: 6,
             gamma_correction: false,
 
             fov: 0.0,
@@ -153,7 +153,7 @@ impl Raytracing
         }
     }
 
-    pub fn trace(&self, ray: &Ray, stop_on_first_hit: bool) -> Option<(f32, Vector3<f32>, &dyn Shape, u32)>
+    pub fn trace(&self, ray: &Ray, stop_on_first_hit: bool, for_shadow: bool) -> Option<(f32, Vector3<f32>, &dyn Shape, u32)>
     {
         //find hits (bbox based)
         let mut hits: Vec<HitResult> = vec![];
@@ -162,7 +162,7 @@ impl Raytracing
             let dist = item.intersect_b_box(&ray);
             if let Some(dist) = dist
             {
-                if item.get_material().alpha > 0.0
+                if item.get_material().alpha > 0.0 && (!for_shadow || item.get_material().cast_shadow)
                 {
                     hits.push(HitResult{ item: item.as_ref(), dist: dist });
                 }
@@ -355,7 +355,7 @@ impl Raytracing
         r.dir = r.dir.normalize();
 
         //intersect
-        let intersection = self.trace(&r, false);
+        let intersection = self.trace(&r, false, false);
 
         let mut color = Vector3::new(0.0, 0.0, 0.0);
 
@@ -420,7 +420,7 @@ impl Raytracing
             let specular_color = self.get_item_color(item, hit_point, face_id, LightningColorType::Specular);
 
             //ambient
-            //color = ambient_color;
+            color = ambient_color;
 
             //diffuse/specular color
             for light in &self.scene.lights
@@ -432,19 +432,6 @@ impl Raytracing
                 {
                     LightType::Directional => direction_to_light = (-light.dir).normalize(),
                     LightType::Point => direction_to_light = (light.pos - hit_point).normalize(),
-                }
-
-                let shadow_ray_start = hit_point + (surface_normal * SHADOW_BIAS);
-                let shadow_ray = Ray::new(shadow_ray_start, direction_to_light);
-                let shadow_intersection = self.trace(&shadow_ray, true);
-
-                let mut in_light = shadow_intersection.is_none();
-                if !in_light && light.light_type == LightType::Point
-                {
-                    let light_dist: Vector3<f32> = light.pos - hit_point;
-                    let len = light_dist.norm();
-
-                    in_light = shadow_intersection.unwrap().0 > len
                 }
 
                 /*
@@ -498,24 +485,45 @@ impl Raytracing
                     }
                 }
 
-                //shadow intensity (including alpha map based shadow check)
-                if !in_light
+                //shadow
+                let mut in_light = true;
+
+                if item.get_material().receive_shadow
                 {
-                    let shadow_obj = shadow_intersection.unwrap().2;
-                    let mut shadow_source_alpha = shadow_obj.get_material().alpha;
-
-                    let shadow_face_id = shadow_intersection.unwrap().3;
-
-                    let shadow_hit_point = shadow_ray.origin + (shadow_ray.dir * shadow_intersection.unwrap().0);
-
-                    let shadow_alpha_tex_color = self.get_tex_color(shadow_obj, shadow_hit_point, shadow_face_id, TextureType::Alpha);
-                    if let Some(shadow_alpha_tex_color) = shadow_alpha_tex_color
+                    let shadow_ray_start = hit_point + (surface_normal * SHADOW_BIAS);
+                    let shadow_ray = Ray::new(shadow_ray_start, direction_to_light);
+                    let shadow_intersection = self.trace(&shadow_ray, true, true);
+    
+                    in_light = shadow_intersection.is_none();
+                    if !in_light && light.light_type == LightType::Point
                     {
-                        shadow_source_alpha *= shadow_alpha_tex_color.x;
+                        let light_dist: Vector3<f32> = light.pos - hit_point;
+                        let len = light_dist.norm();
+    
+                        in_light = shadow_intersection.unwrap().0 > len
                     }
 
-                    intensity = intensity * (1.0 - shadow_source_alpha);
+                    //shadow intensity (including alpha map based shadow check)
+                    if !in_light
+                    {
+                        let shadow_obj = shadow_intersection.unwrap().2;
+                        let mut shadow_source_alpha = shadow_obj.get_material().alpha;
+
+                        let shadow_face_id = shadow_intersection.unwrap().3;
+
+                        let shadow_hit_point = shadow_ray.origin + (shadow_ray.dir * shadow_intersection.unwrap().0);
+
+                        let shadow_alpha_tex_color = self.get_tex_color(shadow_obj, shadow_hit_point, shadow_face_id, TextureType::Alpha);
+                        if let Some(shadow_alpha_tex_color) = shadow_alpha_tex_color
+                        {
+                            shadow_source_alpha *= shadow_alpha_tex_color.x;
+                        }
+
+                        intensity = intensity * (1.0 - shadow_source_alpha);
+                    }
                 }
+
+
 
                 //TODO: intensity is sometimes > 1.0
                 //intensity = intensity.max(1.0);
