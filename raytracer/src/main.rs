@@ -42,7 +42,7 @@ http://nercury.github.io/rust/opengl/tutorial/2018/02/09/opengl-in-rust-from-scr
 
 */
 
-const DATA_PATH: &str = "data";
+//const DATA_PATH: &str = "data";
 const IMAGE_PATH: &str = "data/output";
 const POS_PATH: &str = "data/pos.data";
 
