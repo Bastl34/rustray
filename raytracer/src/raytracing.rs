@@ -80,11 +80,11 @@ impl Raytracing
 
             aspect_ratio: 0.0,
 
-            anti_aliasing: 1, //16
-            samples: 1, //64
+            anti_aliasing: 16, //16
+            samples: 128, //64
 
             focal_length: 8.0,
-            aperture_size: 1.0, //64.0
+            aperture_size: 64.0, //64.0
 
             max_recursion: 6,
             gamma_correction: false,
@@ -540,8 +540,7 @@ impl Raytracing
                     {
                         //use point as base and check angle
                         let r2 = (light.pos - hit_point).norm() as f32;
-                        //intensity = light.intensity / (4.0 * ::std::f32::consts::PI * r2);
-                        intensity = light.intensity / (1.0 * ::std::f32::consts::PI * r2);
+                        intensity = light.intensity / (4.0 * ::std::f32::consts::PI * r2);
 
                         let light_dir = light.dir.normalize();
                         let dot = (-direction_to_light).dot(&light_dir);

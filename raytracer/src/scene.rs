@@ -95,10 +95,10 @@ impl Scene
 
         self.lights.push(Box::new(Light
         {
-            pos: Point3::new(0.0, 5.0, -7.0),
+            pos: Point3::new(0.0, 5.0, -6.0),
             dir: Vector3::new(0.0f32, -1.0, -0.3),
             color: Vector3::new(0.0, 0.0, 1.0),
-            intensity: 150.0,
+            intensity: 800.0,
             max_angle: std::f32::consts::PI / 8.0,
             light_type: LightType::Spot
         }));
@@ -297,7 +297,7 @@ impl Scene
         mesh_front.basic.material.reflectivity = 0.3;
 
 
-        /*
+
         self.items.push(sphere_back);
         self.items.push(sphere_front);
         self.items.push(sphere_left);
@@ -305,7 +305,7 @@ impl Scene
         self.items.push(sphere_not_visible);
         self.items.push(sphere_mirror);
         self.items.push(sphere_texture);
-        */
+
 
         //self.items.push(sphere_far_away);
 
