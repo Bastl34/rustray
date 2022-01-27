@@ -11,7 +11,8 @@ use std::path::Path;
 pub enum LightType
 {
     Directional,
-    Point
+    Point,
+    Spot
 }
 
 pub struct Light
@@ -20,6 +21,7 @@ pub struct Light
     pub dir: Vector3<f32>,
     pub color: Vector3<f32>,
     pub intensity: f32,
+    pub max_angle: f32, //in rad
     pub light_type: LightType
 }
 
@@ -55,6 +57,7 @@ impl Scene
             dir: Vector3::new(1.0f32, -1.0, -1.0),
             color: Vector3::new(1.0, 1.0, 1.0),
             intensity: 1.0,
+            max_angle: 0.0,
             light_type: LightType::Directional
         }));
         */
@@ -65,6 +68,7 @@ impl Scene
             dir: Vector3::new(1.0f32, 1.0, -1.0),
             color: Vector3::new(1.0, 1.0, 1.0),
             intensity: 150.0,
+            max_angle: 0.0,
             light_type: LightType::Point
         }));
 
@@ -74,6 +78,7 @@ impl Scene
             dir: Vector3::new(1.0f32, 1.0, -1.0),
             color: Vector3::new(1.0, 1.0, 1.0),
             intensity: 150.0,
+            max_angle: 0.0,
             light_type: LightType::Point
         }));
 
@@ -84,7 +89,18 @@ impl Scene
             dir: Vector3::new(-1.0f32, -1.0, -1.0),
             color: Vector3::new(1.0, 0.0, 0.0),
             intensity: 150.0,
+            max_angle: 0.0,
             light_type: LightType::Point
+        }));
+
+        self.lights.push(Box::new(Light
+        {
+            pos: Point3::new(0.0, 5.0, -7.0),
+            dir: Vector3::new(0.0f32, -1.0, -0.3),
+            color: Vector3::new(0.0, 0.0, 1.0),
+            intensity: 150.0,
+            max_angle: std::f32::consts::PI / 8.0,
+            light_type: LightType::Spot
         }));
     }
 
@@ -164,7 +180,7 @@ impl Scene
 
         mesh_floor.basic.material.diffuse_color = Vector3::<f32>::new(0.5, 0.5, 1.0);
         mesh_floor.basic.material.specular_color = mesh_floor.basic.material.diffuse_color * 0.8;
-        
+
         mesh_floor.basic.material.reflectivity = 0.4;
         mesh_floor.basic.load_texture("scene/checkerboard.png", TextureType::Diffuse);
 
@@ -190,7 +206,7 @@ impl Scene
 
         mesh_back.basic.material.diffuse_color = Vector3::<f32>::new(0.5, 0.5, 1.0);
         mesh_back.basic.material.specular_color = mesh_back.basic.material.diffuse_color * 0.8;
-        
+
         mesh_back.basic.material.reflectivity = 0.4;
 
         mesh_back.basic.load_texture("scene/floor/base.gif", TextureType::Diffuse);
@@ -208,10 +224,10 @@ impl Scene
         ));
 
         mesh_left.uvs = uvs.clone();
-        
+
         mesh_left.basic.material.diffuse_color = Vector3::<f32>::new(1.0, 0.0, 0.0);
         mesh_left.basic.material.specular_color = mesh_left.basic.material.diffuse_color * 0.8;
-        
+
         mesh_left.basic.material.reflectivity = 0.4;
         //mesh_left.basic.load_texture("scene/wall/Wall_Stone_022_basecolor.jpg", TextureType::Diffuse);
         //mesh_left.basic.load_texture("scene/wall/Wall_Stone_022_normal.jpg", TextureType::Normal);
@@ -229,7 +245,7 @@ impl Scene
         ));
 
         mesh_right.uvs = uvs.clone();
-        
+
         mesh_right.basic.material.diffuse_color = Vector3::<f32>::new(0.0, 1.0, 0.0);
         mesh_right.basic.material.specular_color = mesh_right.basic.material.diffuse_color * 0.8;
         mesh_right.basic.material.reflectivity = 0.4;
@@ -277,7 +293,7 @@ impl Scene
 
         mesh_front.basic.material.diffuse_color = Vector3::<f32>::new(1.0, 1.0, 1.0);
         mesh_front.basic.material.specular_color = mesh_front.basic.material.diffuse_color * 0.8;
-                
+
         mesh_front.basic.material.reflectivity = 0.3;
 
 
@@ -296,14 +312,14 @@ impl Scene
 
         //self.items.push(sphere_texture);
 
-        
+
         self.items.push(mesh_floor);
         self.items.push(mesh_back);
         self.items.push(mesh_left);
         self.items.push(mesh_right);
         self.items.push(mesh_top);
         self.items.push(mesh_behind);
-        
+
 
 
         //self.items.push(mesh_front);
@@ -369,7 +385,7 @@ impl Scene
                 let i2 = mesh.indices[3 * vtx + 2];
 
                 indices.push([i0, i1, i2]);
-            }            
+            }
 
             //tex coords indices
             for vtx in 0..mesh.texcoord_indices.len() / 3
@@ -379,8 +395,8 @@ impl Scene
                 let i2 = mesh.texcoord_indices[3 * vtx + 2];
 
                 uv_indices.push([i0, i1, i2]);
-            }            
-            
+            }
+
             if verts.len() > 0
             {
                 let mut item = Mesh::new_with_data(m.name.as_str(), verts, indices, uvs, uv_indices);

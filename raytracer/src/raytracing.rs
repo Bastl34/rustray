@@ -80,7 +80,7 @@ impl Raytracing
 
             aspect_ratio: 0.0,
 
-            anti_aliasing: 1, //8
+            anti_aliasing: 1, //16
             samples: 1, //64
 
             focal_length: 8.0,
@@ -158,12 +158,16 @@ impl Raytracing
             let x_i = sample.0;
             let y_i = sample.1;
 
-            //let x_trans = x_step * x_i as f32 * (1.0 / aa_f);
-            //let y_trans = y_step * y_i as f32 * (1.0 / aa_f);
-
             //calculate the movement arrount the x/y pos to render (based on anti aliasing and apperture)
-            let mut x_trans = (x_step * x_i as f32 * (1.0 / aa_f)) - (x_step / 2.0);
-            let mut y_trans = (y_step * y_i as f32 * (1.0 / aa_f)) - (y_step / 2.0);
+            let mut x_trans = x_step * x_i as f32 * (1.0 / aa_f);
+            let mut y_trans = y_step * y_i as f32 * (1.0 / aa_f);
+
+            //move translation to center if needed
+            if (self.aperture_size > 1.0 && self.focal_length > 1.0) || self.anti_aliasing > 1
+            {
+                x_trans -= x_step / 2.0;
+                y_trans -= y_step / 2.0;
+            }
 
             let ray;
 
@@ -173,25 +177,26 @@ impl Raytracing
                 x_trans *= self.aperture_size;
                 y_trans *= self.aperture_size;
 
+
                 let origin = Point3::<f32>::origin();
 
                 //let temp_x = ((((x as f32 + 0.5) / w) * 2.0 - 1.0) * self.aspect_ratio) * self.fov_adjustment;
                 //let temp_y = (1.0 - ((y as f32 + 0.5) / h) * 2.0) * self.fov_adjustment;
-    
+
                 let sensor_x = (((((x_f + 0.5) / w) * 2.0 - 1.0)) * self.aspect_ratio) * self.fov_adjustment;
                 let sensor_y = ((1.0 - ((y_f + 0.5) / h) * 2.0)) * self.fov_adjustment;
-    
+
                 let dist_perpendicular = 1.0;
                 let mut pixel_pos = Point3::new(sensor_x, sensor_y, -dist_perpendicular);
                 let dist = (pixel_pos - origin).magnitude();
                 let dir = (pixel_pos - origin).normalize();
-    
+
                 let p = origin + ((dist_perpendicular/(dist/(dist + self.focal_length)))*dir);
-    
+
                 let ray_sensor_x = (((((x_f + 0.5) / w) * 2.0 - 1.0) + x_trans) * self.aspect_ratio) * self.fov_adjustment;
                 let ray_sensor_y = ((1.0 - ((y_f + 0.5) / h) * 2.0) + y_trans) * self.fov_adjustment;
                 pixel_pos = Point3::new(ray_sensor_x, ray_sensor_y, -dist_perpendicular);
-    
+
                 let ray_dir = p - pixel_pos;
 
                 ray = Ray::new(pixel_pos, ray_dir);
@@ -407,7 +412,7 @@ impl Raytracing
                 item_color = mat.diffuse_color;
                 tex_type = TextureType::Diffuse;
             },
-            LightningColorType::Specular => 
+            LightningColorType::Specular =>
             {
                 item_color = mat.specular_color;
                 tex_type = TextureType::Specular;
@@ -421,7 +426,7 @@ impl Raytracing
         {
             item_color.x *= tex_color.x;
             item_color.y *= tex_color.y;
-            item_color.z *= tex_color.z;   
+            item_color.z *= tex_color.z;
         }
 
         item_color
@@ -506,19 +511,20 @@ impl Raytracing
                 {
                     LightType::Directional => direction_to_light = (-light.dir).normalize(),
                     LightType::Point => direction_to_light = (light.pos - hit_point).normalize(),
+                    LightType::Spot => direction_to_light = (light.pos - hit_point).normalize(),
                 }
 
                 //lambert shading
                 let dot_light = surface_normal.dot(&direction_to_light).max(0.0);
 
-			    let diffuse = diffuse_color * dot_light;
+                let diffuse = diffuse_color * dot_light;
 
                 //phong shading
                 let h = (eye_dir + direction_to_light).normalize();
                 let dot_viewer = h.dot(&surface_normal).max(0.0);
 
                 let light_power = dot_viewer.powf(item.get_material().shininess);
-			    let specular = specular_color * light_power;
+                let specular = specular_color * light_power;
 
                 //light intensity
                 let mut intensity;
@@ -529,6 +535,22 @@ impl Raytracing
                     {
                         let r2 = (light.pos - hit_point).norm() as f32;
                         intensity = light.intensity / (4.0 * ::std::f32::consts::PI * r2)
+                    },
+                    LightType::Spot =>
+                    {
+                        //use point as base and check angle
+                        let r2 = (light.pos - hit_point).norm() as f32;
+                        //intensity = light.intensity / (4.0 * ::std::f32::consts::PI * r2);
+                        intensity = light.intensity / (1.0 * ::std::f32::consts::PI * r2);
+
+                        let light_dir = light.dir.normalize();
+                        let dot = (-direction_to_light).dot(&light_dir);
+                        let angle = dot.acos();
+
+                        if angle > light.max_angle
+                        {
+                            intensity = 0.0;
+                        }
                     }
                 }
 
@@ -538,13 +560,13 @@ impl Raytracing
                     let shadow_ray_start = hit_point + (surface_normal * SHADOW_BIAS);
                     let shadow_ray = Ray::new(shadow_ray_start, direction_to_light);
                     let shadow_intersection = self.trace(&shadow_ray, true, true);
-    
+
                     let mut in_light = shadow_intersection.is_none();
-                    if !in_light && light.light_type == LightType::Point
+                    if !in_light && (light.light_type == LightType::Point || light.light_type == LightType::Spot)
                     {
                         let light_dist: Vector3<f32> = light.pos - hit_point;
                         let len = light_dist.norm();
-    
+
                         in_light = shadow_intersection.unwrap().0 > len
                     }
 

@@ -42,7 +42,7 @@ http://nercury.github.io/rust/opengl/tutorial/2018/02/09/opengl-in-rust-from-scr
 
 */
 
-const DATA_PATH: &str = "data";
+//const DATA_PATH: &str = "data";
 const IMAGE_PATH: &str = "data/output";
 const POS_PATH: &str = "data/pos.data";
 
@@ -113,6 +113,7 @@ fn main()
     rendering.start();
 
     let mut fps_display_update: u128 = 0;
+    let mut pps = 0;
 
     let mut completed = false;
 
@@ -209,6 +210,7 @@ fn main()
                 if item.x < image.width() as i32 && item.y < image.height() as i32
                 {
                     image.put_pixel(item.x as u32, item.y as u32, Rgb([item.r, item.g, item.b]));
+                    pps += 1;
                 }
             }
         }
@@ -233,7 +235,7 @@ fn main()
 
             let window = canvas.window_mut();
 
-            let title = format!("Raytracer (FPS: {:.2}, Res: {}x{}, Complete: {:.2}%, Pixels: {}, Time: {:.2}s, Done: {})",fps, width, height, percentage, pixels, elapsed, is_done);
+            let title = format!("Raytracer (FPS: {:.2}, PPS: {} Res: {}x{}, Complete: {:.2}%, Pixels: {}, Time: {:.2}s, Done: {})",fps, pps, width, height, percentage, pixels, elapsed, is_done);
 
             window.set_title(&title).unwrap();
 
@@ -249,6 +251,11 @@ fn main()
 
                 let filename = format!("{}/output_{}-{}-{} {}-{}-{}.png", IMAGE_PATH, now.year(), now.month(), now.day(), now.hour(), now.minute(), now.second());
                 image.save(filename).unwrap();
+            }
+
+            if !completed
+            {
+                pps = 0;
             }
         }
 
