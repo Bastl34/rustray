@@ -24,8 +24,9 @@ https://lettier.github.io/3d-game-shaders-for-beginners/normal-mapping.html
 strengthen for normal mapping:
 https://computergraphics.stackexchange.com/questions/5411/correct-way-to-set-normal-strength/5412
 
-DoF:
+DOF (Depth of field):
 http://courses.washington.edu/css552/2016.Winter/FinalProjects/2.DOF/Final_Project_Presentation.pdf
+https://web.archive.org/web/20160103203728/https://cg.skeelogy.com/depth-of-field-using-raytracing/
 */
 
 pub struct HitResult<'a>
@@ -166,7 +167,7 @@ impl Raytracing
 
             let ray;
 
-            //DoF (depth of field)
+            //DOF (depth of field)
             if self.aperture_size > 1.0 && self.focal_length > 1.0
             {
                 x_trans *= self.aperture_size;
@@ -195,7 +196,7 @@ impl Raytracing
 
                 ray = Ray::new(pixel_pos, ray_dir);
             }
-            //with or without anti aliasing and without DoF
+            //with or without anti aliasing and without DOF
             else
             {
                 //map x/y to -1 <=> +1
