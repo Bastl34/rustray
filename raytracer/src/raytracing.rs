@@ -79,11 +79,11 @@ impl Raytracing
 
             aspect_ratio: 0.0,
 
-            anti_aliasing: 16, //16
-            samples: 128, //64
+            anti_aliasing: 1, //16
+            samples: 1, //64
 
             focal_length: 8.0,
-            aperture_size: 64.0, //64.0
+            aperture_size: 1.0, //64.0
 
             max_recursion: 6,
             gamma_correction: false,
@@ -510,19 +510,20 @@ impl Raytracing
                 {
                     LightType::Directional => direction_to_light = (-light.dir).normalize(),
                     LightType::Point => direction_to_light = (light.pos - hit_point).normalize(),
+                    LightType::Spot => direction_to_light = (light.pos - hit_point).normalize(),
                 }
 
                 //lambert shading
                 let dot_light = surface_normal.dot(&direction_to_light).max(0.0);
 
-			    let diffuse = diffuse_color * dot_light;
+                let diffuse = diffuse_color * dot_light;
 
                 //phong shading
                 let h = (eye_dir + direction_to_light).normalize();
                 let dot_viewer = h.dot(&surface_normal).max(0.0);
 
                 let light_power = dot_viewer.powf(item.get_material().shininess);
-			    let specular = specular_color * light_power;
+                let specular = specular_color * light_power;
 
                 //light intensity
                 let mut intensity;
@@ -533,6 +534,22 @@ impl Raytracing
                     {
                         let r2 = (light.pos - hit_point).norm() as f32;
                         intensity = light.intensity / (4.0 * ::std::f32::consts::PI * r2)
+                    },
+                    LightType::Spot =>
+                    {
+                        //use point as base and check angle
+                        let r2 = (light.pos - hit_point).norm() as f32;
+                        //intensity = light.intensity / (4.0 * ::std::f32::consts::PI * r2);
+                        intensity = light.intensity / (1.0 * ::std::f32::consts::PI * r2);
+
+                        let light_dir = light.dir.normalize();
+                        let dot = (-direction_to_light).dot(&light_dir);
+                        let angle = dot.acos();
+
+                        if angle > light.max_angle
+                        {
+                            intensity = 0.0;
+                        }
                     }
                 }
 
@@ -544,7 +561,7 @@ impl Raytracing
                     let shadow_intersection = self.trace(&shadow_ray, true, true);
 
                     let mut in_light = shadow_intersection.is_none();
-                    if !in_light && light.light_type == LightType::Point
+                    if !in_light && (light.light_type == LightType::Point || light.light_type == LightType::Spot)
                     {
                         let light_dist: Vector3<f32> = light.pos - hit_point;
                         let len = light_dist.norm();
