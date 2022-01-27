@@ -79,11 +79,11 @@ impl Raytracing
 
             aspect_ratio: 0.0,
 
-            anti_aliasing: 1, //16
-            samples: 1, //64
+            anti_aliasing: 16, //16
+            samples: 128, //64
 
             focal_length: 8.0,
-            aperture_size: 1.0, //64.0
+            aperture_size: 64.0, //64.0
 
             max_recursion: 6,
             gamma_correction: false,
