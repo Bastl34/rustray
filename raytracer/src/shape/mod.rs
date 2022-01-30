@@ -76,7 +76,7 @@ impl Material
 
             cast_shadow: true,
             receive_shadow: true,
-            shadow_softness: 0.2,
+            shadow_softness: 0.01,
 
             surface_roughness: 0.0
         }

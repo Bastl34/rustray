@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use crate::shape::{Shape, TextureType};
 use crate::pixel_color::PixelColor;
 
@@ -87,10 +89,10 @@ impl Raytracing
             aspect_ratio: 0.0,
 
             anti_aliasing: 32, //16
-            samples: 256, //64
+            samples: 128, //64
 
             focal_length: 8.0,
-            aperture_size: 64.0, //64.0
+            aperture_size: 1.0, //64.0
 
             max_recursion: 6,
             gamma_correction: false,
@@ -373,13 +375,26 @@ impl Raytracing
             return dir;
         }
 
+
+
         let mut rng = rand::thread_rng();
+
+        /*
 
         //not the perfect solution (it is not angle based) but it works for now
         let mut new_dir = dir;
         new_dir.x += ((2.0 * rng.gen::<f32>()) - 1.0) * strength;
         new_dir.y += ((2.0 * rng.gen::<f32>()) - 1.0) * strength;
         new_dir.z += ((2.0 * rng.gen::<f32>()) - 1.0) * strength;
+         */
+
+        let rot_x = ((rng.gen::<f32>() * PI * 2.0) - PI) * strength;
+        let rot_y = ((rng.gen::<f32>() * PI * 2.0) - PI) * strength;
+        let rot_z = ((rng.gen::<f32>() * PI * 2.0) - PI) * strength;
+
+        let rotation_mat = Isometry3::rotation(Vector3::new(rot_x, rot_y, rot_z));
+
+        let new_dir = rotation_mat * dir;
 
         new_dir.normalize()
     }
@@ -564,13 +579,13 @@ impl Raytracing
                     LightType::Point =>
                     {
                         let r2 = (light.pos - hit_point).norm() as f32;
-                        intensity = light.intensity / (4.0 * ::std::f32::consts::PI * r2)
+                        intensity = light.intensity / (4.0 * PI * r2)
                     },
                     LightType::Spot =>
                     {
                         //use point as base and check angle
                         let r2 = (light.pos - hit_point).norm() as f32;
-                        intensity = light.intensity / (4.0 * ::std::f32::consts::PI * r2);
+                        intensity = light.intensity / (4.0 * PI * r2);
 
                         let light_dir = light.dir.normalize();
                         let dot = (-direction_to_light).dot(&light_dir);

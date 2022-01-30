@@ -141,20 +141,23 @@ impl Scene
         sphere_mirror.basic.material.refraction_index = 1.5;
 
         //let mut sphere_texture = Box::new(Sphere::new_with_pos("sphere_texture", 6.0, -1.0, -5.0, 1.0));
-        let mut sphere_texture = Box::new(Sphere::new_with_pos("sphere_texture", 0.0, -1.0, -7.0, 4.0));
+        //let mut sphere_texture = Box::new(Sphere::new_with_pos("sphere_texture", 0.0, -1.0, -7.0, 4.0));
+        let mut sphere_texture = Box::new(Sphere::new_with_pos("sphere_texture", 0.0, -1.0, -10.0, 3.0));
         sphere_texture.basic.material.diffuse_color = Vector3::<f32>::new(1.0, 1.0, 1.0);
         sphere_texture.basic.material.specular_color = sphere_texture.basic.material.diffuse_color * 0.8;
         //sphere_texture.basic.material.reflectivity = 0.7;
-        sphere_texture.basic.material.reflectivity = 0.0;
-        sphere_texture.basic.material.alpha = 0.1;
+        sphere_texture.basic.material.reflectivity = 0.5;
+        sphere_texture.basic.material.alpha = 0.9;
         sphere_texture.basic.material.refraction_index = 1.0;
+        sphere_texture.basic.material.normal_map_strength = 10.0;
+        sphere_texture.basic.material.surface_roughness = 0.05;
         //sphere_texture.basic.load_texture("scene/checkerboard.png", TextureType::Diffuse);
         //sphere_texture.basic.load_texture("scene/earth/2k_earth_daymap.jpg", TextureType::Diffuse);
-        //sphere_texture.basic.load_texture("scene/earth/2k_earth_normal_map.jpg", TextureType::Normal);
+        sphere_texture.basic.load_texture("scene/earth/2k_earth_normal_map.jpg", TextureType::Normal);
         //sphere_texture.basic.load_texture("scene/white.png", TextureType::Normal);
         //sphere_texture.basic.load_texture("scene/checkerboard.png", TextureType::Normal);
-        sphere_texture.basic.load_texture("scene/leather/Leather_Weave_006_basecolor.jpg", TextureType::Diffuse);
-        sphere_texture.basic.load_texture("scene/leather/Leather_Weave_006_opacity.jpg", TextureType::Alpha);
+        //sphere_texture.basic.load_texture("scene/leather/Leather_Weave_006_basecolor.jpg", TextureType::Diffuse);
+        //sphere_texture.basic.load_texture("scene/leather/Leather_Weave_006_opacity.jpg", TextureType::Alpha);
 
         let mut sphere_not_visible = Box::new(Sphere::new_with_pos("sphere_not_visible", 7.0, 0.0, 10.0, 3.0));
         sphere_not_visible.basic.material.diffuse_color = Vector3::<f32>::new(1.0, 1.0, 1.0);
@@ -180,7 +183,7 @@ impl Scene
         mesh_floor.basic.material.specular_color = mesh_floor.basic.material.diffuse_color * 0.8;
 
         mesh_floor.basic.material.reflectivity = 0.4;
-        mesh_floor.basic.material.surface_roughness = 0.025;
+        mesh_floor.basic.material.surface_roughness = 0.005;
         mesh_floor.basic.load_texture("scene/checkerboard.png", TextureType::Diffuse);
 
         //back
@@ -310,7 +313,7 @@ impl Scene
         //self.items.push(sphere_far_away);
 
 
-        //self.items.push(sphere_texture);
+        self.items.push(sphere_texture);
 
 
         self.items.push(mesh_floor);
@@ -324,7 +327,7 @@ impl Scene
 
         //self.items.push(mesh_front);
 
-        self.load("scene/kBert_thumbsup_bevel.obj");
+        //self.load("scene/kBert_thumbsup_bevel.obj");
 
         //let mut k_bert = self.get_by_name("kBert_Cube").unwrap();
         //k_bert.borrow_mut().
