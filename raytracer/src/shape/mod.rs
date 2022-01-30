@@ -47,6 +47,9 @@ pub struct Material
 
     pub cast_shadow: bool,
     pub receive_shadow: bool,
+    pub shadow_softness: f32,
+
+    pub surface_roughness: f32,
 }
 
 impl Material
@@ -72,7 +75,10 @@ impl Material
             normal_map_strength: 1.0,
 
             cast_shadow: true,
-            receive_shadow: true
+            receive_shadow: true,
+            shadow_softness: 0.2,
+
+            surface_roughness: 0.0
         }
     }
 
@@ -96,6 +102,9 @@ impl Material
 
         println!("cast_shadow: {:?}", self.cast_shadow);
         println!("receive_shadow: {:?}", self.receive_shadow);
+        println!("shadow_softness: {:?}", self.shadow_softness);
+
+        println!("surface_roughness: {:?}", self.surface_roughness);
     }
 }
 

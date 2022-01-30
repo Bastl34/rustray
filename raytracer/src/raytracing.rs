@@ -6,6 +6,7 @@ use crate::scene::{Scene, LightType};
 use nalgebra::{Perspective3, Isometry3, Point3, Vector3, Matrix3};
 use parry3d::query::{Ray};
 
+use rand::Rng;
 use rand::seq::SliceRandom;
 
 const SHADOW_BIAS: f32 = 0.001;
@@ -27,6 +28,11 @@ https://computergraphics.stackexchange.com/questions/5411/correct-way-to-set-nor
 DOF (Depth of field):
 http://courses.washington.edu/css552/2016.Winter/FinalProjects/2.DOF/Final_Project_Presentation.pdf
 https://web.archive.org/web/20160103203728/https://cg.skeelogy.com/depth-of-field-using-raytracing/
+
+monte carlo:
+https://www.youtube.com/watch?v=KCYroQVaARs
+https://www.youtube.com/watch?v=R9iZzaXUaK4
+https://wzhfantastic.github.io/2018/04/09/RayTracingInUnity(PartTwo)/
 */
 
 pub struct HitResult<'a>
@@ -80,8 +86,8 @@ impl Raytracing
 
             aspect_ratio: 0.0,
 
-            anti_aliasing: 16, //16
-            samples: 128, //64
+            anti_aliasing: 32, //16
+            samples: 256, //64
 
             focal_length: 8.0,
             aperture_size: 64.0, //64.0
@@ -360,6 +366,24 @@ impl Raytracing
         }
     }
 
+    pub fn jitter(&self, dir: Vector3<f32>, strength: f32) -> Vector3<f32>
+    {
+        if strength <= 0.0
+        {
+            return dir;
+        }
+
+        let mut rng = rand::thread_rng();
+
+        //not the perfect solution (it is not angle based) but it works for now
+        let mut new_dir = dir;
+        new_dir.x += ((2.0 * rng.gen::<f32>()) - 1.0) * strength;
+        new_dir.y += ((2.0 * rng.gen::<f32>()) - 1.0) * strength;
+        new_dir.z += ((2.0 * rng.gen::<f32>()) - 1.0) * strength;
+
+        new_dir.normalize()
+    }
+
     fn wrap(&self, val: f32, bound: u32) -> u32
     {
         let signed_bound = bound as i32;
@@ -485,6 +509,12 @@ impl Raytracing
                 surface_normal = (tbn * normal_map).normalize();
             }
 
+            //roughness
+            if self.samples > 1 && item.get_material().surface_roughness > 0.0
+            {
+                surface_normal = self.jitter(surface_normal, item.get_material().surface_roughness);
+            }
+
             //alpha mapping
             let mut alpha = item.get_material().alpha;
             let alpha_tex_color = self.get_tex_color(item, hit_point, face_id, TextureType::Alpha);
@@ -557,7 +587,15 @@ impl Raytracing
                 if item.get_material().receive_shadow
                 {
                     let shadow_ray_start = hit_point + (surface_normal * SHADOW_BIAS);
-                    let shadow_ray = Ray::new(shadow_ray_start, direction_to_light);
+                    let mut shadow_ray_dir = direction_to_light;
+
+                    if self.samples > 1
+                    {
+                        shadow_ray_dir = self.jitter(shadow_ray_dir, item.get_material().shadow_softness);
+                    }
+
+
+                    let shadow_ray = Ray::new(shadow_ray_start, shadow_ray_dir);
                     let shadow_intersection = self.trace(&shadow_ray, true, true);
 
                     let mut in_light = shadow_intersection.is_none();

@@ -50,7 +50,6 @@ impl Scene
 
     pub fn init_lights(&mut self)
     {
-        /*
         self.lights.push(Box::new(Light
         {
             pos: Point3::new(0.0, 0.0, 0.0),
@@ -60,7 +59,6 @@ impl Scene
             max_angle: 0.0,
             light_type: LightType::Directional
         }));
-        */
 
         self.lights.push(Box::new(Light
         {
@@ -77,7 +75,7 @@ impl Scene
             pos: Point3::new(-2.0, -2.0, -15.0),
             dir: Vector3::new(1.0f32, 1.0, -1.0),
             color: Vector3::new(1.0, 1.0, 1.0),
-            intensity: 150.0,
+            intensity: 500.0,
             max_angle: 0.0,
             light_type: LightType::Point
         }));
@@ -182,6 +180,7 @@ impl Scene
         mesh_floor.basic.material.specular_color = mesh_floor.basic.material.diffuse_color * 0.8;
 
         mesh_floor.basic.material.reflectivity = 0.4;
+        mesh_floor.basic.material.surface_roughness = 0.025;
         mesh_floor.basic.load_texture("scene/checkerboard.png", TextureType::Diffuse);
 
         //back
@@ -297,7 +296,7 @@ impl Scene
         mesh_front.basic.material.reflectivity = 0.3;
 
 
-
+        /*
         self.items.push(sphere_back);
         self.items.push(sphere_front);
         self.items.push(sphere_left);
@@ -305,6 +304,7 @@ impl Scene
         self.items.push(sphere_not_visible);
         self.items.push(sphere_mirror);
         self.items.push(sphere_texture);
+         */
 
 
         //self.items.push(sphere_far_away);
