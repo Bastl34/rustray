@@ -11,8 +11,8 @@ opt-level = 3
 panic = "abort"
 #strip = "symbols"
 # Improve performance but increase compile time
-lto = "fat"
-codegen-units = 1
+#lto = "fat"
+#codegen-units = 1
 
 [dependencies]
 sdl2 = { version = "0.35.1", features = ["bundled", "static-link"] }

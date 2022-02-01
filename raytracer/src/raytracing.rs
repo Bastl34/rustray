@@ -58,8 +58,10 @@ pub struct Raytracing
 
     width: u32,
     height: u32,
+    aspect_ratio: f32,
 
-    anti_aliasing: u8,
+    monte_carlo: bool,
+
     samples: u16,
 
     focal_length: f32,
@@ -67,8 +69,6 @@ pub struct Raytracing
 
     max_recursion: u16,
     gamma_correction: bool,
-
-    aspect_ratio: f32,
 
     fov: f32,
     fov_adjustment: f32,
@@ -87,11 +87,11 @@ impl Raytracing
 
             width: 0,
             height: 0,
-
             aspect_ratio: 0.0,
 
-            anti_aliasing: 5, //16
-            samples: 2, //64
+            monte_carlo: false,
+
+            samples: 16, //this also includes anti aliasing
 
             focal_length: 8.0,
             aperture_size: 1.0, //64.0
@@ -140,8 +140,6 @@ impl Raytracing
         let w = self.width as f32;
         let h = self.height as f32;
 
-        let aa_f = self.anti_aliasing as f32;
-
         let x_step = 2.0 / w;
         let y_step = 2.0 / h;
 
@@ -149,9 +147,17 @@ impl Raytracing
 
         let mut samples = vec![];
 
-        for x_i in 0..self.anti_aliasing
+        let mut cell_size = 1;
+        if self.samples > 1
         {
-            for y_i in 0..self.anti_aliasing
+            //increase samples value to not exactly match power of two with sampling steps
+            //otherweise this would result in crappy visual effects for DOF blur
+            cell_size = (self.samples + 2).next_power_of_two() / 2;
+        }
+
+        for x_i in 0..cell_size
+        {
+            for y_i in 0..cell_size
             {
                 samples.push((x_i, y_i));
             }
@@ -169,11 +175,11 @@ impl Raytracing
             let y_i = sample.1;
 
             //calculate the movement arrount the x/y pos to render (based on anti aliasing and apperture)
-            let mut x_trans = x_step * x_i as f32 * (1.0 / aa_f);
-            let mut y_trans = y_step * y_i as f32 * (1.0 / aa_f);
+            let mut x_trans = x_step * x_i as f32 * (1.0 / cell_size as f32);
+            let mut y_trans = y_step * y_i as f32 * (1.0 / cell_size as f32);
 
             //move translation to center if needed
-            if (self.aperture_size > 1.0 && self.focal_length > 1.0) || self.anti_aliasing > 1
+            if self.aperture_size > 1.0 && self.focal_length > 1.0 && self.samples > 1
             {
                 x_trans -= x_step / 2.0;
                 y_trans -= y_step / 2.0;
@@ -378,8 +384,6 @@ impl Raytracing
             return dir;
         }
 
-
-
         let mut rng = rand::thread_rng();
 
         /*
@@ -528,7 +532,7 @@ impl Raytracing
             }
 
             //roughness
-            if self.samples > 1 && item.get_material().surface_roughness > 0.0
+            if self.monte_carlo && item.get_material().surface_roughness > 0.0
             {
                 surface_normal = self.jitter(surface_normal, item.get_material().surface_roughness);
             }
@@ -607,11 +611,10 @@ impl Raytracing
                     let shadow_ray_start = hit_point + (surface_normal * SHADOW_BIAS);
                     let mut shadow_ray_dir = direction_to_light;
 
-                    if self.samples > 1
+                    if self.monte_carlo
                     {
                         shadow_ray_dir = self.jitter(shadow_ray_dir, item.get_material().shadow_softness);
                     }
-
 
                     let shadow_ray = Ray::new(shadow_ray_start, shadow_ray_dir);
                     let shadow_intersection = self.trace(&shadow_ray, true, true);
