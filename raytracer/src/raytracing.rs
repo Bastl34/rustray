@@ -12,12 +12,14 @@ use rand::Rng;
 use rand::seq::SliceRandom;
 
 const SHADOW_BIAS: f32 = 0.001;
+const APERTURE_BASE_RESOLUTION: f32 = 800.0;
 
 /*
 some resources:
 
 Raytracing in general:
 https://bheisler.github.io/post/writing-raytracer-in-rust-part-1/
+https://raytracing.github.io/books/RayTracingInOneWeekend.html
 
 normal mapping:
 https://stackoverflow.com/questions/41015574/raytracing-normal-mapping
@@ -88,8 +90,8 @@ impl Raytracing
 
             aspect_ratio: 0.0,
 
-            anti_aliasing: 32, //16
-            samples: 128, //64
+            anti_aliasing: 5, //16
+            samples: 2, //64
 
             focal_length: 8.0,
             aperture_size: 1.0, //64.0
@@ -182,8 +184,9 @@ impl Raytracing
             //DOF (depth of field)
             if self.aperture_size > 1.0 && self.focal_length > 1.0
             {
-                x_trans *= self.aperture_size;
-                y_trans *= self.aperture_size;
+                let aperture_scale = self.width as f32 / APERTURE_BASE_RESOLUTION;
+                x_trans *= self.aperture_size * aperture_scale;
+                y_trans *= self.aperture_size * aperture_scale;
 
 
                 let origin = Point3::<f32>::origin();

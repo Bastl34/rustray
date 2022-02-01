@@ -3,6 +3,17 @@ name = "raytracer"
 version = "0.1.0"
 edition = "2021"
 
+[profile.dev]
+opt-level = 3
+
+[profile.release]
+# Reduce binary size
+panic = "abort"
+#strip = "symbols"
+# Improve performance but increase compile time
+lto = "fat"
+codegen-units = 1
+
 [dependencies]
 sdl2 = { version = "0.35.1", features = ["bundled", "static-link"] }
 rand = "*"

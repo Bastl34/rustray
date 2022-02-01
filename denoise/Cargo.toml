@@ -1,0 +1,22 @@
+[package]
+name = "denoise"
+version = "0.1.0"
+edition = "2021"
+build = "build.rs"
+#links = "libOpenImageDenoise"
+
+[dependencies]
+image = "0.23.14"
+oidn = "1.4.1"
+
+#[target.x86_64-apple-darwin.libOpenImageDenoise]
+#rustc-link-search = ["llib/oidn/lib"]
+
+#[target.x86_64-apple-darwin.libtbb]
+#rustc-link-search = ["llib/oidn/lib"]
+
+#[target.x86_64-apple-darwin]
+#rustc-link-search = ["lib/oidn/lib"]
+
+#[profile]
+#rpath = true
