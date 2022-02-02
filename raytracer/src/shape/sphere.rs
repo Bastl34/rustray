@@ -30,23 +30,31 @@ impl Shape for Sphere
         &self.basic
     }
 
+    fn get_basic_mut(&mut self) -> &mut ShapeBasics
+    {
+        &mut self.basic
+    }
+
     fn calc_bbox(&mut self)
     {
-        self.basic.b_box = self.ball.aabb(&self.basic.trans);
+        let trans = Isometry3::<f32>::identity();
+        self.basic.b_box = self.ball.aabb(&trans);
     }
 
     fn intersect_b_box(&self, ray: &Ray) -> Option<f32>
     {
-        //self.basic.b_box.cast_ray(&self.basic.trans, ray, std::f32::MAX, true)
-        let trans = Isometry3::<f32>::identity();
+        let ray_inverse = self.basic.get_inverse_ray(ray);
+
         let solid = !(self.basic.material.alpha < 1.0 || self.basic.has_texture(TextureType::Alpha));
-        self.basic.b_box.cast_ray(&trans, ray, std::f32::MAX, solid)
+        self.basic.b_box.cast_local_ray(&ray_inverse, std::f32::MAX, solid)
     }
 
     fn intersect(&self, ray: &Ray) -> Option<(f32, Vector3<f32>, u32)>
     {
+        let ray_inverse = self.basic.get_inverse_ray(ray);
+
         let solid = !(self.basic.material.alpha < 1.0 || self.basic.has_texture(TextureType::Alpha));
-        let res = self.ball.cast_ray_and_get_normal(&self.basic.trans, ray, std::f32::MAX, solid);
+        let res = self.ball.cast_local_ray_and_get_normal(&ray_inverse, std::f32::MAX, solid);
         if let Some(res) = res
         {
             return Some((res.toi, res.normal, 0))
@@ -70,7 +78,7 @@ impl Shape for Sphere
 
         //https://people.cs.clemson.edu/~dhouse/courses/405/notes/texture-maps.pdf
 
-        let c = &self.basic.trans * Point3::<f32>::new(0.0, 0.0, 0.0);
+        let c = &self.basic.trans * Point3::<f32>::new(0.0, 0.0, 0.0).to_homogeneous();
 
         let theta = (-(hit.z - c.z)).atan2(hit.x - c.x);
         let u = (theta + std::f32::consts::PI) / (2.0 * std::f32::consts::PI);
@@ -108,7 +116,7 @@ impl Sphere
         };
 
         //sphere.basic.trans = Isometry3::translation(x, y, z) * Isometry3::rotation(Vector3::new(1.0, 0.0, 0.0));
-        sphere.basic.trans = Isometry3::translation(x, y, z);
+        sphere.basic.trans = Isometry3::translation(x, y, z).to_homogeneous();
 
 
         sphere.calc_bbox();

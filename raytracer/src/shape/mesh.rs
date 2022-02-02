@@ -33,22 +33,32 @@ impl Shape for Mesh
         &self.basic
     }
 
+    fn get_basic_mut(&mut self) -> &mut ShapeBasics
+    {
+        &mut self.basic
+    }
+
     fn calc_bbox(&mut self)
     {
-        self.basic.b_box = self.mesh.aabb(&self.basic.trans);
+        let trans = Isometry3::<f32>::identity();
+        self.basic.b_box = self.mesh.aabb(&trans);
     }
 
     fn intersect_b_box(&self, ray: &Ray) -> Option<f32>
     {
-        let trans = Isometry3::<f32>::identity();
+        let ray_inverse = self.basic.get_inverse_ray(ray);
+
         let solid = !(self.basic.material.alpha < 1.0 || self.basic.has_texture(TextureType::Alpha));
-        self.basic.b_box.cast_ray(&trans, ray, std::f32::MAX, solid)
+
+        self.basic.b_box.cast_local_ray(&ray_inverse, std::f32::MAX, solid)
     }
 
     fn intersect(&self, ray: &Ray) -> Option<(f32, Vector3<f32>, u32)>
     {
+        let ray_inverse = self.basic.get_inverse_ray(ray);
+
         let solid = !(self.basic.material.alpha < 1.0 || self.basic.has_texture(TextureType::Alpha));
-        let res = self.mesh.cast_ray_and_get_normal(&self.basic.trans, ray, std::f32::MAX, solid);
+        let res = self.mesh.cast_local_ray_and_get_normal(&ray_inverse, std::f32::MAX, solid);
         if let Some(res) = res
         {
             let mut face_id = 0;
@@ -80,9 +90,9 @@ impl Shape for Mesh
         let i_uv_1 = uv_face[1] as usize;
         let i_uv_2 = uv_face[2] as usize;
 
-        let mut a = self.mesh.vertices()[i0];
-        let mut b = self.mesh.vertices()[i1];
-        let mut c = self.mesh.vertices()[i2];
+        let mut a = self.mesh.vertices()[i0].to_homogeneous();
+        let mut b = self.mesh.vertices()[i1].to_homogeneous();
+        let mut c = self.mesh.vertices()[i2].to_homogeneous();
 
         let a_t = self.uvs[i_uv_0];
         let b_t = self.uvs[i_uv_1];
@@ -92,6 +102,10 @@ impl Shape for Mesh
         a = &self.basic.trans * a;
         b = &self.basic.trans * b;
         c = &self.basic.trans * c;
+
+        let a = Point3::<f32>::from_homogeneous(a).unwrap();
+        let b = Point3::<f32>::from_homogeneous(b).unwrap();
+        let c = Point3::<f32>::from_homogeneous(c).unwrap();
 
         let f1 = a - hit;
         let f2 = b - hit;

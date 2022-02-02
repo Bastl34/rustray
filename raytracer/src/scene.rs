@@ -46,6 +46,8 @@ impl Scene
     {
         self.init_objects();
         self.init_lights();
+
+        self.update();
     }
 
     pub fn init_lights(&mut self)
@@ -313,7 +315,7 @@ impl Scene
         //self.items.push(sphere_far_away);
 
 
-        //self.items.push(sphere_texture);
+        self.items.push(sphere_texture);
 
 
         self.items.push(mesh_floor);
@@ -327,7 +329,7 @@ impl Scene
 
         //self.items.push(mesh_front);
 
-        self.load("scene/kBert_thumbsup_bevel.obj");
+        //self.load("scene/kBert_thumbsup_bevel.obj");
 
         //let mut k_bert = self.get_by_name("kBert_Cube").unwrap();
         //k_bert.borrow_mut().
@@ -452,6 +454,14 @@ impl Scene
                 self.items.push(Box::new(item));
             }
 
+        }
+    }
+
+    pub fn update(&mut self)
+    {
+        for item in & mut self.items
+        {
+            item.update();
         }
     }
 

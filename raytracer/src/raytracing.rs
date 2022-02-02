@@ -89,9 +89,9 @@ impl Raytracing
             height: 0,
             aspect_ratio: 0.0,
 
-            monte_carlo: true,
+            monte_carlo: false,
 
-            samples: 16, //this also includes anti aliasing
+            samples: 1, //this includes anti aliasing
 
             focal_length: 8.0,
             aperture_size: 1.0, //64.0 (1 means off)
@@ -120,8 +120,8 @@ impl Raytracing
 
         self.projection = Perspective3::new(self.aspect_ratio, self.fov, 0.001, 1000.0);
 
-        let eye    = Point3::new(0.0, 0.0, 1.0);
-        let target = Point3::new(1.0, 0.0, 0.0);
+        let eye    = Point3::new(0.0, 0.0, 0.0);
+        let target = Point3::new(0.0, 0.0, -1.0);
 
         self.view = Isometry3::look_at_rh(&eye, &target, &Vector3::y());
     }

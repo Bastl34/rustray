@@ -1,4 +1,4 @@
-use nalgebra::{Isometry3, Matrix4, Vector3, Point2, Point3};
+use nalgebra::{Matrix4, Vector3, Point2, Point3};
 use parry3d::query::{Ray};
 
 use parry3d::bounding_volume::AABB;
@@ -13,8 +13,10 @@ pub trait Shape
     fn get_name(&self) -> &String;
     fn get_material(&self) -> &Material;
     fn get_basic(&self) -> &ShapeBasics;
+    fn get_basic_mut(&mut self) -> &mut ShapeBasics;
 
     fn calc_bbox(&mut self);
+
     fn intersect_b_box(&self, ray: &Ray) -> Option<f32>;
     fn intersect(&self, ray: &Ray) -> Option<(f32, Vector3<f32>, u32)>;
 
@@ -23,6 +25,7 @@ pub trait Shape
     fn update(&mut self)
     {
         self.calc_bbox();
+        self.get_basic_mut().calc_inverse();
     }
 }
 
@@ -120,7 +123,7 @@ pub enum TextureType
 
 pub struct ShapeBasics
 {
-    pub trans: Isometry3<f32>,
+    pub trans: Matrix4<f32>,
     tran_inverse: Matrix4<f32>,
 
     b_box: AABB,
@@ -134,7 +137,7 @@ impl ShapeBasics
     {
         ShapeBasics
         {
-            trans: Isometry3::<f32>::identity(),
+            trans: Matrix4::<f32>::identity(),
             tran_inverse: Matrix4::<f32>::identity(),
             b_box: AABB::new_invalid(),
             material: Material::new()
@@ -143,7 +146,15 @@ impl ShapeBasics
 
     pub fn get_mat(&mut self) -> Matrix4<f32>
     {
-        self.trans.to_homogeneous()
+        self.trans
+    }
+
+    pub fn get_inverse_ray(&self, ray: &Ray) -> Ray
+    {
+        let ray_inverse_start = self.tran_inverse * ray.origin.to_homogeneous();
+        let ray_inverse_dir = self.tran_inverse * ray.dir.to_homogeneous();
+
+        Ray::new(Point3::from_homogeneous(ray_inverse_start).unwrap(), Vector3::from_homogeneous(ray_inverse_dir).unwrap())
     }
 
     pub fn load_texture(&mut self, path: &str, tex_type: TextureType)
@@ -214,6 +225,6 @@ impl ShapeBasics
     pub fn calc_inverse(&mut self)
     {
         //because we are dealing with 4x4 matrices: unwrap should be fine
-        self.tran_inverse = self.trans.to_homogeneous().try_inverse().unwrap();
+        self.tran_inverse = self.trans.try_inverse().unwrap();
     }
 }
