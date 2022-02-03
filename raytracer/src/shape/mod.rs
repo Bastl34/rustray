@@ -53,6 +53,8 @@ pub struct Material
     pub shadow_softness: f32,
 
     pub surface_roughness: f32,
+
+    pub smooth_shading: bool,
 }
 
 impl Material
@@ -81,7 +83,9 @@ impl Material
             receive_shadow: true,
             shadow_softness: 0.01,
 
-            surface_roughness: 0.0
+            surface_roughness: 0.0,
+
+            smooth_shading: true
         }
     }
 
@@ -108,6 +112,8 @@ impl Material
         println!("shadow_softness: {:?}", self.shadow_softness);
 
         println!("surface_roughness: {:?}", self.surface_roughness);
+
+        println!("smooth_shading: {:?}", self.smooth_shading);
     }
 }
 

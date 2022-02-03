@@ -89,9 +89,9 @@ impl Raytracing
             height: 0,
             aspect_ratio: 0.0,
 
-            monte_carlo: false,
+            monte_carlo: true,
 
-            samples: 1, //this includes anti aliasing
+            samples: 8, //this includes anti aliasing
 
             focal_length: 8.0,
             aperture_size: 1.0, //64.0 (1 means off)

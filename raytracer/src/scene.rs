@@ -25,9 +25,11 @@ pub struct Light
     pub light_type: LightType
 }
 
+type ScemeItem = Box<dyn Shape + Send + Sync>;
+
 pub struct Scene
 {
-    pub items: Vec<Box<dyn Shape + Send + Sync>>,
+    pub items: Vec<ScemeItem>,
     pub lights: Vec<Box<Light>>,
 }
 
@@ -315,7 +317,7 @@ impl Scene
         //self.items.push(sphere_far_away);
 
 
-        self.items.push(sphere_texture);
+        //self.items.push(sphere_texture);
 
 
         self.items.push(mesh_floor);
@@ -329,11 +331,25 @@ impl Scene
 
         //self.items.push(mesh_front);
 
-        //self.load("scene/kBert_thumbsup_bevel.obj");
+        self.load("scene/monkey.obj");
+        self.get_by_name("Suzanne").unwrap().get_basic_mut().trans = nalgebra::Isometry3::translation(0.0, 0.0, -10.0).to_homogeneous();
+        self.get_by_name("Suzanne").unwrap().get_basic_mut().material.reflectivity = 0.5;
+        self.get_by_name("Suzanne").unwrap().get_basic_mut().material.smooth_shading = true;
+        self.get_by_name("Suzanne").unwrap().get_basic_mut().material.alpha = 0.5;
 
-        //let mut k_bert = self.get_by_name("kBert_Cube").unwrap();
-        //k_bert.borrow_mut().
-        //k_bert.borrow_mut().get_material().reflectivity = 0.5;
+        /*
+        self.load("scene/kBert_thumbsup_bevel.obj");
+        let items = ["kBert_Cube", "Cylinder_Cylinder.001"];
+
+        for item in items
+        {
+            let item = self.get_by_name(item).unwrap();
+            item.get_basic_mut().material.reflectivity = 0.0;
+            item.get_basic_mut().material.alpha = 0.5;
+        }
+
+        self.get_by_name("Cylinder_Cylinder.001").unwrap().get_basic_mut().material.smooth_shading = false;
+        */
     }
 
     pub fn load(&mut self, path: &str)
@@ -359,9 +375,12 @@ impl Scene
 
             let mut verts: Vec<Point3::<f32>> = vec![];
             let mut uvs: Vec<Point2<f32>> = vec![];
+            let mut normals: Vec<Point3<f32>> = vec![];
 
             let mut indices:Vec<[u32; 3]> = vec![];
             let mut uv_indices: Vec<[u32; 3]> = vec![];
+            let mut normals_indices: Vec<[u32; 3]> = vec![];
+
 
             //vertices
             for vtx in 0..mesh.positions.len() / 3
@@ -371,6 +390,16 @@ impl Scene
                 let z = mesh.positions[3 * vtx + 2];
 
                 verts.push(Point3::<f32>::new(x, y, z));
+            }
+
+            //normals
+            for vtx in 0..mesh.normals.len() / 3
+            {
+                let x = mesh.normals[3 * vtx];
+                let y = mesh.normals[3 * vtx + 1];
+                let z = mesh.normals[3 * vtx + 2];
+
+                normals.push(Point3::<f32>::new(x, y, z));
             }
 
             //tex coords
@@ -402,9 +431,19 @@ impl Scene
                 uv_indices.push([i0, i1, i2]);
             }
 
+            //normals coords indices
+            for vtx in 0..mesh.normal_indices.len() / 3
+            {
+                let i0 = mesh.normal_indices[3 * vtx];
+                let i1 = mesh.normal_indices[3 * vtx + 1];
+                let i2 = mesh.normal_indices[3 * vtx + 2];
+
+                normals_indices.push([i0, i1, i2]);
+            }
+
             if verts.len() > 0
             {
-                let mut item = Mesh::new_with_data(m.name.as_str(), verts, indices, uvs, uv_indices);
+                let mut item = Mesh::new_with_data(m.name.as_str(), verts, indices, uvs, uv_indices, normals, normals_indices);
 
                 //apply material
                 if let Some(mat_id) = mesh.material_id
@@ -417,10 +456,6 @@ impl Scene
                     item.basic.material.diffuse_color = Vector3::<f32>::new(mat.diffuse[0], mat.diffuse[1], mat.diffuse[2]);
                     item.basic.material.refraction_index = mat.optical_density;
                     item.basic.material.alpha = mat.dissolve;
-
-                    //TODO:
-                    //item.basic.material.reflectivity = 0.5;
-                    //item.basic.material.alpha = 0.5;
 
                     item.basic.material.ambient_color = item.basic.material.diffuse_color * 0.01;
 
@@ -463,6 +498,19 @@ impl Scene
         {
             item.update();
         }
+    }
+
+    pub fn get_by_name(&mut self, name: &str) -> Option<&mut ScemeItem>
+    {
+        for item in & mut self.items
+        {
+            if item.get_name() == name
+            {
+                return Some(item);
+            }
+        }
+
+        None
     }
 
     pub fn print(&self)

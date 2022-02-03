@@ -13,7 +13,10 @@ pub struct Mesh
     pub mesh: TriMesh,
 
     pub uvs: Vec<Point2<f32>>,
-    pub uv_indices: Vec<[u32; 3]>
+    pub uv_indices: Vec<[u32; 3]>,
+
+    pub normals: Vec<Point3<f32>>,
+    pub normals_indices: Vec<[u32; 3]>,
 }
 
 impl Shape for Mesh
@@ -67,7 +70,20 @@ impl Shape for Mesh
                 face_id = i;
             }
 
-            return Some((res.toi, res.normal, face_id))
+            let mut normal = res.normal;
+
+            //use normal based on loaded normal (not on computed normal by parry -- if needed for smooth shading)
+            if self.get_material().smooth_shading && self.normals.len() > 0 && self.normals_indices.len() > 0
+            {
+                let hit = ray.origin + (ray.dir * res.toi);
+                normal = self.get_normal(hit, face_id);
+
+                if self.mesh.is_backface(res.feature)
+                {
+                    normal = -normal;
+                }
+            }
+            return Some((res.toi, normal, face_id))
         }
         None
     }
@@ -136,7 +152,9 @@ impl Mesh
             name: String::from("Mesh"),
             mesh: TriMesh::new(vec![], vec![]),
             uvs: vec![],
-            uv_indices: vec![]
+            uv_indices: vec![],
+            normals: vec![],
+            normals_indices: vec![]
         };
 
         mesh.calc_bbox();
@@ -144,7 +162,7 @@ impl Mesh
         mesh
     }
 
-    pub fn new_with_data(name: &str, vertices: Vec<Point3<f32>>, indices: Vec<[u32; 3]>, uvs: Vec<Point2<f32>>, uv_indices: Vec<[u32; 3]>) -> Mesh
+    pub fn new_with_data(name: &str, vertices: Vec<Point3<f32>>, indices: Vec<[u32; 3]>, uvs: Vec<Point2<f32>>, uv_indices: Vec<[u32; 3]>, normals: Vec<Point3<f32>>, normals_indices: Vec<[u32; 3]>) -> Mesh
     {
         let mut mesh = Mesh
         {
@@ -152,7 +170,9 @@ impl Mesh
             name: String::from(name),
             mesh: TriMesh::new(vertices, indices),
             uvs: uvs,
-            uv_indices: uv_indices
+            uv_indices: uv_indices,
+            normals: normals,
+            normals_indices: normals_indices
         };
 
         mesh.calc_bbox();
@@ -178,6 +198,64 @@ impl Mesh
         let indices = vec![[0u32, 1, 2], [0, 2, 3]];
         let uv_indices = vec![[0u32, 1, 2], [0, 2, 3]];
 
-        Mesh::new_with_data(name, points, indices, uvs, uv_indices)
+        Mesh::new_with_data(name, points, indices, uvs, uv_indices, vec![], vec![])
+    }
+
+    fn get_normal(&self, hit: Point3<f32>, face_id: u32) -> Vector3<f32>
+    {
+        // https://stackoverflow.com/questions/23980748/triangle-texture-mapping-with-barycentric-coordinates
+        // https://answers.unity.com/questions/383804/calculate-uv-coordinates-of-3d-point-on-plane-of-m.html
+
+        let f_id = (face_id % self.mesh.indices().len() as u32) as usize;
+
+        let face = self.mesh.indices()[f_id];
+        let normal_face = self.normals_indices[f_id];
+
+        let i0 = face[0] as usize;
+        let i1 = face[1] as usize;
+        let i2 = face[2] as usize;
+
+        let i_normal_0 = normal_face[0] as usize;
+        let i_normal_1 = normal_face[1] as usize;
+        let i_normal_2 = normal_face[2] as usize;
+
+        let mut a = self.mesh.vertices()[i0].to_homogeneous();
+        let mut b = self.mesh.vertices()[i1].to_homogeneous();
+        let mut c = self.mesh.vertices()[i2].to_homogeneous();
+
+        let a_t = self.normals[i_normal_0];
+        let b_t = self.normals[i_normal_1];
+        let c_t = self.normals[i_normal_2];
+
+        //apply transformation
+        a = &self.basic.trans * a;
+        b = &self.basic.trans * b;
+        c = &self.basic.trans * c;
+
+        let a = Point3::<f32>::from_homogeneous(a).unwrap();
+        let b = Point3::<f32>::from_homogeneous(b).unwrap();
+        let c = Point3::<f32>::from_homogeneous(c).unwrap();
+
+        let f1 = a - hit;
+        let f2 = b - hit;
+        let f3 = c - hit;
+
+        let a = (a-b).cross(&(a-c)).magnitude();
+        let a1 = f2.cross(&f3).magnitude() / a;
+        let a2 = f3.cross(&f1).magnitude() / a;
+        let a3 = f1.cross(&f2).magnitude() / a;
+
+        let part_1 = a_t * a1;
+        let part_2 = b_t * a2;
+        let part_3 = c_t * a3;
+
+        let normal = Point3::<f32>::new
+        (
+            part_1.x + part_2.x + part_3.x,
+            part_1.y + part_2.y + part_3.y,
+            part_1.z + part_2.z + part_3.z,
+        );
+
+        Vector3::<f32>::new(normal.x, normal.y, normal.z)
     }
 }
