@@ -317,7 +317,7 @@ impl Scene
         //self.items.push(sphere_far_away);
 
 
-        //self.items.push(sphere_texture);
+        self.items.push(sphere_texture);
 
 
         self.items.push(mesh_floor);
@@ -331,11 +331,13 @@ impl Scene
 
         //self.items.push(mesh_front);
 
+        /*
         self.load("scene/monkey.obj");
         self.get_by_name("Suzanne").unwrap().get_basic_mut().trans = nalgebra::Isometry3::translation(0.0, 0.0, -10.0).to_homogeneous();
         self.get_by_name("Suzanne").unwrap().get_basic_mut().material.reflectivity = 0.5;
         self.get_by_name("Suzanne").unwrap().get_basic_mut().material.smooth_shading = true;
         self.get_by_name("Suzanne").unwrap().get_basic_mut().material.alpha = 0.5;
+         */
 
         /*
         self.load("scene/kBert_thumbsup_bevel.obj");

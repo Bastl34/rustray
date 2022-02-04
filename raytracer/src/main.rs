@@ -46,7 +46,124 @@ http://nercury.github.io/rust/opengl/tutorial/2018/02/09/opengl-in-rust-from-scr
 const IMAGE_PATH: &str = "data/output";
 const POS_PATH: &str = "data/pos.data";
 
+
 fn main()
+{
+    let args: Vec<String> = std::env::args().collect();
+
+    let mut run_as_window = true;
+
+    if args.len() > 1
+    {
+        let command = args[1].clone();
+
+        if command != "win"
+        {
+            run_as_window = false;
+        }
+    }
+
+    if run_as_window 
+    {
+        main_sdl();
+    }
+    else
+    {
+        main_cmd();
+    }
+}
+
+fn main_cmd()
+{
+    let width: i32 = 800;
+    let height: i32 = 600;
+
+    let mut image: RgbImage = ImageBuffer::new(width as u32, height as u32);
+
+    let mut current_time: u128;
+
+    let timer = Instant::now();
+
+    let mut scene = Scene::new();
+    scene.init_with_some_objects();
+    scene.print();
+
+    let mut raytracing = Raytracing::new(scene);
+
+    raytracing.init_camera(width as u32, height as u32);
+
+    let raytracing_arc = std::sync::Arc::new(std::sync::RwLock::new(raytracing));
+
+    let mut rendering = RendererManager::new(width, height, raytracing_arc.clone());
+    rendering.start();
+
+    let mut fps_display_update: u128 = 0;
+    let mut pps = 0;
+
+    let mut completed = false;
+
+    while !completed
+    {
+        let receiver = rendering.get_message_receiver();
+
+        loop
+        {
+            let res = receiver.try_recv();
+
+            if res.is_err() { break }
+
+            if res.is_ok()
+            {
+                let item = res.unwrap();
+
+                //check range to prevent draing something outside while resizing
+                if item.x < image.width() as i32 && item.y < image.height() as i32
+                {
+                    image.put_pixel(item.x as u32, item.y as u32, Rgb([item.r, item.g, item.b]));
+                    pps += 1;
+                }
+            }
+        }
+
+        current_time = timer.elapsed().as_millis();
+
+        //update window title
+        if current_time - fps_display_update >= 1000
+        {
+            let pixels = rendering.get_rendered_pixels();
+            let is_done = rendering.is_done();
+            let elapsed = rendering.check_and_get_elapsed_time() as f64 / 1000.0;
+            let percentage = (pixels as f32 / (width * height) as f32) * 100.0;
+
+            println!("{:0>6.2}%, PPS: {} Pixels: {}, Time: {:.2}s",percentage, pps, pixels, elapsed);
+
+            fps_display_update = current_time;
+
+            if is_done && !completed
+            {
+                println!("rendering time: {}", elapsed);
+                completed = true;
+
+                //save
+                let now = Utc::now();
+
+                let filename = format!("{}/output_{}-{}-{} {}-{}-{}.png", IMAGE_PATH, now.year(), now.month(), now.day(), now.hour(), now.minute(), now.second());
+                image.save(filename).unwrap();
+            }
+
+            if !completed
+            {
+                pps = 0;
+            }
+        }
+
+        thread::sleep(Duration::from_millis(100));
+    }
+
+    println!("done");
+}
+
+fn main_sdl()
 {
     let sdl = sdl2::init().unwrap();
 
