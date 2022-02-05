@@ -67,6 +67,9 @@ pub struct Raytracing
     focal_length: f32,
     aperture_size: f32,
 
+    fog_density: f32,
+    fog_color: Vector3<f32>,
+
     max_recursion: u16,
     gamma_correction: bool,
 
@@ -91,10 +94,13 @@ impl Raytracing
 
             monte_carlo: true,
 
-            samples: 8, //this includes anti aliasing
+            samples: 1, //this includes anti aliasing
 
             focal_length: 8.0,
             aperture_size: 1.0, //64.0 (1 means off)
+
+            fog_density: 0.03,
+            fog_color: Vector3::<f32>::new(0.4, 0.4, 0.4),
 
             max_recursion: 6,
             gamma_correction: false,
@@ -694,6 +700,13 @@ impl Raytracing
             else if alpha < 1.0
             {
                 color = color * alpha;
+            }
+
+            //fog
+            {
+                let fog_amount = (self.fog_density * hit_dist).min(1.0);
+                
+                color = ((1.0 - fog_amount) * color) + (self.fog_color * fog_amount);
             }
         }
 
