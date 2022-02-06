@@ -37,6 +37,9 @@ monte carlo:
 https://www.youtube.com/watch?v=KCYroQVaARs
 https://www.youtube.com/watch?v=R9iZzaXUaK4
 https://wzhfantastic.github.io/2018/04/09/RayTracingInUnity(PartTwo)/
+
+hemi sphere sampling
+https://www.gamedev.net/forums/topic/683176-finding-a-random-point-on-a-sphere-with-spread-and-direction/
 */
 
 pub struct HitResult<'a>
@@ -94,12 +97,12 @@ impl Raytracing
 
             monte_carlo: true,
 
-            samples: 1, //this includes anti aliasing
+            samples: 2, //this includes anti aliasing
 
             focal_length: 8.0,
             aperture_size: 1.0, //64.0 (1 means off)
 
-            fog_density: 0.03,
+            fog_density: 0.0,
             fog_color: Vector3::<f32>::new(0.4, 0.4, 0.4),
 
             max_recursion: 6,
@@ -383,9 +386,9 @@ impl Raytracing
         }
     }
 
-    pub fn jitter(&self, dir: Vector3<f32>, strength: f32) -> Vector3<f32>
+    pub fn jitter(&self, dir: Vector3<f32>, spread: f32) -> Vector3<f32>
     {
-        if strength <= 0.0
+        if spread <= 0.0
         {
             return dir;
         }
@@ -396,18 +399,46 @@ impl Raytracing
 
         //not the perfect solution (it is not angle based) but it works for now
         let mut new_dir = dir;
-        new_dir.x += ((2.0 * rng.gen::<f32>()) - 1.0) * strength;
-        new_dir.y += ((2.0 * rng.gen::<f32>()) - 1.0) * strength;
-        new_dir.z += ((2.0 * rng.gen::<f32>()) - 1.0) * strength;
+        new_dir.x += ((2.0 * rng.gen::<f32>()) - 1.0) * spread;
+        new_dir.y += ((2.0 * rng.gen::<f32>()) - 1.0) * spread;
+        new_dir.z += ((2.0 * rng.gen::<f32>()) - 1.0) * spread;
          */
 
-        let rot_x = ((rng.gen::<f32>() * PI * 2.0) - PI) * strength;
-        let rot_y = ((rng.gen::<f32>() * PI * 2.0) - PI) * strength;
-        let rot_z = ((rng.gen::<f32>() * PI * 2.0) - PI) * strength;
+        /*
+        let rot_x = ((rng.gen::<f32>() * PI * 2.0) - PI) * spread;
+        let rot_y = ((rng.gen::<f32>() * PI * 2.0) - PI) * spread;
+        let rot_z = ((rng.gen::<f32>() * PI * 2.0) - PI) * spread;
 
         let rotation_mat = Isometry3::rotation(Vector3::new(rot_x, rot_y, rot_z));
 
         let new_dir = rotation_mat * dir;
+
+        new_dir.normalize()
+         */
+
+        let b3 = dir.normalize();
+
+        let diff;
+        if b3.x.abs() < 0.5
+        {
+            diff = Vector3::<f32>::new(1.0, 0.0, 0.0);
+        }
+        else
+        {
+            diff = Vector3::<f32>::new(0.0, 1.0, 0.0);
+        }
+
+        let b1 = b3.cross(&diff).normalize();
+        let b2 = b1.cross(&b3);
+
+        let z = rand::thread_rng().gen_range((spread * PI).cos()..1.0);
+        let r = (1.0 - z * z).sqrt();
+        let theta = rand::thread_rng().gen_range(-PI..PI);
+        let x = r * theta.cos();
+        let y = r * theta.sin();
+
+        let new_dir = x * b1 + y * b2 + z * b3;
+        //let new_dir = Vector3<f32>::new(x * b1, y * b2)
 
         new_dir.normalize()
     }

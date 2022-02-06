@@ -187,7 +187,8 @@ impl Scene
         mesh_floor.basic.material.specular_color = mesh_floor.basic.material.diffuse_color * 0.8;
 
         mesh_floor.basic.material.reflectivity = 0.4;
-        mesh_floor.basic.material.surface_roughness = 0.005;
+        //mesh_floor.basic.material.surface_roughness = 0.005;
+        //mesh_floor.basic.material.shadow_softness = 0.1;
         mesh_floor.basic.load_texture("scene/checkerboard.png", TextureType::Diffuse);
 
         //back
@@ -317,7 +318,7 @@ impl Scene
         //self.items.push(sphere_far_away);
 
 
-        self.items.push(sphere_texture);
+        //self.items.push(sphere_texture);
 
 
         self.items.push(mesh_floor);
@@ -339,19 +340,20 @@ impl Scene
         self.get_by_name("Suzanne").unwrap().get_basic_mut().material.alpha = 0.5;
          */
 
-        /*
+        
         self.load("scene/kBert_thumbsup_bevel.obj");
         let items = ["kBert_Cube", "Cylinder_Cylinder.001"];
 
         for item in items
         {
             let item = self.get_by_name(item).unwrap();
-            item.get_basic_mut().material.reflectivity = 0.0;
-            item.get_basic_mut().material.alpha = 0.5;
+            item.get_basic_mut().material.reflectivity = 0.1;
+            //item.get_basic_mut().material.shadow_softness = 0.1;
+            //item.get_basic_mut().material.alpha = 0.5;
         }
 
         self.get_by_name("Cylinder_Cylinder.001").unwrap().get_basic_mut().material.smooth_shading = false;
-        */
+        
     }
 
     pub fn load(&mut self, path: &str)
