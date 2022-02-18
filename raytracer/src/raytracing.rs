@@ -117,7 +117,6 @@ impl Raytracing
             fov: 0.0,
             fov_adjustment: 0.0,
 
-            //TODO: use projection mat instead of manual calc
             projection: Perspective3::<f32>::new(1.0f32, 0.0f32, 0.001, 1000.0),
             view: Isometry3::<f32>::identity(),
 
@@ -215,29 +214,36 @@ impl Raytracing
                 x_trans *= self.aperture_size * aperture_scale;
                 y_trans *= self.aperture_size * aperture_scale;
 
+                // ***** calculate the center pixel pos
+                let center_x = ((x_f + 0.5) / w) * 2.0 - 1.0;
+                let center_y = 1.0 - ((y_f + 0.5) / h) * 2.0;
 
-                let origin = Point3::<f32>::origin();
+                let mut center_pixel_pos = Vector4::new(center_x, center_y, -CAM_CLIPPING_PLANE_DIST, 1.0);
+                center_pixel_pos = self.projection_inverse * center_pixel_pos;
 
-                //let temp_x = ((((x as f32 + 0.5) / w) * 2.0 - 1.0) * self.aspect_ratio) * self.fov_adjustment;
-                //let temp_y = (1.0 - ((y as f32 + 0.5) / h) * 2.0) * self.fov_adjustment;
+                let mut ray_dir = center_pixel_pos - DEFAILT_VIEW_POS;
+                ray_dir.w = 0.0;
 
-                let sensor_x = (((((x_f + 0.5) / w) * 2.0 - 1.0)) * self.aspect_ratio) * self.fov_adjustment;
-                let sensor_y = ((1.0 - ((y_f + 0.5) / h) * 2.0)) * self.fov_adjustment;
+                let origin = self.view_inverse * DEFAILT_VIEW_POS;
+                let dir = (self.view_inverse * ray_dir).normalize();
 
+                let dist = ray_dir.xyz().magnitude();
+
+                // ***** calculate the focal point
                 let dist_perpendicular = CAM_CLIPPING_PLANE_DIST;
-                let mut pixel_pos = Point3::new(sensor_x, sensor_y, -dist_perpendicular);
-                let dist = (pixel_pos - origin).magnitude();
-                let dir = (pixel_pos - origin).normalize();
-
                 let p = origin + ((dist_perpendicular/(dist/(dist + self.focal_length)))*dir);
 
-                let ray_sensor_x = (((((x_f + 0.5) / w) * 2.0 - 1.0) + x_trans) * self.aspect_ratio) * self.fov_adjustment;
-                let ray_sensor_y = ((1.0 - ((y_f + 0.5) / h) * 2.0) + y_trans) * self.fov_adjustment;
-                pixel_pos = Point3::new(ray_sensor_x, ray_sensor_y, -dist_perpendicular);
+                // ***** calculate ray
+                let ray_sensor_x = (((x_f + 0.5) / w) * 2.0 - 1.0) + x_trans;
+                let ray_sensor_y = (1.0 - ((y_f + 0.5) / h) * 2.0) + y_trans;
 
-                let ray_dir = p - pixel_pos;
+                let mut pixel_pos = Vector4::new(ray_sensor_x, ray_sensor_y, -CAM_CLIPPING_PLANE_DIST, 1.0);
+                pixel_pos = self.projection_inverse * pixel_pos;
 
-                ray = Ray::new(pixel_pos, ray_dir);
+                let ray_origin = self.view_inverse * pixel_pos;
+                let ray_dir = p - pixel_pos; //p is already in view mat space
+
+                ray = Ray::new(Point3::<f32>::from(ray_origin.xyz()), Vector3::<f32>::from(ray_dir.xyz()));
             }
             //with or without anti aliasing and without DOF
             else
@@ -246,12 +252,12 @@ impl Raytracing
                 let sensor_x = (((x_f + 0.5) / w) * 2.0 - 1.0) + x_trans;
                 let sensor_y = (1.0 - ((y_f + 0.5) / h) * 2.0) + y_trans;
 
-                let mut p = Vector4::new(sensor_x, sensor_y, -CAM_CLIPPING_PLANE_DIST, 1.0);
-                p = self.projection_inverse * p;
+                let mut pixel_pos = Vector4::new(sensor_x, sensor_y, -CAM_CLIPPING_PLANE_DIST, 1.0);
+                pixel_pos = self.projection_inverse * pixel_pos;
 
-                let ray_dir = p - DEFAILT_VIEW_POS;
+                let ray_dir = pixel_pos - DEFAILT_VIEW_POS;
 
-                let origin = self.view_inverse * p;
+                let origin = self.view_inverse * pixel_pos;
                 let dir = self.view_inverse * ray_dir;
 
                 ray = Ray::new(Point3::<f32>::from(origin.xyz()), Vector3::<f32>::from(dir.xyz()));

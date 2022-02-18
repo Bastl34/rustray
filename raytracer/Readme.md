@@ -18,7 +18,6 @@
 * monte carlo raytracing
 
 ## TODO
-* projection matrix
 * animation
 * gltf scene loading
 * json based scene

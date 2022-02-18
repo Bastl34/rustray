@@ -95,6 +95,7 @@ impl RendererManager
         println!("block size: {}", BLOCK_SIZE);
 
         let cores = num_cpus::get();
+        //let cores = 1;
         println!("cores found: {}", cores);
 
         //start time
