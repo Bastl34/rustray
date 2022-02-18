@@ -18,7 +18,6 @@
 * monte carlo raytracing
 
 ## TODO
-* real transformations
 * projection matrix
 * animation
 * gltf scene loading

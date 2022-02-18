@@ -5,7 +5,7 @@ use crate::pixel_color::PixelColor;
 
 use crate::scene::{Scene, LightType};
 
-use nalgebra::{Perspective3, Isometry3, Point3, Vector3, Matrix3};
+use nalgebra::{Perspective3, Isometry3, Point3, Vector3, Matrix3, Matrix4, Vector4};
 use parry3d::query::{Ray};
 
 use rand::Rng;
@@ -13,6 +13,9 @@ use rand::seq::SliceRandom;
 
 const SHADOW_BIAS: f32 = 0.001;
 const APERTURE_BASE_RESOLUTION: f32 = 800.0;
+
+const CAM_CLIPPING_PLANE_DIST: f32 = 1.0;
+const DEFAILT_VIEW_POS: Vector4::<f32> = Vector4::<f32>::new(0.0, 0.0, 0.0, 1.0);
 
 /*
 some resources:
@@ -80,7 +83,10 @@ pub struct Raytracing
     fov_adjustment: f32,
 
     projection: Perspective3<f32>,
-    view: Isometry3<f32>
+    view: Isometry3<f32>,
+
+    projection_inverse: Matrix4<f32>,
+    view_inverse: Matrix4<f32>,
 }
 
 impl Raytracing
@@ -97,10 +103,10 @@ impl Raytracing
 
             monte_carlo: true,
 
-            samples: 2, //this includes anti aliasing
+            samples: 64, //this includes anti aliasing
 
             focal_length: 8.0,
-            aperture_size: 1.0, //64.0 (1 means off)
+            aperture_size: 64.0, //64.0 (1 means off)
 
             fog_density: 0.0,
             fog_color: Vector3::<f32>::new(0.4, 0.4, 0.4),
@@ -113,7 +119,10 @@ impl Raytracing
 
             //TODO: use projection mat instead of manual calc
             projection: Perspective3::<f32>::new(1.0f32, 0.0f32, 0.001, 1000.0),
-            view: Isometry3::<f32>::identity()
+            view: Isometry3::<f32>::identity(),
+
+            projection_inverse: Matrix4::<f32>::identity(),
+            view_inverse: Matrix4::<f32>::identity(),
         }
     }
 
@@ -133,6 +142,9 @@ impl Raytracing
         let target = Point3::new(0.0, 0.0, -1.0);
 
         self.view = Isometry3::look_at_rh(&eye, &target, &Vector3::y());
+
+        self.projection_inverse = self.projection.inverse();
+        self.view_inverse = self.view.to_homogeneous().try_inverse().unwrap();
     }
 
     pub fn gamma_encode(&self, linear: f32) -> f32
@@ -212,7 +224,7 @@ impl Raytracing
                 let sensor_x = (((((x_f + 0.5) / w) * 2.0 - 1.0)) * self.aspect_ratio) * self.fov_adjustment;
                 let sensor_y = ((1.0 - ((y_f + 0.5) / h) * 2.0)) * self.fov_adjustment;
 
-                let dist_perpendicular = 1.0;
+                let dist_perpendicular = CAM_CLIPPING_PLANE_DIST;
                 let mut pixel_pos = Point3::new(sensor_x, sensor_y, -dist_perpendicular);
                 let dist = (pixel_pos - origin).magnitude();
                 let dir = (pixel_pos - origin).normalize();
@@ -231,10 +243,18 @@ impl Raytracing
             else
             {
                 //map x/y to -1 <=> +1
-                let sensor_x = (((((x_f + 0.5) / w) * 2.0 - 1.0) + x_trans) * self.aspect_ratio) * self.fov_adjustment;
-                let sensor_y = ((1.0 - ((y_f + 0.5) / h) * 2.0) + y_trans) * self.fov_adjustment;
+                let sensor_x = (((x_f + 0.5) / w) * 2.0 - 1.0) + x_trans;
+                let sensor_y = (1.0 - ((y_f + 0.5) / h) * 2.0) + y_trans;
 
-                ray = Ray::new(Point3::origin(), Vector3::new(sensor_x, sensor_y, -1.0));
+                let mut p = Vector4::new(sensor_x, sensor_y, -CAM_CLIPPING_PLANE_DIST, 1.0);
+                p = self.projection_inverse * p;
+
+                let ray_dir = p - DEFAILT_VIEW_POS;
+
+                let origin = self.view_inverse * p;
+                let dir = self.view_inverse * ray_dir;
+
+                ray = Ray::new(Point3::<f32>::from(origin.xyz()), Vector3::<f32>::from(dir.xyz()));
             }
 
             color += self.get_color(ray, 1);
@@ -393,9 +413,9 @@ impl Raytracing
             return dir;
         }
 
-        let mut rng = rand::thread_rng();
-
         /*
+
+        let mut rng = rand::thread_rng();
 
         //not the perfect solution (it is not angle based) but it works for now
         let mut new_dir = dir;
@@ -515,11 +535,14 @@ impl Raytracing
         item_color
     }
 
+    pub fn reflect(&self, i: Vector3<f32>, n: Vector3<f32>) -> Vector3<f32>
+    {
+        //https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/reflect.xhtml
+        i - 2.0 * n.dot(&i) * n
+    }
+
     pub fn get_color(&self, ray: Ray, depth: u16) -> Vector3<f32>
     {
-        //TODO:
-        let eye_dir = Vector3::<f32>::new(0.0, 0.0, 0.0);
-
         let mut r = ray;
         r.dir = r.dir.normalize();
 
@@ -609,10 +632,11 @@ impl Raytracing
                 let diffuse = diffuse_color * dot_light;
 
                 //phong shading
-                let h = (eye_dir + direction_to_light).normalize();
-                let dot_viewer = h.dot(&surface_normal).max(0.0);
+                let reflect_dir = self.reflect(-direction_to_light, surface_normal);
+                let view_dir = (-r.dir).normalize();
+                let spec_dot = reflect_dir.dot(&view_dir).max(0.0);
+                let light_power = spec_dot.powf(item.get_material().shininess);
 
-                let light_power = dot_viewer.powf(item.get_material().shininess);
                 let specular = specular_color * light_power;
 
                 //light intensity
@@ -736,7 +760,7 @@ impl Raytracing
             //fog
             {
                 let fog_amount = (self.fog_density * hit_dist).min(1.0);
-                
+
                 color = ((1.0 - fog_amount) * color) + (self.fog_color * fog_amount);
             }
         }
