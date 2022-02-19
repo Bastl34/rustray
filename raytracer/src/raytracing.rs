@@ -103,7 +103,7 @@ impl Raytracing
 
             monte_carlo: true,
 
-            samples: 256, //this includes anti aliasing
+            samples: 8, //this includes anti aliasing
 
             focal_length: 8.0,
             aperture_size: 64.0, //64.0 (1 means off)
@@ -639,12 +639,12 @@ impl Raytracing
                     LightType::Spot => direction_to_light = (light.pos - hit_point).normalize(),
                 }
 
-                //lambert shading
+                //lambert
                 let dot_light = surface_normal.dot(&direction_to_light).max(0.0);
 
                 let diffuse = diffuse_color * dot_light;
 
-                //phong shading
+                //phong
                 let reflect_dir = self.reflect(-direction_to_light, surface_normal);
                 let view_dir = (-r.dir).normalize();
                 let spec_dot = reflect_dir.dot(&view_dir).max(0.0);
