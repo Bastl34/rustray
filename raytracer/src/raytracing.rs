@@ -83,7 +83,7 @@ pub struct Raytracing
     fov_adjustment: f32,
 
     projection: Perspective3<f32>,
-    view: Isometry3<f32>,
+    view: Matrix4<f32>,
 
     projection_inverse: Matrix4<f32>,
     view_inverse: Matrix4<f32>,
@@ -103,7 +103,7 @@ impl Raytracing
 
             monte_carlo: true,
 
-            samples: 64, //this includes anti aliasing
+            samples: 256, //this includes anti aliasing
 
             focal_length: 8.0,
             aperture_size: 64.0, //64.0 (1 means off)
@@ -118,7 +118,7 @@ impl Raytracing
             fov_adjustment: 0.0,
 
             projection: Perspective3::<f32>::new(1.0f32, 0.0f32, 0.001, 1000.0),
-            view: Isometry3::<f32>::identity(),
+            view: Matrix4::<f32>::identity(),
 
             projection_inverse: Matrix4::<f32>::identity(),
             view_inverse: Matrix4::<f32>::identity(),
@@ -140,10 +140,12 @@ impl Raytracing
         let eye    = Point3::new(0.0, 0.0, 0.0);
         let target = Point3::new(0.0, 0.0, -1.0);
 
-        self.view = Isometry3::look_at_rh(&eye, &target, &Vector3::y());
+        self.view = Isometry3::look_at_rh(&eye, &target, &Vector3::y()).to_homogeneous();
+
+        //self.view = self.view.append_translation(&Vector3::new(0.0, 0.0, -2.0));
 
         self.projection_inverse = self.projection.inverse();
-        self.view_inverse = self.view.to_homogeneous().try_inverse().unwrap();
+        self.view_inverse = self.view.try_inverse().unwrap();
     }
 
     pub fn gamma_encode(&self, linear: f32) -> f32
@@ -220,6 +222,7 @@ impl Raytracing
 
                 let mut center_pixel_pos = Vector4::new(center_x, center_y, -CAM_CLIPPING_PLANE_DIST, 1.0);
                 center_pixel_pos = self.projection_inverse * center_pixel_pos;
+                center_pixel_pos.w = 1.0;
 
                 let mut ray_dir = center_pixel_pos - DEFAILT_VIEW_POS;
                 ray_dir.w = 0.0;
@@ -239,9 +242,11 @@ impl Raytracing
 
                 let mut pixel_pos = Vector4::new(ray_sensor_x, ray_sensor_y, -CAM_CLIPPING_PLANE_DIST, 1.0);
                 pixel_pos = self.projection_inverse * pixel_pos;
+                pixel_pos.w = 1.0;
 
                 let ray_origin = self.view_inverse * pixel_pos;
-                let ray_dir = p - pixel_pos; //p is already in view mat space
+                let mut ray_dir = p - ray_origin; //p is already in view mat space
+                ray_dir.w = 0.0;
 
                 ray = Ray::new(Point3::<f32>::from(ray_origin.xyz()), Vector3::<f32>::from(ray_dir.xyz()));
             }
@@ -254,8 +259,10 @@ impl Raytracing
 
                 let mut pixel_pos = Vector4::new(sensor_x, sensor_y, -CAM_CLIPPING_PLANE_DIST, 1.0);
                 pixel_pos = self.projection_inverse * pixel_pos;
+                pixel_pos.w = 1.0;
 
-                let ray_dir = pixel_pos - DEFAILT_VIEW_POS;
+                let mut ray_dir = pixel_pos - DEFAILT_VIEW_POS;
+                ray_dir.w = 0.0;
 
                 let origin = self.view_inverse * pixel_pos;
                 let dir = self.view_inverse * ray_dir;
