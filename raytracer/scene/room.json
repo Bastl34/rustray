@@ -1,0 +1,64 @@
+{
+    "name": "Room",
+    "settings":
+    {
+        "monte_carlo": true,
+        "samples": 8,
+
+        "focal_length": 8.0,
+        "aperture_size": 64.0,
+
+        "fog_density": 0.0,
+        "fog_color": {"r": 0.4, "g": 0.4, "b": 0.4},
+
+        "max_recursion": 6,
+        "gamma_correction": false,
+
+        "fov": 90.0
+    },
+    "lights":
+    [
+        {
+            "name": "light dir",
+            "dir": {"x": 1.0, "y": -1.0, "z": -1.0},
+            "color": {"r": 1.0, "g": 1.0, "b": 1.0},
+            "intensity": 1.0,
+            "light_type": "directional"
+        },
+        {
+            "name": "light point 1",
+            "pos": {"x": -5.0, "y": -5.0, "z": -5.0},
+            "dir": {"x": 1.0, "y": 1.0, "z": -1.0},
+            "color": {"r": 1.0, "g": 1.0, "b": 1.0},
+            "intensity": 150.0,
+            "light_type": "point"
+        },
+        {
+            "name": "light point 2",
+            "pos": {"x": -2.0, "y": -2.0, "z": -15.0},
+            "dir": {"x": 1.0, "y": 1.0, "z": -1.0},
+            "color": {"r": 1.0, "g": 1.0, "b": 1.0},
+            "intensity": 500.0,
+            "light_type": "point"
+        },
+        {
+            "name": "light point 3",
+            "pos": {"x": 5.0, "y": 5.0, "z": -10.0},
+            "dir": {"x": -1.0, "y": -1.0, "z": -1.0},
+            "color": {"r": 1.0, "g": 0.0, "b": 0.0},
+            "intensity": 150.0,
+            "light_type": "point"
+        },
+        {
+            "name": "light point 3",
+            "pos": {"x": 0.0, "y": 5.0, "z": -6.0},
+            "dir": {"x": 0.0, "y": -1.0, "z": -0.3},
+            "color": {"r": 0.0, "g": 0.0, "b": 1.0},
+            "intensity": 800.0,
+            "max_angle": 22.5,
+            "light_type": "spot"
+        }
+    ],
+    "objects":
+    []
+}

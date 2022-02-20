@@ -63,7 +63,7 @@ fn main()
         }
     }
 
-    if run_as_window 
+    if run_as_window
     {
         main_sdl();
     }
@@ -218,6 +218,7 @@ fn main_sdl()
 
     let mut scene = Scene::new();
     scene.init_with_some_objects();
+    scene.load_json("scene/room.json");
     scene.print();
 
     let mut raytracing = Raytracing::new(scene);

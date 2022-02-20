@@ -80,7 +80,6 @@ pub struct Raytracing
     gamma_correction: bool,
 
     fov: f32,
-    fov_adjustment: f32,
 
     projection: Perspective3<f32>,
     view: Matrix4<f32>,
@@ -101,9 +100,9 @@ impl Raytracing
             height: 0,
             aspect_ratio: 0.0,
 
-            monte_carlo: true,
+            monte_carlo: false,
 
-            samples: 8, //this includes anti aliasing
+            samples: 1, //this includes anti aliasing
 
             focal_length: 8.0,
             aperture_size: 64.0, //64.0 (1 means off)
@@ -114,8 +113,7 @@ impl Raytracing
             max_recursion: 6,
             gamma_correction: false,
 
-            fov: 0.0,
-            fov_adjustment: 0.0,
+            fov: 90.0f32.to_radians(),
 
             projection: Perspective3::<f32>::new(1.0f32, 0.0f32, 0.001, 1000.0),
             view: Matrix4::<f32>::identity(),
@@ -131,9 +129,6 @@ impl Raytracing
         self.height = height;
 
         self.aspect_ratio = width as f32 / height as f32;
-        self.fov = 3.14 / 2.0;
-
-        self.fov_adjustment = (self.fov / 2.0).tan();
 
         self.projection = Perspective3::new(self.aspect_ratio, self.fov, 0.001, 1000.0);
 
@@ -142,7 +137,7 @@ impl Raytracing
 
         self.view = Isometry3::look_at_rh(&eye, &target, &Vector3::y()).to_homogeneous();
 
-        //self.view = self.view.append_translation(&Vector3::new(0.0, 0.0, -2.0));
+        self.view = self.view.append_translation(&Vector3::new(-0.0, 0.0, 0.0));
 
         self.projection_inverse = self.projection.inverse();
         self.view_inverse = self.view.try_inverse().unwrap();

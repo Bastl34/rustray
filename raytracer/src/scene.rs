@@ -1,4 +1,5 @@
 use nalgebra::{Point2, Point3, Vector3};
+use serde_json::{Value};
 
 use crate::shape::{Shape, TextureType};
 
@@ -47,63 +48,91 @@ impl Scene
     pub fn init_with_some_objects(&mut self)
     {
         self.init_objects();
-        self.init_lights();
 
         self.update();
     }
 
-    pub fn init_lights(&mut self)
+    pub fn load_json(&mut self, path: &str)
     {
-        self.lights.push(Box::new(Light
+        let data = std::fs::read_to_string(path);
+        if data.is_ok()
         {
-            pos: Point3::new(0.0, 0.0, 0.0),
-            dir: Vector3::new(1.0f32, -1.0, -1.0),
-            color: Vector3::new(1.0, 1.0, 1.0),
-            intensity: 1.0,
-            max_angle: 0.0,
-            light_type: LightType::Directional
-        }));
+            let str = data.unwrap();
+            let scene_data = serde_json::from_str::<Value>(&str);
+            if scene_data.is_ok()
+            {
+                let data = scene_data.unwrap();
 
-        self.lights.push(Box::new(Light
-        {
-            pos: Point3::new(-5.0, -5.0, -5.0),
-            dir: Vector3::new(1.0f32, 1.0, -1.0),
-            color: Vector3::new(1.0, 1.0, 1.0),
-            intensity: 150.0,
-            max_angle: 0.0,
-            light_type: LightType::Point
-        }));
+                dbg!(&data["lights"].as_array().unwrap());
 
-        self.lights.push(Box::new(Light
-        {
-            pos: Point3::new(-2.0, -2.0, -15.0),
-            dir: Vector3::new(1.0f32, 1.0, -1.0),
-            color: Vector3::new(1.0, 1.0, 1.0),
-            intensity: 500.0,
-            max_angle: 0.0,
-            light_type: LightType::Point
-        }));
+                let lights = data["lights"].as_array().unwrap();
 
-        self.lights.push(Box::new(Light
-        {
-            //pos: Point3::new(5.0, 5.0, -10.0),
-            pos: Point3::new(5.0, 5.0, -1.0),
-            dir: Vector3::new(-1.0f32, -1.0, -1.0),
-            color: Vector3::new(1.0, 0.0, 0.0),
-            intensity: 150.0,
-            max_angle: 0.0,
-            light_type: LightType::Point
-        }));
+                // ********** lights **********
+                for light in lights
+                {
+                    // pos
+                    let mut pos = Point3::<f32>::new(0.0, 0.0, 0.0);
+                    if !light["pos"].is_null()
+                    {
+                        pos.x = light["pos"]["x"].as_f64().unwrap() as f32;
+                        pos.y = light["pos"]["y"].as_f64().unwrap() as f32;
+                        pos.z = light["pos"]["z"].as_f64().unwrap() as f32;
+                    }
 
-        self.lights.push(Box::new(Light
+                    // dir
+                    let mut dir = Vector3::<f32>::new(0.0, 0.0, 0.0);
+                    dir.x = light["dir"]["x"].as_f64().unwrap() as f32;
+                    dir.y = light["dir"]["y"].as_f64().unwrap() as f32;
+                    dir.z = light["dir"]["z"].as_f64().unwrap() as f32;
+
+                    // color
+                    let mut color = Vector3::<f32>::new(0.0, 0.0, 0.0);
+                    color.x = light["color"]["r"].as_f64().unwrap() as f32;
+                    color.y = light["color"]["g"].as_f64().unwrap() as f32;
+                    color.z = light["color"]["b"].as_f64().unwrap() as f32;
+
+                    // intensity
+                    let intensity =  light["intensity"].as_f64().unwrap() as f32;
+
+                    // max_angle
+                    let mut max_angle = 0.0f32;
+                    if !light["max_angle"].is_null()
+                    {
+                        max_angle =  (light["max_angle"].as_f64().unwrap() as f32).to_radians();
+                    }
+
+                    // light type
+                    let mut light_type = LightType::Point;
+                    let light_type_str = light["light_type"].as_str().unwrap();
+
+                    match light_type_str
+                    {
+                        "point" => { light_type = LightType::Point },
+                        "directional" => { light_type = LightType::Directional },
+                        "spot" => { light_type = LightType::Spot },
+                        _ => {}
+                    }
+
+                    self.lights.push(Box::new(Light
+                    {
+                        pos: pos,
+                        dir: dir,
+                        color: color,
+                        intensity: intensity,
+                        max_angle: max_angle,
+                        light_type: light_type
+                    }));
+                }
+            }
+            else
+            {
+                println!("error can not parse json file {}", path);
+            }
+        }
+        else
         {
-            pos: Point3::new(0.0, 5.0, -6.0),
-            dir: Vector3::new(0.0f32, -1.0, -0.3),
-            color: Vector3::new(0.0, 0.0, 1.0),
-            intensity: 800.0,
-            max_angle: std::f32::consts::PI / 8.0,
-            light_type: LightType::Spot
-        }));
+            println!("error can not load file {}", path);
+        }
     }
 
     pub fn init_objects(&mut self)
@@ -340,7 +369,7 @@ impl Scene
         self.get_by_name("Suzanne").unwrap().get_basic_mut().material.alpha = 0.5;
          */
 
-        
+
         self.load("scene/kBert_thumbsup_bevel.obj");
         let items = ["kBert_Cube", "Cylinder_Cylinder.001"];
 
@@ -353,7 +382,7 @@ impl Scene
         }
 
         self.get_by_name("Cylinder_Cylinder.001").unwrap().get_basic_mut().material.smooth_shading = false;
-        
+
     }
 
     pub fn load(&mut self, path: &str)
