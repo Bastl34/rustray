@@ -5,6 +5,8 @@ use parry3d::bounding_volume::AABB;
 
 use image::{DynamicImage, GenericImageView, Pixel};
 
+use crate::helper::approx_equal;
+
 pub mod sphere;
 pub mod mesh;
 
@@ -33,18 +35,25 @@ pub trait Shape
 pub struct Material
 {
     pub ambient_color: Vector3<f32>,
-    pub diffuse_color: Vector3<f32>,
+    pub base_color: Vector3<f32>,
     pub specular_color: Vector3<f32>,
+
+    pub texture_ambient_path: String,
+    pub texture_base_path: String,
+    pub texture_specular_path: String,
+    pub texture_normal_path: String,
+    pub texture_alpha_path: String,
+
+    pub texture_ambient: DynamicImage,
+    pub texture_base: DynamicImage,
+    pub texture_specular: DynamicImage,
+    pub texture_normal: DynamicImage,
+    pub texture_alpha: DynamicImage,
+
     pub alpha: f32,
     pub shininess: f32,
     pub reflectivity: f32,
     pub refraction_index: f32,
-
-    pub texture_ambient: DynamicImage,
-    pub texture_diffuse: DynamicImage,
-    pub texture_specular: DynamicImage,
-    pub texture_normal: DynamicImage,
-    pub texture_alpha: DynamicImage,
 
     pub normal_map_strength: f32,
 
@@ -64,18 +73,25 @@ impl Material
         Material
         {
             ambient_color: Vector3::<f32>::new(0.0, 0.0, 0.0),
-            diffuse_color: Vector3::<f32>::new(1.0, 1.0, 1.0),
+            base_color: Vector3::<f32>::new(1.0, 1.0, 1.0),
             specular_color: Vector3::<f32>::new(0.8, 0.8, 0.8),
+
+            texture_ambient_path: String::new(),
+            texture_base_path: String::new(),
+            texture_specular_path: String::new(),
+            texture_normal_path: String::new(),
+            texture_alpha_path: String::new(),
+
+            texture_ambient: DynamicImage::new_rgb8(0,0),
+            texture_base: DynamicImage::new_rgb8(0,0),
+            texture_specular: DynamicImage::new_rgb8(0,0),
+            texture_normal: DynamicImage::new_rgb8(0,0),
+            texture_alpha: DynamicImage::new_rgb8(0,0),
+
             alpha: 1.0,
             shininess: 150.0,
             reflectivity: 0.0,
             refraction_index: 1.0,
-
-            texture_ambient: DynamicImage::new_rgb8(0,0),
-            texture_diffuse: DynamicImage::new_rgb8(0,0),
-            texture_specular: DynamicImage::new_rgb8(0,0),
-            texture_normal: DynamicImage::new_rgb8(0,0),
-            texture_alpha: DynamicImage::new_rgb8(0,0),
 
             normal_map_strength: 1.0,
 
@@ -89,21 +105,111 @@ impl Material
         }
     }
 
+    pub fn apply_diff(&mut self, new_mat: &Material)
+    {
+        let default_material = Material::new();
+
+        // ********** colors **********
+
+        // ambient
+        if
+            !approx_equal(default_material.ambient_color.x, new_mat.ambient_color.x)
+            ||
+            !approx_equal(default_material.ambient_color.y, new_mat.ambient_color.y)
+            ||
+            !approx_equal(default_material.ambient_color.z, new_mat.ambient_color.z)
+        {
+            self.ambient_color = new_mat.ambient_color;
+        }
+
+        // ambient
+        if
+            !approx_equal(default_material.base_color.x, new_mat.base_color.x)
+            ||
+            !approx_equal(default_material.base_color.y, new_mat.base_color.y)
+            ||
+            !approx_equal(default_material.base_color.z, new_mat.base_color.z)
+        {
+            self.base_color = new_mat.base_color;
+        }
+
+        // specular
+        if
+            !approx_equal(default_material.specular_color.x, new_mat.specular_color.x)
+            ||
+            !approx_equal(default_material.specular_color.y, new_mat.specular_color.y)
+            ||
+            !approx_equal(default_material.specular_color.z, new_mat.specular_color.z)
+        {
+            self.specular_color = new_mat.specular_color;
+        }
+
+
+        // ********** textures **********
+
+        // ambient
+        if default_material.texture_ambient_path != new_mat.texture_ambient_path
+        {
+            self.texture_ambient = new_mat.texture_ambient.clone();
+        }
+
+        // base
+        if default_material.texture_base_path != new_mat.texture_base_path
+        {
+            self.texture_base = new_mat.texture_base.clone();
+        }
+
+        // specular
+        if default_material.texture_specular_path != new_mat.texture_specular_path
+        {
+            self.texture_specular = new_mat.texture_specular.clone();
+        }
+
+        // normal
+        if default_material.texture_normal_path != new_mat.texture_normal_path
+        {
+            self.texture_normal = new_mat.texture_normal.clone();
+        }
+
+        // alpha
+        if default_material.texture_alpha_path != new_mat.texture_alpha_path
+        {
+            self.texture_alpha = new_mat.texture_alpha.clone();
+        }
+
+        // ********** other attributes **********
+        if !approx_equal(default_material.alpha, new_mat.alpha) { self.alpha = new_mat.alpha; }
+        if !approx_equal(default_material.shininess, new_mat.shininess) { self.shininess = new_mat.shininess; }
+        if !approx_equal(default_material.reflectivity, new_mat.reflectivity) { self.reflectivity = new_mat.reflectivity; }
+        if !approx_equal(default_material.refraction_index, new_mat.refraction_index) { self.refraction_index = new_mat.refraction_index; }
+
+        if !approx_equal(default_material.normal_map_strength, new_mat.normal_map_strength) { self.normal_map_strength = new_mat.normal_map_strength; }
+
+        if default_material.cast_shadow != new_mat.cast_shadow { self.cast_shadow = new_mat.cast_shadow; }
+        if default_material.receive_shadow != new_mat.receive_shadow { self.receive_shadow = new_mat.receive_shadow; }
+        if !approx_equal(default_material.shadow_softness, new_mat.shadow_softness) { self.shadow_softness = new_mat.shadow_softness; }
+
+        if !approx_equal(default_material.surface_roughness, new_mat.surface_roughness) { self.surface_roughness = new_mat.surface_roughness; }
+
+        if default_material.smooth_shading != new_mat.smooth_shading { self.smooth_shading = new_mat.smooth_shading; }
+    }
+
     pub fn print(&self)
     {
         println!("ambient_color: {:?}", self.ambient_color);
-        println!("diffuse_color: {:?}", self.diffuse_color);
+        println!("base_color: {:?}", self.base_color);
         println!("specular_color: {:?}", self.specular_color);
+
+        println!("texture_ambient: {:?}", self.texture_ambient.width() > 0);
+        println!("texture_base: {:?}", self.texture_base.width() > 0);
+        println!("texture_specular: {:?}", self.texture_specular.width() > 0);
+        println!("texture_normal: {:?}", self.texture_normal.width() > 0);
+        println!("texture_alpha: {:?}", self.texture_alpha.width() > 0);
+
         println!("alpha: {:?}", self.alpha);
         println!("shininess: {:?}", self.shininess);
         println!("reflectivity: {:?}", self.reflectivity);
         println!("refraction_index: {:?}", self.refraction_index);
-
-        println!("texture_ambient: {:?}", self.texture_ambient.width() > 0);
-        println!("texture_diffuse: {:?}", self.texture_diffuse.width() > 0);
-        println!("texture_specular: {:?}", self.texture_specular.width() > 0);
-        println!("texture_normal: {:?}", self.texture_normal.width() > 0);
-        println!("texture_alpha: {:?}", self.texture_alpha.width() > 0);
 
         println!("normal_map_strength: {:?}", self.normal_map_strength);
 
@@ -120,7 +226,7 @@ impl Material
 #[derive(Clone, Copy)]
 pub enum TextureType
 {
-    Diffuse,
+    Base,
     Ambient,
     Specular,
     Normal,
@@ -129,6 +235,7 @@ pub enum TextureType
 
 pub struct ShapeBasics
 {
+    pub id: u32,
     pub trans: Matrix4<f32>,
     tran_inverse: Matrix4<f32>,
 
@@ -143,6 +250,7 @@ impl ShapeBasics
     {
         ShapeBasics
         {
+            id: 0,
             trans: Matrix4::<f32>::identity(),
             tran_inverse: Matrix4::<f32>::identity(),
             b_box: AABB::new_invalid(),
@@ -168,11 +276,31 @@ impl ShapeBasics
         let tex = image::open(path).unwrap();
         match tex_type
         {
-            TextureType::Diffuse => { self.material.texture_diffuse = tex; },
-            TextureType::Ambient => { self.material.texture_ambient = tex; },
-            TextureType::Specular => { self.material.texture_specular = tex; },
-            TextureType::Normal => { self.material.texture_normal = tex; },
-            TextureType::Alpha => { self.material.texture_alpha = tex; },
+            TextureType::Base =>
+            {
+                self.material.texture_base_path = path.to_string();
+                self.material.texture_base = tex;
+            },
+            TextureType::Ambient =>
+            {
+                self.material.texture_ambient_path = path.to_string();
+                self.material.texture_ambient = tex;
+            },
+            TextureType::Specular =>
+            {
+                self.material.texture_specular_path = path.to_string();
+                self.material.texture_specular = tex;
+            },
+            TextureType::Normal =>
+            {
+                self.material.texture_normal_path = path.to_string();
+                self.material.texture_normal = tex;
+            },
+            TextureType::Alpha =>
+            {
+                self.material.texture_alpha_path = path.to_string();
+                self.material.texture_alpha = tex;
+            },
         }
     }
 
@@ -180,11 +308,11 @@ impl ShapeBasics
     {
         match tex_type
         {
-            TextureType::Diffuse => self.material.texture_diffuse.dimensions().0 > 0,
-            TextureType::Ambient => self.material.texture_ambient.dimensions().0 > 0,
-            TextureType::Specular => self.material.texture_specular.dimensions().0 > 0,
-            TextureType::Normal => self.material.texture_normal.dimensions().0 > 0,
-            TextureType::Alpha => self.material.texture_alpha.dimensions().0 > 0,
+            TextureType::Base => self.material.texture_base.width() > 0,
+            TextureType::Ambient => self.material.texture_ambient.width() > 0,
+            TextureType::Specular => self.material.texture_specular.width() > 0,
+            TextureType::Normal => self.material.texture_normal.width() > 0,
+            TextureType::Alpha => self.material.texture_alpha.width() > 0,
         }
     }
 
@@ -192,7 +320,7 @@ impl ShapeBasics
     {
         match tex_type
         {
-            TextureType::Diffuse => self.material.texture_diffuse.dimensions(),
+            TextureType::Base => self.material.texture_base.dimensions(),
             TextureType::Ambient => self.material.texture_ambient.dimensions(),
             TextureType::Specular => self.material.texture_specular.dimensions(),
             TextureType::Normal => self.material.texture_normal.dimensions(),
@@ -211,7 +339,7 @@ impl ShapeBasics
 
         match tex_type
         {
-            TextureType::Diffuse => { pixel = self.material.texture_diffuse.get_pixel(x, y); },
+            TextureType::Base => { pixel = self.material.texture_base.get_pixel(x, y); },
             TextureType::Ambient => { pixel = self.material.texture_ambient.get_pixel(x, y); },
             TextureType::Specular => { pixel = self.material.texture_specular.get_pixel(x, y); },
             TextureType::Normal => { pixel = self.material.texture_normal.get_pixel(x, y); },

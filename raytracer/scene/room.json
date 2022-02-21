@@ -60,5 +60,47 @@
         }
     ],
     "objects":
-    []
+    [
+        {
+            "name": "sphere_back",
+            "type": "sphere",
+            "pos": {"x": 1.0, "y": -10.0, "z": 1.0},
+            "radius": 1.0,
+            "color":
+            {
+                "base": {"r": 1.0, "g": 0.0, "b": 1.0},
+                "specular": {"factor": 0.8}
+            },
+            "reflectivity": 0.3,
+            "alpha": 0.1,
+            "refraction_index": 1.5
+        },
+        {
+            "name": "mesh_floor",
+            "type": "plane",
+            "vertices":
+            [
+                {"x": -10.0, "y": -5.5, "z": 2.0},
+                {"x": 10.0, "y": -5.5, "z": 2.0},
+                {"x": 10.0, "y": -5.5, "z": -20.0},
+                {"x": -10.0, "y": -5.5, "z": -20.0}
+            ],
+            "color":
+            {
+                "base": {"r": 0.5, "g": 0.5, "b": 1.0},
+                "specular": {"factor": 0.8}
+            },
+            "texture":
+            {
+                "base": "scene/checkerboard.png"
+            },
+            "reflectivity": 0.4
+        },
+        {
+            "type": "wavefront",
+            "path": "scene/kBert_thumbsup_bevel.obj",
+            "reflectivity": 0.1,
+            "smooth_shading": false
+        }
+    ]
 }

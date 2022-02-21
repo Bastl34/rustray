@@ -217,6 +217,7 @@ fn main_sdl()
     let timer = Instant::now();
 
     let mut scene = Scene::new();
+    scene.clear();
     scene.init_with_some_objects();
     scene.load_json("scene/room.json");
     scene.print();

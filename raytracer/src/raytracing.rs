@@ -54,7 +54,7 @@ pub struct HitResult<'a>
 pub enum LightningColorType
 {
     Ambient,
-    Diffuse,
+    Base,
     Specular
 }
 
@@ -518,10 +518,10 @@ impl Raytracing
                 item_color = mat.ambient_color;
                 tex_type = TextureType::Ambient;
             },
-            LightningColorType::Diffuse =>
+            LightningColorType::Base =>
             {
-                item_color = mat.diffuse_color;
-                tex_type = TextureType::Diffuse;
+                item_color = mat.base_color;
+                tex_type = TextureType::Base;
             },
             LightningColorType::Specular =>
             {
@@ -615,7 +615,7 @@ impl Raytracing
 
             //ambient, diffuse, specular colors
             let ambient_color = self.get_item_color(item, hit_point, face_id, LightningColorType::Ambient);
-            let diffuse_color = self.get_item_color(item, hit_point, face_id, LightningColorType::Diffuse);
+            let base_color = self.get_item_color(item, hit_point, face_id, LightningColorType::Base);
             let specular_color = self.get_item_color(item, hit_point, face_id, LightningColorType::Specular);
 
             //ambient
@@ -637,7 +637,7 @@ impl Raytracing
                 //lambert
                 let dot_light = surface_normal.dot(&direction_to_light).max(0.0);
 
-                let diffuse = diffuse_color * dot_light;
+                let base = base_color * dot_light;
 
                 //phong
                 let reflect_dir = self.reflect(-direction_to_light, surface_normal);
@@ -718,9 +718,9 @@ impl Raytracing
                 }
 
                 //color based on components
-                color.x = color.x + ((light.color.x * (specular.x + diffuse.x)) * intensity);
-                color.y = color.y + ((light.color.y * (specular.y + diffuse.y)) * intensity);
-                color.z = color.z + ((light.color.z * (specular.z + diffuse.z)) * intensity);
+                color.x = color.x + ((light.color.x * (specular.x + base.x)) * intensity);
+                color.y = color.y + ((light.color.y * (specular.y + base.y)) * intensity);
+                color.z = color.z + ((light.color.z * (specular.z + base.z)) * intensity);
             }
 
             let refraction_index = item.get_material().refraction_index;
