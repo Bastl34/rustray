@@ -85,7 +85,7 @@ fn main_cmd()
     let timer = Instant::now();
 
     let mut scene = Scene::new();
-    scene.init_with_some_objects();
+    scene.load_json("scene/room.json");
     scene.print();
 
     let mut raytracing = Raytracing::new(scene);
@@ -218,11 +218,16 @@ fn main_sdl()
 
     let mut scene = Scene::new();
     scene.clear();
-    scene.init_with_some_objects();
     scene.load_json("scene/room.json");
+    //scene.load_json("scene/spheres.json");
+    //scene.load_json("scene/monkey.json");
+    //scene.load_json("scene/kbert.json");
+    scene.load_json("scene/earth.json");
     scene.print();
 
     let mut raytracing = Raytracing::new(scene);
+    raytracing.load_settings("scene/default_render_settings.json");
+    raytracing.print_settings();
 
     raytracing.init_camera(width as u32, height as u32);
 

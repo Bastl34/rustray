@@ -1,4 +1,4 @@
-use nalgebra::{Matrix4, Vector3, Point2, Point3};
+use nalgebra::{Matrix4, Vector3, Point2, Point3, Rotation3};
 use parry3d::query::{Ray};
 
 use parry3d::bounding_volume::AABB;
@@ -151,30 +151,35 @@ impl Material
         if default_material.texture_ambient_path != new_mat.texture_ambient_path
         {
             self.texture_ambient = new_mat.texture_ambient.clone();
+            self.texture_ambient_path = new_mat.texture_ambient_path.clone();
         }
 
         // base
         if default_material.texture_base_path != new_mat.texture_base_path
         {
             self.texture_base = new_mat.texture_base.clone();
+            self.texture_base_path = new_mat.texture_base_path.clone();
         }
 
         // specular
         if default_material.texture_specular_path != new_mat.texture_specular_path
         {
             self.texture_specular = new_mat.texture_specular.clone();
+            self.texture_specular_path = new_mat.texture_specular_path.clone();
         }
 
         // normal
         if default_material.texture_normal_path != new_mat.texture_normal_path
         {
             self.texture_normal = new_mat.texture_normal.clone();
+            self.texture_normal_path = new_mat.texture_normal_path.clone();
         }
 
         // alpha
         if default_material.texture_alpha_path != new_mat.texture_alpha_path
         {
             self.texture_alpha = new_mat.texture_alpha.clone();
+            self.texture_alpha_path = new_mat.texture_alpha_path.clone();
         }
 
         // ********** other attributes **********
@@ -236,6 +241,7 @@ pub enum TextureType
 pub struct ShapeBasics
 {
     pub id: u32,
+    pub visible: bool,
     pub trans: Matrix4<f32>,
     tran_inverse: Matrix4<f32>,
 
@@ -251,6 +257,7 @@ impl ShapeBasics
         ShapeBasics
         {
             id: 0,
+            visible: true,
             trans: Matrix4::<f32>::identity(),
             tran_inverse: Matrix4::<f32>::identity(),
             b_box: AABB::new_invalid(),
@@ -261,6 +268,27 @@ impl ShapeBasics
     pub fn get_mat(&mut self) -> Matrix4<f32>
     {
         self.trans
+    }
+
+    pub fn apply_transformation(&mut self, translation: Vector3<f32>, scale: Vector3<f32>, rotation: Vector3<f32>)
+    {
+        let translation = nalgebra::Isometry3::translation(translation.x, translation.y, translation.z).to_homogeneous();
+        let scale = Matrix4::new_nonuniform_scaling(&scale);
+
+        //use a different rotation matrix for each axis to get the desired result
+        //https://www.reddit.com/r/rust/comments/heuc9k/nalgebras_awkward_euler_angles_method/
+        //https://github.com/dimforge/nalgebra/issues/269
+        let rotation_x  = Rotation3::from_euler_angles(rotation.x, 0.0, 0.0).to_homogeneous();
+        let rotation_y  = Rotation3::from_euler_angles(0.0, rotation.y, 0.0).to_homogeneous();
+        let rotation_z  = Rotation3::from_euler_angles(0.0, 0.0, rotation.z).to_homogeneous();
+
+        self.trans = self.trans * translation;
+        self.trans = self.trans * scale;
+        self.trans = self.trans * rotation_x;
+        self.trans = self.trans * rotation_y;
+        self.trans = self.trans * rotation_z;
+
+        self.calc_inverse();
     }
 
     pub fn get_inverse_ray(&self, ray: &Ray) -> Ray

@@ -57,13 +57,17 @@ impl Shape for Sphere
         let res = self.ball.cast_local_ray_and_get_normal(&ray_inverse, std::f32::MAX, solid);
         if let Some(res) = res
         {
-            return Some((res.toi, res.normal, 0))
+            let normal = self.basic.trans * res.normal.to_homogeneous();
+            return Some((res.toi, normal.xyz().normalize(), 0))
         }
         None
     }
 
     fn get_uv(&self, hit: Point3<f32>, _face_id: u32) -> Point2<f32>
     {
+        let hit_pos_local = self.basic.tran_inverse * hit.to_homogeneous();
+        let hit_pos_local = Point3::<f32>::from_homogeneous(hit_pos_local).unwrap();
+
         // https://gamedev.stackexchange.com/questions/114412/how-to-get-uv-coordinates-for-sphere-cylindrical-projection
 
         /*
@@ -78,12 +82,14 @@ impl Shape for Sphere
 
         //https://people.cs.clemson.edu/~dhouse/courses/405/notes/texture-maps.pdf
 
-        let c = &self.basic.trans * Point3::<f32>::new(0.0, 0.0, 0.0).to_homogeneous();
+        //let c = &self.basic.trans * Point3::<f32>::new(0.0, 0.0, 0.0).to_homogeneous();
 
-        let theta = (-(hit.z - c.z)).atan2(hit.x - c.x);
+        let c = Point3::<f32>::new(0.0, 0.0, 0.0);
+
+        let theta = (-(hit_pos_local.z - c.z)).atan2(hit_pos_local.x - c.x);
         let u = (theta + std::f32::consts::PI) / (2.0 * std::f32::consts::PI);
 
-        let phi = ((-(hit.y - c.y)) / self.ball.radius).acos();
+        let phi = ((-(hit_pos_local.y - c.y)) / self.ball.radius).acos();
         let v = phi / std::f32::consts::PI;
 
         Point2::<f32>::new(u, -v)

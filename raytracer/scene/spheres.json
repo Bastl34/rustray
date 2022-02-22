@@ -1,0 +1,120 @@
+{
+    "name": "Spheres",
+    "lights":
+    [
+    ],
+    "objects":
+    [
+        {
+            "name": "sphere_back",
+            "type": "sphere",
+            "pos": {"x": 1.0, "y": -10.0, "z": 1.0},
+            "radius": 1.0,
+            "color":
+            {
+                "base": {"r": 1.0, "g": 0.0, "b": 1.0},
+                "specular": {"factor": 0.8}
+            },
+            "reflectivity": 0.3,
+            "alpha": 0.1,
+            "refraction_index": 1.5
+        },
+        {
+            "name": "sphere_front",
+            "type": "sphere",
+            "pos": {"x": 0.0, "y": 0.0, "z": -5.0},
+            "radius": 3.0,
+            "color":
+            {
+                "base": {"r": 1.0, "g": 0.0, "b": 1.0},
+                "specular": {"factor": 0.8}
+            },
+            "reflectivity": 0.3,
+            "alpha": 0.1,
+            "refraction_index": 1.5,
+            "visible": false
+        },
+        {
+            "name": "sphere_left",
+            "type": "sphere",
+            "pos": {"x": -7.0, "y": 0.0, "z": -20.0},
+            "radius": 3.0,
+            "color":
+            {
+                "base": {"r": 0.0, "g": 1.0, "b": 0.0},
+                "specular": {"factor": 0.8}
+            },
+            "reflectivity": 0.5,
+            "alpha": 0.8,
+            "refraction_index": 1.5
+        },
+        {
+            "name": "sphere_right",
+            "type": "sphere",
+            "pos": {"x": 7.0, "y": -2.5, "z": -18.0},
+            "radius": 3.0,
+            "color":
+            {
+                "base": {"r": 0.0, "g": 0.0, "b": 1.0},
+                "specular": {"factor": 0.8}
+            },
+            "reflectivity": 0.5,
+            "alpha": 0.8,
+            "refraction_index": 1.5
+        },
+        {
+            "name": "sphere_mirror",
+            "type": "sphere",
+            "pos": {"x": -6.0, "y": 2.5, "z": -7.0},
+            "radius": 1.0,
+            "color":
+            {
+                "base": {"r": 1.0, "g": 1.0, "b": 1.0},
+                "specular": {"factor": 0.8}
+            },
+            "reflectivity": 1.0,
+            "alpha": 1.0,
+            "refraction_index": 1.5
+        },
+        {
+            "name": "sphere_texture",
+            "type": "sphere",
+            "pos": {"x": 0.0, "y": -1.0, "z": -10.0},
+            "radius": 3.0,
+            "color":
+            {
+                "base": {"r": 1.0, "g": 1.0, "b": 1.0},
+                "specular": {"factor": 0.8}
+            },
+            "texture":
+            {
+                "base": "scene/earth/2k_earth_normal_map.jpg"
+            },
+            "reflectivity": 0.5,
+            "alpha": 0.9,
+            "refraction_index": 1.0,
+            "normal_map_strength": 10.0,
+            "surface_roughness": 0.05
+        },
+        {
+            "name": "sphere_not_visible",
+            "type": "sphere",
+            "pos": {"x": 7.0, "y": 0.0, "z": 10.0},
+            "radius": 3.0
+        },
+        {
+            "name": "sphere_front",
+            "type": "sphere",
+            "pos": {"x": 0.0, "y": 0.0, "z": -50.0},
+            "radius": 30.0,
+            "color":
+            {
+                "base": {"r": 1.0, "g": 1.0, "b": 1.0},
+                "specular": {"factor": 0.8}
+            },
+            "reflectivity": 0.3,
+            "alpha": 1.0,
+            "visible": false
+        }
+    ]
+}

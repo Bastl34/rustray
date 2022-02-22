@@ -15,9 +15,11 @@
 * Anti-Aliasing
 * DOF (Depth of field)
 * Different light types (directional, point, spot)
-* monte carlo raytracing
+* Monte Carlo raytracing
+* Fog
+* Matrix based transformations
+* Json based scenes
 
 ## TODO
 * animation
 * gltf scene loading
-* json based scene

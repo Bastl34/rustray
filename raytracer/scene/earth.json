@@ -1,0 +1,45 @@
+{
+    "name": "Spheres",
+    "lights":
+    [
+        {
+            "name": "light point 1",
+            "pos": {"x": 0.0, "y": 0.0, "z": 0.0},
+            "dir": {"x": 0.0, "y": 0.0, "z": -1.0},
+            "color": {"r": 1.0, "g": 1.0, "b": 1.0},
+            "intensity": 100.0,
+            "light_type": "point"
+        }
+    ],
+    "objects":
+    [
+        {
+            "name": "earth",
+            "type": "sphere",
+            "pos": {"x": 0.0, "y": 0.0, "z": -7.0},
+            "radius": 4.0,
+            "color":
+            {
+                "base": {"r": 1.0, "g": 1.0, "b": 1.0},
+                "specular": {"factor": 0.8}
+            },
+            "texture":
+            {
+                "base": "scene/earth/2k_earth_daymap.jpg",
+                "normal": "scene/earth/2k_earth_normal_map.jpg",
+                "specular": "scene/earth/2k_earth_specular_map.jpg"
+            },
+            "transformation":
+            {
+                "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
+                "rotation": {"x": 40.0, "y": -110.0, "z": 0.0},
+                "translation": {"x": 0.0, "y": 0.0, "z": 0.0}
+            },
+            "reflectivity": 0.1,
+            "alpha": 0.9,
+            "refraction_index": 1.5,
+            "normal_map_strength": 10.0,
+            "surface_roughness": 0.15
+        }
+    ]
+}

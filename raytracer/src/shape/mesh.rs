@@ -70,13 +70,14 @@ impl Shape for Mesh
                 face_id = i;
             }
 
-            let mut normal = res.normal;
+            let mut normal = (self.basic.trans * res.normal.to_homogeneous()).xyz().normalize();
 
             //use normal based on loaded normal (not on computed normal by parry -- if needed for smooth shading)
             if self.get_material().smooth_shading && self.normals.len() > 0 && self.normals_indices.len() > 0
             {
                 let hit = ray.origin + (ray.dir * res.toi);
                 normal = self.get_normal(hit, face_id);
+                normal = (self.basic.trans * normal.to_homogeneous()).xyz().normalize();
 
                 if self.mesh.is_backface(res.feature)
                 {
@@ -93,6 +94,10 @@ impl Shape for Mesh
         // https://stackoverflow.com/questions/23980748/triangle-texture-mapping-with-barycentric-coordinates
         // https://answers.unity.com/questions/383804/calculate-uv-coordinates-of-3d-point-on-plane-of-m.html
 
+        //transform hit to local coords
+        let hit_pos_local = self.basic.tran_inverse * hit.to_homogeneous();
+        let hit_pos_local = Point3::<f32>::from_homogeneous(hit_pos_local).unwrap();
+
         let f_id = (face_id % self.mesh.indices().len() as u32) as usize;
 
         let face = self.mesh.indices()[f_id];
@@ -106,26 +111,21 @@ impl Shape for Mesh
         let i_uv_1 = uv_face[1] as usize;
         let i_uv_2 = uv_face[2] as usize;
 
-        let mut a = self.mesh.vertices()[i0].to_homogeneous();
-        let mut b = self.mesh.vertices()[i1].to_homogeneous();
-        let mut c = self.mesh.vertices()[i2].to_homogeneous();
+        let a = self.mesh.vertices()[i0].to_homogeneous();
+        let b = self.mesh.vertices()[i1].to_homogeneous();
+        let c = self.mesh.vertices()[i2].to_homogeneous();
 
         let a_t = self.uvs[i_uv_0];
         let b_t = self.uvs[i_uv_1];
         let c_t = self.uvs[i_uv_2];
 
-        //apply transformation
-        a = &self.basic.trans * a;
-        b = &self.basic.trans * b;
-        c = &self.basic.trans * c;
-
         let a = Point3::<f32>::from_homogeneous(a).unwrap();
         let b = Point3::<f32>::from_homogeneous(b).unwrap();
         let c = Point3::<f32>::from_homogeneous(c).unwrap();
 
-        let f1 = a - hit;
-        let f2 = b - hit;
-        let f3 = c - hit;
+        let f1 = a - hit_pos_local;
+        let f2 = b - hit_pos_local;
+        let f3 = c - hit_pos_local;
 
         let a = (a-b).cross(&(a-c)).magnitude();
         let a1 = f2.cross(&f3).magnitude() / a;
@@ -206,6 +206,10 @@ impl Mesh
         // https://stackoverflow.com/questions/23980748/triangle-texture-mapping-with-barycentric-coordinates
         // https://answers.unity.com/questions/383804/calculate-uv-coordinates-of-3d-point-on-plane-of-m.html
 
+        //transform hit to local coords
+        let hit_pos_local = self.basic.tran_inverse * hit.to_homogeneous();
+        let hit_pos_local = Point3::<f32>::from_homogeneous(hit_pos_local).unwrap();
+
         let f_id = (face_id % self.mesh.indices().len() as u32) as usize;
 
         let face = self.mesh.indices()[f_id];
@@ -219,26 +223,21 @@ impl Mesh
         let i_normal_1 = normal_face[1] as usize;
         let i_normal_2 = normal_face[2] as usize;
 
-        let mut a = self.mesh.vertices()[i0].to_homogeneous();
-        let mut b = self.mesh.vertices()[i1].to_homogeneous();
-        let mut c = self.mesh.vertices()[i2].to_homogeneous();
+        let a = self.mesh.vertices()[i0].to_homogeneous();
+        let b = self.mesh.vertices()[i1].to_homogeneous();
+        let c = self.mesh.vertices()[i2].to_homogeneous();
 
         let a_t = self.normals[i_normal_0];
         let b_t = self.normals[i_normal_1];
         let c_t = self.normals[i_normal_2];
 
-        //apply transformation
-        a = &self.basic.trans * a;
-        b = &self.basic.trans * b;
-        c = &self.basic.trans * c;
-
         let a = Point3::<f32>::from_homogeneous(a).unwrap();
         let b = Point3::<f32>::from_homogeneous(b).unwrap();
         let c = Point3::<f32>::from_homogeneous(c).unwrap();
 
-        let f1 = a - hit;
-        let f2 = b - hit;
-        let f3 = c - hit;
+        let f1 = a - hit_pos_local;
+        let f2 = b - hit_pos_local;
+        let f3 = c - hit_pos_local;
 
         let a = (a-b).cross(&(a-c)).magnitude();
         let a1 = f2.cross(&f3).magnitude() / a;

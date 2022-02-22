@@ -54,13 +54,6 @@ impl Scene
         self.lights.clear();
     }
 
-    pub fn init_with_some_objects(&mut self)
-    {
-        self.init_objects();
-
-        self.update();
-    }
-
     pub fn get_next_id(&mut self) -> u32
     {
         self.item_id = self.item_id + 1;
@@ -178,6 +171,27 @@ impl Scene
                     if !&object["surface_roughness"].is_null() { material.surface_roughness = object["surface_roughness"].as_f64().unwrap() as f32; }
                     if !&object["smooth_shading"].is_null() { material.smooth_shading = object["smooth_shading"].as_bool().unwrap(); }
 
+                    // ***** other settings
+                    let mut visible = true;
+                    if !&object["visible"].is_null() { visible = object["visible"].as_bool().unwrap(); }
+
+                    // ***** transformation
+                    let mut rotation = Vector3::<f32>::new(0.0, 0.0, 0.0);
+                    let mut scale = Vector3::<f32>::new(1.0, 1.0, 1.0);
+                    let mut translation = Vector3::<f32>::new(0.0, 0.0, 0.0);
+
+                    if !object["transformation"].is_null()
+                    {
+                        scale = self.get_vec_from_json_object("scale", &object["transformation"], scale);
+                        translation = self.get_vec_from_json_object("translation", &object["transformation"], translation);
+                        rotation = self.get_vec_from_json_object("rotation", &object["transformation"], rotation);
+
+                        //to rad
+                        rotation.x = rotation.x.to_radians();
+                        rotation.y = rotation.y.to_radians();
+                        rotation.z = rotation.z.to_radians();
+                    }
+
                     // ***** sphere
                     if item_type == "sphere"
                     {
@@ -222,15 +236,19 @@ impl Scene
                                 if *item_id == item.get_basic().id
                                 {
                                     item.get_basic_mut().material.apply_diff(&material);
+                                    item.get_basic_mut().visible = visible;
+                                    item.get_basic_mut().apply_transformation(translation, scale, rotation);
                                 }
                             }
                         }
                     }
 
-                    // ***** appy material
+                    // ***** appy material and properties
                     if let Some(mut shape) = shape
                     {
                         shape.get_basic_mut().material = material;
+                        shape.get_basic_mut().visible = visible;
+                        shape.get_basic_mut().apply_transformation(translation, scale, rotation);
 
                         // ***** textures
                         let texture = &object["texture"];
@@ -344,257 +362,6 @@ impl Scene
         v
     }
 
-    pub fn init_objects(&mut self)
-    {
-        // ******************** some spheres ********************
-        let mut sphere_back = Box::new(Sphere::new_with_pos("sphere_back", 1.0, 0.0, -10.0, 1.0));
-        sphere_back.basic.material.base_color = Vector3::<f32>::new(1.0, 0.0, 0.0);
-        sphere_back.basic.material.specular_color = sphere_back.basic.material.base_color * 0.8;
-        sphere_back.basic.material.reflectivity = 0.3;
-        sphere_back.basic.material.alpha = 0.1;
-        sphere_back.basic.material.refraction_index = 1.5;
-
-        let mut sphere_front = Box::new(Sphere::new_with_pos("sphere_front", 0.0, 0.0, -5.0, 3.0));
-        sphere_front.basic.material.base_color = Vector3::<f32>::new(1.0, 1.0, 1.0);
-        sphere_front.basic.material.specular_color = sphere_front.basic.material.base_color * 0.8;
-        sphere_front.basic.material.reflectivity = 0.3;
-        sphere_front.basic.material.alpha = 0.1;
-        sphere_front.basic.material.refraction_index = 1.5;
-
-        let mut sphere_left = Box::new(Sphere::new_with_pos("sphere_left", -7.0, 0.0, -20.0, 4.0));
-        sphere_left.basic.material.base_color = Vector3::<f32>::new(0.0, 1.0, 0.0);
-        sphere_left.basic.material.specular_color = sphere_left.basic.material.base_color * 0.8;
-        sphere_left.basic.material.reflectivity = 0.5;
-        sphere_left.basic.material.alpha = 0.8;
-        sphere_left.basic.material.refraction_index = 1.5;
-
-        let mut sphere_right = Box::new(Sphere::new_with_pos("sphere_right", 7.0, -2.5, -18.0, 3.0));
-        sphere_right.basic.material.base_color = Vector3::<f32>::new(0.0, 0.0, 1.0);
-        sphere_right.basic.material.specular_color = sphere_right.basic.material.base_color * 0.8;
-        sphere_right.basic.material.reflectivity = 0.5;
-        sphere_right.basic.material.alpha = 0.8;
-        sphere_right.basic.material.refraction_index = 1.5;
-
-        let mut sphere_mirror = Box::new(Sphere::new_with_pos("sphere_mirror", -6.0, 2.5, -7.0, 1.0));
-        sphere_mirror.basic.material.base_color = Vector3::<f32>::new(1.0, 1.0, 1.0);
-        sphere_mirror.basic.material.specular_color = sphere_mirror.basic.material.base_color * 0.8;
-        sphere_mirror.basic.material.reflectivity = 1.0;
-        sphere_mirror.basic.material.alpha = 1.0;
-        sphere_mirror.basic.material.refraction_index = 1.5;
-
-        //let mut sphere_texture = Box::new(Sphere::new_with_pos("sphere_texture", 6.0, -1.0, -5.0, 1.0));
-        //let mut sphere_texture = Box::new(Sphere::new_with_pos("sphere_texture", 0.0, -1.0, -7.0, 4.0));
-        let mut sphere_texture = Box::new(Sphere::new_with_pos("sphere_texture", 0.0, -1.0, -10.0, 3.0));
-        sphere_texture.basic.material.base_color = Vector3::<f32>::new(1.0, 1.0, 1.0);
-        sphere_texture.basic.material.specular_color = sphere_texture.basic.material.base_color * 0.8;
-        //sphere_texture.basic.material.reflectivity = 0.7;
-        sphere_texture.basic.material.reflectivity = 0.5;
-        sphere_texture.basic.material.alpha = 0.9;
-        sphere_texture.basic.material.refraction_index = 1.0;
-        sphere_texture.basic.material.normal_map_strength = 10.0;
-        sphere_texture.basic.material.surface_roughness = 0.05;
-        //sphere_texture.basic.load_texture("scene/checkerboard.png", TextureType::Base);
-        //sphere_texture.basic.load_texture("scene/earth/2k_earth_daymap.jpg", TextureType::Base);
-        sphere_texture.basic.load_texture("scene/earth/2k_earth_normal_map.jpg", TextureType::Normal);
-        //sphere_texture.basic.load_texture("scene/white.png", TextureType::Normal);
-        //sphere_texture.basic.load_texture("scene/checkerboard.png", TextureType::Normal);
-        //sphere_texture.basic.load_texture("scene/leather/Leather_Weave_006_basecolor.jpg", TextureType::Base);
-        //sphere_texture.basic.load_texture("scene/leather/Leather_Weave_006_opacity.jpg", TextureType::Alpha);
-
-        let mut sphere_not_visible = Box::new(Sphere::new_with_pos("sphere_not_visible", 7.0, 0.0, 10.0, 3.0));
-        sphere_not_visible.basic.material.base_color = Vector3::<f32>::new(1.0, 1.0, 1.0);
-
-        let mut sphere_far_away = Box::new(Sphere::new_with_pos("sphere_front", 0.0, 0.0, -50.0, 30.0));
-        sphere_far_away.basic.material.base_color = Vector3::<f32>::new(1.0, 1.0, 1.0);
-        sphere_far_away.basic.material.specular_color = sphere_front.basic.material.base_color * 0.8;
-        sphere_far_away.basic.material.reflectivity = 0.3;
-        sphere_far_away.basic.material.alpha = 1.0;
-
-        // ******************** some meshes ********************
-        //floor
-        let mut mesh_floor = Box::new(Mesh::new_plane
-        (
-            "mesh_floor",
-            Point3::new(-10.0, -5.5, 2.0),
-            Point3::new(10.0, -5.5, 2.0),
-            Point3::new(10.0, -5.5, -20.0),
-            Point3::new(-10.0, -5.5, -20.0),
-        ));
-
-        mesh_floor.basic.material.base_color = Vector3::<f32>::new(0.5, 0.5, 1.0);
-        mesh_floor.basic.material.specular_color = mesh_floor.basic.material.base_color * 0.8;
-
-        mesh_floor.basic.material.reflectivity = 0.4;
-        //mesh_floor.basic.material.surface_roughness = 0.005;
-        //mesh_floor.basic.material.shadow_softness = 0.1;
-        mesh_floor.basic.load_texture("scene/checkerboard.png", TextureType::Base);
-
-        //back
-        let mut mesh_back = Box::new(Mesh::new_plane
-        (
-            "mesh_back",
-            Point3::new(-10.0, -5.5, -20.0),
-            Point3::new(10.0, -5.5, -20.0),
-            Point3::new(10.0, 5.5, -20.0),
-            Point3::new(-10.0, 5.5, -20.0),
-        ));
-
-        let uvs = vec!
-        [
-            Point2::new(0.0, 0.0),
-            Point2::new(3.0, 0.0),
-            Point2::new(3.0, 3.0),
-            Point2::new(0.0, 3.0),
-        ];
-
-        mesh_back.uvs = uvs.clone();
-
-        mesh_back.basic.material.base_color = Vector3::<f32>::new(0.5, 0.5, 1.0);
-        mesh_back.basic.material.specular_color = mesh_back.basic.material.base_color * 0.8;
-
-        mesh_back.basic.material.reflectivity = 0.4;
-
-        mesh_back.basic.load_texture("scene/floor/base.gif", TextureType::Base);
-        //mesh_back.basic.load_texture("scene/floor/bump.gif", TextureType::Normal);
-        //mesh_back.basic.load_texture("scene/floor/specular.gif", TextureType::Specular);
-
-        //left
-        let mut mesh_left = Box::new(Mesh::new_plane
-        (
-            "mesh_left",
-            Point3::new(-10.0, -5.5, 2.0),
-            Point3::new(-10.0, -5.5, -20.0),
-            Point3::new(-10.0, 5.5, -20.0),
-            Point3::new(-10.0, 5.5, 2.0),
-        ));
-
-        mesh_left.uvs = uvs.clone();
-
-        mesh_left.basic.material.base_color = Vector3::<f32>::new(1.0, 0.0, 0.0);
-        mesh_left.basic.material.specular_color = mesh_left.basic.material.base_color * 0.8;
-
-        mesh_left.basic.material.reflectivity = 0.4;
-        //mesh_left.basic.load_texture("scene/wall/Wall_Stone_022_basecolor.jpg", TextureType::Base);
-        //mesh_left.basic.load_texture("scene/wall/Wall_Stone_022_normal.jpg", TextureType::Normal);
-        //mesh_left.basic.material.normal_map_strength = 10.0;
-        mesh_left.basic.load_texture("scene/floor/base.gif", TextureType::Base);
-
-        //right
-        let mut mesh_right = Box::new(Mesh::new_plane
-        (
-            "mesh_right",
-            Point3::new(10.0, -5.5, 2.0),
-            Point3::new(10.0, -5.5, -20.0),
-            Point3::new(10.0, 5.5, -20.0),
-            Point3::new(10.0, 5.5, 2.0),
-        ));
-
-        mesh_right.uvs = uvs.clone();
-
-        mesh_right.basic.material.base_color = Vector3::<f32>::new(0.0, 1.0, 0.0);
-        mesh_right.basic.material.specular_color = mesh_right.basic.material.base_color * 0.8;
-        mesh_right.basic.material.reflectivity = 0.4;
-        mesh_right.basic.load_texture("scene/floor/base.gif", TextureType::Base);
-
-        //top
-        let mut mesh_top = Box::new(Mesh::new_plane
-        (
-            "mesh_top",
-            Point3::new(-10.0, 5.5, 2.0),
-            Point3::new(10.0, 5.5, 2.0),
-            Point3::new(10.0, 5.5, -20.0),
-            Point3::new(-10.0, 5.5, -20.0),
-        ));
-
-        mesh_top.uvs = uvs.clone();
-
-        mesh_top.basic.material.base_color = Vector3::<f32>::new(0.5, 0.5, 1.0);
-        mesh_top.basic.material.specular_color = mesh_top.basic.material.base_color * 0.8;
-        mesh_top.basic.material.reflectivity = 0.4;
-        mesh_top.basic.load_texture("scene/floor/base.gif", TextureType::Base);
-
-        //behind
-        let mut mesh_behind = Box::new(Mesh::new_plane
-        (
-            "mesh_behind",
-            Point3::new(-10.0, -5.5, 2.0),
-            Point3::new(10.0, -5.5, 2.0),
-            Point3::new(10.0, 5.5, 2.0),
-            Point3::new(-10.0, 5.5, 2.0),
-        ));
-
-        mesh_behind.basic.material.base_color = Vector3::<f32>::new(1.0, 0.5, 0.5);
-        mesh_behind.basic.material.specular_color = mesh_behind.basic.material.base_color * 0.8;
-        mesh_behind.basic.material.reflectivity = 0.4;
-
-        let mut mesh_front = Box::new(Mesh::new_plane
-        (
-            "mesh_front",
-            Point3::new(-5.0, -2.5, -10.0),
-            Point3::new(5.0, -2.5, -10.0),
-            Point3::new(5.0, 2.5, -10.0),
-            Point3::new(-5.0, 2.5, -10.0),
-        ));
-
-        mesh_front.basic.material.base_color = Vector3::<f32>::new(1.0, 1.0, 1.0);
-        mesh_front.basic.material.specular_color = mesh_front.basic.material.base_color * 0.8;
-
-        mesh_front.basic.material.reflectivity = 0.3;
-
-
-        /*
-        self.items.push(sphere_back);
-        self.items.push(sphere_front);
-        self.items.push(sphere_left);
-        self.items.push(sphere_right);
-        self.items.push(sphere_not_visible);
-        self.items.push(sphere_mirror);
-        self.items.push(sphere_texture);
-         */
-
-
-        //self.items.push(sphere_far_away);
-
-
-        //self.items.push(sphere_texture);
-
-
-        //self.items.push(mesh_floor);
-        self.items.push(mesh_back);
-        self.items.push(mesh_left);
-        self.items.push(mesh_right);
-        self.items.push(mesh_top);
-        self.items.push(mesh_behind);
-
-
-
-        //self.items.push(mesh_front);
-
-        /*
-        self.load("scene/monkey.obj");
-        self.get_by_name("Suzanne").unwrap().get_basic_mut().trans = nalgebra::Isometry3::translation(0.0, 0.0, -10.0).to_homogeneous();
-        self.get_by_name("Suzanne").unwrap().get_basic_mut().material.reflectivity = 0.5;
-        self.get_by_name("Suzanne").unwrap().get_basic_mut().material.smooth_shading = true;
-        self.get_by_name("Suzanne").unwrap().get_basic_mut().material.alpha = 0.5;
-         */
-
-
-        /*
-        self.load_wavefront("scene/kBert_thumbsup_bevel.obj");
-        let items = ["kBert_Cube", "Cylinder_Cylinder.001"];
-
-        for item in items
-        {
-            let item = self.get_by_name(item).unwrap();
-            item.get_basic_mut().material.reflectivity = 0.1;
-            //item.get_basic_mut().material.shadow_softness = 0.1;
-            //item.get_basic_mut().material.alpha = 0.5;
-        }
-
-        self.get_by_name("Cylinder_Cylinder.001").unwrap().get_basic_mut().material.smooth_shading = false;
-         */
-
-    }
 
     pub fn load_wavefront(&mut self, path: &str) -> Vec<u32>
     {
@@ -766,7 +533,7 @@ impl Scene
         println!("scene:");
         for item in &self.items
         {
-            println!(" - {}: {}", item.get_basic().id, item.get_name());
+            println!(" - {}: {} (visible: {})", item.get_basic().id, item.get_name(), item.get_basic().visible);
         }
     }
 }

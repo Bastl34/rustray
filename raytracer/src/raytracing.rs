@@ -10,6 +10,7 @@ use parry3d::query::{Ray};
 
 use rand::Rng;
 use rand::seq::SliceRandom;
+use serde_json::Value;
 
 const SHADOW_BIAS: f32 = 0.001;
 const APERTURE_BASE_RESOLUTION: f32 = 800.0;
@@ -100,9 +101,9 @@ impl Raytracing
             height: 0,
             aspect_ratio: 0.0,
 
-            monte_carlo: false,
+            monte_carlo: true,
 
-            samples: 1, //this includes anti aliasing
+            samples: 8, //this includes anti aliasing
 
             focal_length: 8.0,
             aperture_size: 64.0, //64.0 (1 means off)
@@ -121,6 +122,56 @@ impl Raytracing
             projection_inverse: Matrix4::<f32>::identity(),
             view_inverse: Matrix4::<f32>::identity(),
         }
+    }
+
+    pub fn load_settings(&mut self, path: &str)
+    {
+        let data = std::fs::read_to_string(path);
+        if data.is_ok()
+        {
+            let str = data.unwrap();
+            let data = serde_json::from_str::<Value>(&str);
+            if data.is_ok()
+            {
+                let data = data.unwrap();
+
+                if !&data["monte_carlo"].is_null() { self.monte_carlo = data["monte_carlo"].as_bool().unwrap(); }
+                if !&data["samples"].is_null() { self.samples = data["samples"].as_u64().unwrap() as u16; }
+
+                if !&data["focal_length"].is_null() { self.focal_length = data["focal_length"].as_f64().unwrap() as f32; }
+                if !&data["aperture_size"].is_null() { self.aperture_size = data["aperture_size"].as_f64().unwrap() as f32; }
+
+                if !&data["fog_density"].is_null() { self.fog_density = data["fog_density"].as_f64().unwrap() as f32; }
+                if !&data["fog_color"].is_null()
+                {
+                    self.fog_color.x = data["fog_color"]["r"].as_f64().unwrap() as f32;
+                    self.fog_color.y = data["fog_color"]["g"].as_f64().unwrap() as f32;
+                    self.fog_color.z = data["fog_color"]["b"].as_f64().unwrap() as f32;
+                }
+
+                if !&data["max_recursion"].is_null() { self.max_recursion = data["max_recursion"].as_u64().unwrap() as u16; }
+                if !&data["gamma_correction"].is_null() { self.gamma_correction = data["gamma_correction"].as_bool().unwrap(); }
+
+                if !&data["fov"].is_null() { self.fov = data["fov"].as_f64().unwrap().to_radians() as f32; }
+            }
+        }
+    }
+
+    pub fn print_settings(&self)
+    {
+        println!("monte_carlo: {:?}", self.monte_carlo);
+        println!("samples: {:?}", self.samples);
+
+        println!("focal_length: {:?}", self.focal_length);
+        println!("aperture_size: {:?}", self.aperture_size);
+
+        println!("fog_density: {:?}", self.fog_density);
+        println!("fog_color: {:?}", self.fog_color);
+
+        println!("max_recursion: {:?}", self.max_recursion);
+        println!("gamma_correction: {:?}", self.gamma_correction);
+
+        println!("fov: {:?}", self.fov);
     }
 
     pub fn init_camera(&mut self, width: u32, height: u32)
@@ -302,7 +353,7 @@ impl Raytracing
             let dist = item.intersect_b_box(&ray);
             if let Some(dist) = dist
             {
-                if item.get_material().alpha > 0.0 && (!for_shadow || item.get_material().cast_shadow)
+                if item.get_basic().visible && item.get_material().alpha > 0.0 && (!for_shadow || item.get_material().cast_shadow)
                 {
                     hits.push(HitResult{ item: item.as_ref(), dist: dist });
                 }

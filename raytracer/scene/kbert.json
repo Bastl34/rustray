@@ -1,0 +1,30 @@
+{
+    "name": "Spheres",
+    "lights":
+    [
+        {
+            "name": "light point 3",
+            "pos": {"x": 0.0, "y": 5.0, "z": -6.0},
+            "dir": {"x": 0.0, "y": -1.0, "z": -0.3},
+            "color": {"r": 0.0, "g": 0.0, "b": 1.0},
+            "intensity": 800.0,
+            "max_angle": 22.5,
+            "light_type": "spot"
+        }
+    ],
+    "objects":
+    [
+        {
+            "type": "wavefront",
+            "path": "scene/kBert_thumbsup_bevel.obj",
+            "reflectivity": 0.1,
+            "smooth_shading": false,
+            "visible": true,
+            "transformation":
+            {
+                "translation": {"x": 0.0, "y": -5.5, "z": -10.0},
+                "rotation": {"x": 0.0, "y": 0.25, "z": 0.0}
+            }
+        }
+    ]
+}
