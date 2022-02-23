@@ -1,6 +1,10 @@
 use nalgebra::{Point2, Point3, Vector3};
 use serde_json::{Value};
 
+use easy_gltf::Light::{Directional, Point, Spot};
+
+use image::{ImageBuffer, RgbaImage};
+
 use crate::shape::{Shape, TextureType, Material};
 
 use crate::shape::sphere::Sphere;
@@ -362,6 +366,158 @@ impl Scene
         v
     }
 
+    pub fn load_gltf(&mut self, path: &str) -> Vec<u32>
+    {
+        let mut loaded_ids: Vec<u32> = vec![];
+
+        let scenes = easy_gltf::load(path).unwrap();
+        for scene in scenes
+        {
+            // ********** light **********
+            for light in scene.lights
+            {
+                match light
+                {
+                    Point { position, color, intensity } =>
+                    {
+                        self.lights.push(Box::new(Light
+                        {
+                            pos: Point3::<f32>::new(position.x, position.y, position.z),
+                            dir: Vector3::<f32>::new(0.0, 0.0, 0.0),
+                            color: Vector3::<f32>::new(color.x, color.y, color.z),
+                            intensity: intensity,
+                            max_angle: 0.0,
+                            light_type: LightType::Point
+                        }));
+                    },
+                    Directional { direction, color, intensity } =>
+                    {
+                        self.lights.push(Box::new(Light
+                        {
+                            pos: Point3::<f32>::new(0.0, 0.0, 0.0),
+                            dir: Vector3::<f32>::new(direction.x, direction.y, direction.z),
+                            color: Vector3::<f32>::new(color.x, color.y, color.z),
+                            intensity: intensity,
+                            max_angle: 0.0,
+                            light_type: LightType::Directional
+                        }));
+                    },
+                    Spot { position, direction, color, intensity, inner_cone_angle, outer_cone_angle } =>
+                    {
+                        self.lights.push(Box::new(Light
+                        {
+                            pos: Point3::<f32>::new(position.x, position.y, position.z),
+                            dir: Vector3::<f32>::new(direction.x, direction.y, direction.z),
+                            color: Vector3::<f32>::new(color.x, color.y, color.z),
+                            intensity: intensity,
+                            max_angle: outer_cone_angle,
+                            light_type: LightType::Spot
+                        }));
+                    }
+                };
+            }
+
+            // ********** camera **********
+            if scene.cameras.len() > 2
+            {
+                println!("only one camera is supported");
+            }
+
+            if scene.cameras.len() > 0
+            {
+                let cam = &scene.cameras[0];
+                dbg!(cam);
+            }
+
+            // ********** objects **********
+            for model in scene.models
+            {
+                let triangles = model.triangles().unwrap();
+                let material = model.material();
+
+                let mut verts: Vec<Point3::<f32>> = vec![];
+                let mut uvs: Vec<Point2<f32>> = vec![];
+                let mut normals: Vec<Point3<f32>> = vec![];
+
+                let mut indices:Vec<[u32; 3]> = vec![];
+                let mut uv_indices: Vec<[u32; 3]> = vec![];
+                let mut normals_indices: Vec<[u32; 3]> = vec![];
+
+                let mut index_vert: u32 = 0;
+                let mut index_uv: u32 = 0;
+                let mut index_normal: u32 = 0;
+
+                for triangle in triangles
+                {
+                    // ***** data
+                    for vertex in triangle
+                    {
+                        // vertex
+                        verts.push(Point3::<f32>::new(vertex.position.x, vertex.position.y, vertex.position.z));
+
+                        // normal
+                        if model.has_normals()
+                        {
+                            normals.push(Point3::<f32>::new(vertex.normal.x, vertex.normal.y, vertex.normal.z));
+                        }
+
+                        // texture uv coord
+                        uvs.push(Point2::<f32>::new(vertex.tex_coords.x, vertex.tex_coords.y));
+                    }
+
+                    // ***** indices
+                    indices.push([index_vert, index_vert + 1, index_vert + 2]);
+                    index_vert += 3;
+
+                    // normals
+                    if model.has_normals()
+                    {
+                        normals_indices.push([index_normal, index_normal + 1, index_normal + 2]);
+                        index_normal += 3;
+                    }
+
+                    // texture coords
+                    if model.has_tex_coords()
+                    {
+                        uv_indices.push([index_uv, index_uv + 1, index_uv + 2]);
+                        index_uv += 3;
+                    }
+                }
+
+                let mut item = Mesh::new_with_data("unknown", verts, indices, uvs, uv_indices, normals, normals_indices);
+
+                // ********** material **********
+                if let Some(normal_map) = material.normal
+                {
+                    let tex = normal_map.texture;
+                    item.basic.load_texture_buffer(normal_map.texture.as_ref() as &ImageBuffer<image::Rgba<u8>, Vec<u8>>, TextureType::Normal);
+                }
+
+                item.get_basic_mut().id = self.get_next_id();
+                loaded_ids.push(item.get_basic().id);
+
+                self.items.push(Box::new(item));
+
+                /*
+                let vertices = model. vertices();
+                let indices = model.indices();
+                let indices = model.indices();
+                 */
+            }
+
+            /*
+            println!
+            (
+                "Cameras: #{}  Lights: #{}  Models: #{}",
+                scene.cameras.len(),
+                scene.lights.len(),
+                scene.models.len()
+            )
+             */
+        }
+
+        loaded_ids
+    }
 
     pub fn load_wavefront(&mut self, path: &str) -> Vec<u32>
     {
@@ -506,6 +662,8 @@ impl Scene
         }
         loaded_ids
     }
+
+
 
     pub fn update(&mut self)
     {

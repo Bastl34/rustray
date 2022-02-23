@@ -69,7 +69,7 @@
             },
             "texture":
             {
-                "base": "scene/checkerboard.png"
+                "base": "scene/textures/checkerboard.png"
             },
             "reflectivity": 0.4
         },
@@ -90,7 +90,7 @@
             },
             "texture":
             {
-                "base": "scene/floor/base.gif"
+                "base": "scene/textures/floor/base.gif"
             },
             "reflectivity": 0.4
         },
@@ -111,7 +111,7 @@
             },
             "texture":
             {
-                "base": "scene/floor/base.gif"
+                "base": "scene/textures/floor/base.gif"
             },
             "reflectivity": 0.4
         },
@@ -132,7 +132,7 @@
             },
             "texture":
             {
-                "base": "scene/floor/base.gif"
+                "base": "scene/textures/floor/base.gif"
             },
             "reflectivity": 0.4
         },
@@ -153,7 +153,7 @@
             },
             "texture":
             {
-                "base": "scene/floor/base.gif"
+                "base": "scene/textures/floor/base.gif"
             },
             "reflectivity": 0.4
         },
@@ -174,7 +174,7 @@
             },
             "texture":
             {
-                "base": "scene/floor/base.gif"
+                "base": "scene/textures/floor/base.gif"
             },
             "reflectivity": 0.4
         }

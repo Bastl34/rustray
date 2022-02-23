@@ -88,7 +88,7 @@
             },
             "texture":
             {
-                "base": "scene/earth/2k_earth_normal_map.jpg"
+                "base": "scene/textures/earth/2k_earth_normal_map.jpg"
             },
             "reflectivity": 0.5,
             "alpha": 0.9,

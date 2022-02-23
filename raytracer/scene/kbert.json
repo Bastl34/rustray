@@ -16,7 +16,7 @@
     [
         {
             "type": "wavefront",
-            "path": "scene/kBert_thumbsup_bevel.obj",
+            "path": "scene/models/kBert/kBert_thumbsup_bevel.obj",
             "reflectivity": 0.1,
             "smooth_shading": false,
             "visible": true,

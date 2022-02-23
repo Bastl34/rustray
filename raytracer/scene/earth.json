@@ -25,9 +25,9 @@
             },
             "texture":
             {
-                "base": "scene/earth/2k_earth_daymap.jpg",
-                "normal": "scene/earth/2k_earth_normal_map.jpg",
-                "specular": "scene/earth/2k_earth_specular_map.jpg"
+                "base": "scene/textures/earth/2k_earth_daymap.jpg",
+                "normal": "scene/textures/earth/2k_earth_normal_map.jpg",
+                "specular": "scene/textures/earth/2k_earth_specular_map.jpg"
             },
             "transformation":
             {

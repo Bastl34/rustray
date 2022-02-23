@@ -3,7 +3,7 @@ use parry3d::query::{Ray};
 
 use parry3d::bounding_volume::AABB;
 
-use image::{DynamicImage, GenericImageView, Pixel};
+use image::{DynamicImage, GenericImageView, Pixel, RgbaImage};
 
 use crate::helper::approx_equal;
 
@@ -301,6 +301,8 @@ impl ShapeBasics
 
     pub fn load_texture(&mut self, path: &str, tex_type: TextureType)
     {
+        println!("loading texture: {}", path);
+
         let tex = image::open(path).unwrap();
         match tex_type
         {
@@ -328,6 +330,40 @@ impl ShapeBasics
             {
                 self.material.texture_alpha_path = path.to_string();
                 self.material.texture_alpha = tex;
+            },
+        }
+    }
+
+    pub fn load_texture_buffer(&mut self, image: &RgbaImage, tex_type: TextureType)
+    {
+        println!("loading texture from buffer");
+
+        match tex_type
+        {
+            TextureType::Base =>
+            {
+                self.material.texture_base_path = String::from("from buffer");
+                self.material.texture_base = DynamicImage::ImageRgba8(image.clone());
+            },
+            TextureType::Ambient =>
+            {
+                self.material.texture_ambient_path = String::from("from buffer");
+                self.material.texture_ambient = DynamicImage::ImageRgba8(image.clone());
+            },
+            TextureType::Specular =>
+            {
+                self.material.texture_specular_path = String::from("from buffer");
+                self.material.texture_specular = DynamicImage::ImageRgba8(image.clone());
+            },
+            TextureType::Normal =>
+            {
+                self.material.texture_normal_path = String::from("from buffer");
+                self.material.texture_normal = DynamicImage::ImageRgba8(image.clone());
+            },
+            TextureType::Alpha =>
+            {
+                self.material.texture_alpha_path = String::from("from buffer");
+                self.material.texture_alpha = DynamicImage::ImageRgba8(image.clone());
             },
         }
     }
