@@ -3,7 +3,7 @@ use serde_json::{Value};
 
 use easy_gltf::Light::{Directional, Point, Spot};
 
-use image::{ImageBuffer, RgbaImage};
+use image::{DynamicImage, Rgba, RgbaImage, ImageBuffer};
 
 use crate::shape::{Shape, TextureType, Material};
 
@@ -487,10 +487,25 @@ impl Scene
                 let mut item = Mesh::new_with_data("unknown", verts, indices, uvs, uv_indices, normals, normals_indices);
 
                 // ********** material **********
-                if let Some(normal_map) = material.normal
+
+                let base_color = material.pbr.base_color_factor;
+                item.get_basic_mut().material.base_color = Vector3::<f32>::new(base_color.x, base_color.y, base_color.z);
+                item.get_basic_mut().material.specular_color = item.get_basic_mut().material.base_color * 0.8;
+
+                item.get_basic_mut().material.surface_roughness = material.pbr.roughness_factor;
+
+                // base map
+                if material.pbr.base_color_texture.is_some()
                 {
-                    let tex = normal_map.texture;
-                    item.basic.load_texture_buffer(normal_map.texture.as_ref() as &ImageBuffer<image::Rgba<u8>, Vec<u8>>, TextureType::Normal);
+                    let img = self.get_dyn_image_from_gltf_material(&material, TextureType::Base);
+                    item.basic.load_texture_buffer(&img, TextureType::Base);
+                }
+
+                // normal map
+                if material.normal.is_some()
+                {
+                    let img = self.get_dyn_image_from_gltf_material(&material, TextureType::Normal);
+                    item.basic.load_texture_buffer(&img, TextureType::Normal);
                 }
 
                 item.get_basic_mut().id = self.get_next_id();
@@ -517,6 +532,58 @@ impl Scene
         }
 
         loaded_ids
+    }
+
+    pub fn get_dyn_image_from_gltf_material(&self, mat: &easy_gltf::Material, tex_type: TextureType) -> DynamicImage
+    {
+        match tex_type
+        {
+            TextureType::Base =>
+            {
+                if let Some(base_map) = &mat.pbr.base_color_texture
+                {
+                    let width = base_map.width();
+                    let height = base_map.height();
+
+                    let mut img: RgbaImage = ImageBuffer::new(width, height);
+                    for x in 0..width
+                    {
+                        for y in 0..height
+                        {
+                            let pixel = base_map.get_pixel(x, y);
+                            img.put_pixel(x, y, Rgba([pixel[0], pixel[1], pixel[2], pixel[3]]));
+                        }
+                    }
+
+                    return DynamicImage::ImageRgba8(img.clone());
+                }
+            },
+            TextureType::Normal =>
+            {
+                if let Some(normal_map) = &mat.normal
+                {
+                    let tex = &normal_map.texture;
+                    let width = tex.width();
+                    let height = tex.height();
+
+                    let mut img: RgbaImage = ImageBuffer::new(width, height);
+                    for x in 0..width
+                    {
+                        for y in 0..height
+                        {
+                            let pixel = tex.get_pixel(x, y);
+                            img.put_pixel(x, y, Rgba([pixel[0], pixel[1], pixel[2], 255]));
+                        }
+                    }
+
+                    return DynamicImage::ImageRgba8(img.clone());
+                }
+            },
+            _ =>
+            {}
+        }
+
+        DynamicImage::new_rgb8(0,0)
     }
 
     pub fn load_wavefront(&mut self, path: &str) -> Vec<u32>

@@ -3,7 +3,7 @@ use parry3d::query::{Ray};
 
 use parry3d::bounding_volume::AABB;
 
-use image::{DynamicImage, GenericImageView, Pixel, RgbaImage};
+use image::{DynamicImage, GenericImageView, Pixel};
 
 use crate::helper::approx_equal;
 
@@ -334,7 +334,7 @@ impl ShapeBasics
         }
     }
 
-    pub fn load_texture_buffer(&mut self, image: &RgbaImage, tex_type: TextureType)
+    pub fn load_texture_buffer(&mut self, image: &DynamicImage, tex_type: TextureType)
     {
         println!("loading texture from buffer");
 
@@ -343,27 +343,27 @@ impl ShapeBasics
             TextureType::Base =>
             {
                 self.material.texture_base_path = String::from("from buffer");
-                self.material.texture_base = DynamicImage::ImageRgba8(image.clone());
+                self.material.texture_base = image.clone();
             },
             TextureType::Ambient =>
             {
                 self.material.texture_ambient_path = String::from("from buffer");
-                self.material.texture_ambient = DynamicImage::ImageRgba8(image.clone());
+                self.material.texture_ambient = image.clone();
             },
             TextureType::Specular =>
             {
                 self.material.texture_specular_path = String::from("from buffer");
-                self.material.texture_specular = DynamicImage::ImageRgba8(image.clone());
+                self.material.texture_specular = image.clone();
             },
             TextureType::Normal =>
             {
                 self.material.texture_normal_path = String::from("from buffer");
-                self.material.texture_normal = DynamicImage::ImageRgba8(image.clone());
+                self.material.texture_normal = image.clone();
             },
             TextureType::Alpha =>
             {
                 self.material.texture_alpha_path = String::from("from buffer");
-                self.material.texture_alpha = DynamicImage::ImageRgba8(image.clone());
+                self.material.texture_alpha = image.clone();
             },
         }
     }
