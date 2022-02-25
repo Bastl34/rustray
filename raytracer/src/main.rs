@@ -29,6 +29,7 @@ pub mod shape;
 pub mod renderer;
 pub mod raytracing;
 pub mod scene;
+pub mod camera;
 
 use renderer::RendererManager;
 use raytracing::Raytracing;
@@ -85,12 +86,13 @@ fn main_cmd()
     let timer = Instant::now();
 
     let mut scene = Scene::new();
+    scene.cam.init(width as u32, height as u32);
     scene.load_json("scene/room.json");
     scene.print();
 
-    let mut raytracing = Raytracing::new(scene);
+    let scene = std::sync::Arc::new(std::sync::RwLock::new(scene));
 
-    raytracing.init_camera(width as u32, height as u32);
+    let raytracing = Raytracing::new(scene);
 
     let raytracing_arc = std::sync::Arc::new(std::sync::RwLock::new(raytracing));
 
@@ -224,13 +226,18 @@ fn main_sdl()
     //scene.load_json("scene/kbert.json");
     //scene.load_json("scene/earth.json");
     scene.load_gltf("scene/models/monkey/monkey.glb");
+    //scene.get_by_name("unknown").unwrap().get_basic_mut().material.smooth_shading = false;
     scene.print();
 
-    let mut raytracing = Raytracing::new(scene);
+    let scene = std::sync::Arc::new(std::sync::RwLock::new(scene));
+
+    let mut raytracing = Raytracing::new(scene.clone());
     raytracing.load_settings("scene/default_render_settings.json");
     raytracing.print_settings();
 
-    raytracing.init_camera(width as u32, height as u32);
+    {
+        scene.write().unwrap().cam.init(width as u32, height as u32);
+    }
 
     let raytracing_arc = std::sync::Arc::new(std::sync::RwLock::new(raytracing));
 
@@ -287,8 +294,8 @@ fn main_sdl()
                     render_canvas.clear();
 
                     {
-                        let mut rt = raytracing_arc.write().unwrap();
-                        rt.init_camera(width as u32, height as u32);
+                        let mut scene = scene.write().unwrap();
+                        scene.cam.init(width as u32, height as u32);
                     }
 
                     rendering.restart(width, height);

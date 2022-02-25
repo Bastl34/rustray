@@ -1,11 +1,12 @@
 use std::f32::consts::PI;
+use std::sync::{RwLock, Arc};
 
 use crate::shape::{Shape, TextureType};
 use crate::pixel_color::PixelColor;
 
 use crate::scene::{Scene, LightType};
 
-use nalgebra::{Perspective3, Isometry3, Point3, Vector3, Matrix3, Matrix4, Vector4};
+use nalgebra::{Point3, Vector3, Matrix3, Vector4};
 use parry3d::query::{Ray};
 
 use rand::Rng;
@@ -61,11 +62,7 @@ pub enum LightningColorType
 
 pub struct Raytracing
 {
-    scene: Scene,
-
-    width: u32,
-    height: u32,
-    aspect_ratio: f32,
+    scene: Arc<RwLock<Scene>>,
 
     monte_carlo: bool,
 
@@ -78,28 +75,16 @@ pub struct Raytracing
     fog_color: Vector3<f32>,
 
     max_recursion: u16,
-    gamma_correction: bool,
-
-    fov: f32,
-
-    projection: Perspective3<f32>,
-    view: Matrix4<f32>,
-
-    projection_inverse: Matrix4<f32>,
-    view_inverse: Matrix4<f32>,
+    gamma_correction: bool
 }
 
 impl Raytracing
 {
-    pub fn new(scene: Scene) -> Raytracing
+    pub fn new(scene: Arc<RwLock<Scene>>) -> Raytracing
     {
         Raytracing
         {
             scene: scene,
-
-            width: 0,
-            height: 0,
-            aspect_ratio: 0.0,
 
             monte_carlo: true,
 
@@ -112,21 +97,14 @@ impl Raytracing
             fog_color: Vector3::<f32>::new(0.4, 0.4, 0.4),
 
             max_recursion: 6,
-            gamma_correction: false,
-
-            fov: 90.0f32.to_radians(),
-
-            projection: Perspective3::<f32>::new(1.0f32, 0.0f32, 0.001, 1000.0),
-            view: Matrix4::<f32>::identity(),
-
-            projection_inverse: Matrix4::<f32>::identity(),
-            view_inverse: Matrix4::<f32>::identity(),
+            gamma_correction: false
         }
     }
 
     pub fn load_settings(&mut self, path: &str)
     {
         let data = std::fs::read_to_string(path);
+
         if data.is_ok()
         {
             let str = data.unwrap();
@@ -151,9 +129,15 @@ impl Raytracing
 
                 if !&data["max_recursion"].is_null() { self.max_recursion = data["max_recursion"].as_u64().unwrap() as u16; }
                 if !&data["gamma_correction"].is_null() { self.gamma_correction = data["gamma_correction"].as_bool().unwrap(); }
-
-                if !&data["fov"].is_null() { self.fov = data["fov"].as_f64().unwrap().to_radians() as f32; }
             }
+            else
+            {
+                println!("error can not parse settings file: {}", path);
+            }
+        }
+        else
+        {
+            println!("error can not load settings file: {}", path);
         }
     }
 
@@ -170,28 +154,6 @@ impl Raytracing
 
         println!("max_recursion: {:?}", self.max_recursion);
         println!("gamma_correction: {:?}", self.gamma_correction);
-
-        println!("fov: {:?}", self.fov);
-    }
-
-    pub fn init_camera(&mut self, width: u32, height: u32)
-    {
-        self.width = width;
-        self.height = height;
-
-        self.aspect_ratio = width as f32 / height as f32;
-
-        self.projection = Perspective3::new(self.aspect_ratio, self.fov, 0.001, 1000.0);
-
-        let eye    = Point3::new(0.0, 0.0, 0.0);
-        let target = Point3::new(0.0, 0.0, -1.0);
-
-        self.view = Isometry3::look_at_rh(&eye, &target, &Vector3::y()).to_homogeneous();
-
-        self.view = self.view.append_translation(&Vector3::new(-0.0, 0.0, 0.0));
-
-        self.projection_inverse = self.projection.inverse();
-        self.view_inverse = self.view.try_inverse().unwrap();
     }
 
     pub fn gamma_encode(&self, linear: f32) -> f32
@@ -202,11 +164,13 @@ impl Raytracing
 
     pub fn render(&self, x: i32, y: i32) -> PixelColor
     {
+        let scene = self.scene.read().unwrap();
+
         let x_f = x as f32;
         let y_f = y as f32;
 
-        let w = self.width as f32;
-        let h = self.height as f32;
+        let w = scene.cam.width as f32;
+        let h = scene.cam.height as f32;
 
         let x_step = 2.0 / w;
         let y_step = 2.0 / h;
@@ -258,7 +222,7 @@ impl Raytracing
             //DOF (depth of field)
             if self.aperture_size > 1.0 && self.focal_length > 1.0
             {
-                let aperture_scale = self.width as f32 / APERTURE_BASE_RESOLUTION;
+                let aperture_scale = scene.cam.width as f32 / APERTURE_BASE_RESOLUTION;
                 x_trans *= self.aperture_size * aperture_scale;
                 y_trans *= self.aperture_size * aperture_scale;
 
@@ -267,14 +231,14 @@ impl Raytracing
                 let center_y = 1.0 - ((y_f + 0.5) / h) * 2.0;
 
                 let mut center_pixel_pos = Vector4::new(center_x, center_y, -CAM_CLIPPING_PLANE_DIST, 1.0);
-                center_pixel_pos = self.projection_inverse * center_pixel_pos;
+                center_pixel_pos = scene.cam.projection_inverse * center_pixel_pos;
                 center_pixel_pos.w = 1.0;
 
                 let mut ray_dir = center_pixel_pos - DEFAILT_VIEW_POS;
                 ray_dir.w = 0.0;
 
-                let origin = self.view_inverse * DEFAILT_VIEW_POS;
-                let dir = (self.view_inverse * ray_dir).normalize();
+                let origin = scene.cam.view_inverse * DEFAILT_VIEW_POS;
+                let dir = (scene.cam.view_inverse * ray_dir).normalize();
 
                 let dist = ray_dir.xyz().magnitude();
 
@@ -287,10 +251,10 @@ impl Raytracing
                 let ray_sensor_y = (1.0 - ((y_f + 0.5) / h) * 2.0) + y_trans;
 
                 let mut pixel_pos = Vector4::new(ray_sensor_x, ray_sensor_y, -CAM_CLIPPING_PLANE_DIST, 1.0);
-                pixel_pos = self.projection_inverse * pixel_pos;
+                pixel_pos = scene.cam.projection_inverse * pixel_pos;
                 pixel_pos.w = 1.0;
 
-                let ray_origin = self.view_inverse * pixel_pos;
+                let ray_origin = scene.cam.view_inverse * pixel_pos;
                 let mut ray_dir = p - ray_origin; //p is already in view mat space
                 ray_dir.w = 0.0;
 
@@ -304,14 +268,14 @@ impl Raytracing
                 let sensor_y = (1.0 - ((y_f + 0.5) / h) * 2.0) + y_trans;
 
                 let mut pixel_pos = Vector4::new(sensor_x, sensor_y, -CAM_CLIPPING_PLANE_DIST, 1.0);
-                pixel_pos = self.projection_inverse * pixel_pos;
+                pixel_pos = scene.cam.projection_inverse * pixel_pos;
                 pixel_pos.w = 1.0;
 
                 let mut ray_dir = pixel_pos - DEFAILT_VIEW_POS;
                 ray_dir.w = 0.0;
 
-                let origin = self.view_inverse * pixel_pos;
-                let dir = self.view_inverse * ray_dir;
+                let origin = scene.cam.view_inverse * pixel_pos;
+                let dir = scene.cam.view_inverse * ray_dir;
 
                 ray = Ray::new(Point3::<f32>::from(origin.xyz()), Vector3::<f32>::from(dir.xyz()));
             }
@@ -344,11 +308,11 @@ impl Raytracing
         }
     }
 
-    pub fn trace(&self, ray: &Ray, stop_on_first_hit: bool, for_shadow: bool) -> Option<(f32, Vector3<f32>, &dyn Shape, u32)>
+    pub fn trace<'a>(&self, scene: &'a Scene, ray: &Ray, stop_on_first_hit: bool, for_shadow: bool) -> Option<(f32, Vector3<f32>, &'a dyn Shape, u32)>
     {
         //find hits (bbox based)
         let mut hits: Vec<HitResult> = vec![];
-        for item in &self.scene.items
+        for item in &scene.items
         {
             let dist = item.intersect_b_box(&ray);
             if let Some(dist) = dist
@@ -359,7 +323,6 @@ impl Raytracing
                 }
             }
         }
-
         if hits.len() == 0
         {
             return None;
@@ -602,11 +565,13 @@ impl Raytracing
 
     pub fn get_color(&self, ray: Ray, depth: u16) -> Vector3<f32>
     {
+        let scene = self.scene.read().unwrap();
+
         let mut r = ray;
         r.dir = r.dir.normalize();
 
         //intersect
-        let intersection = self.trace(&r, false, false);
+        let intersection = self.trace(&scene, &r, false, false);
 
         let mut color = Vector3::new(0.0, 0.0, 0.0);
 
@@ -673,7 +638,7 @@ impl Raytracing
             color = ambient_color;
 
             //diffuse/specular color
-            for light in &self.scene.lights
+            for light in &scene.lights
             {
                 //get direction to light based on light type
                 let direction_to_light;
@@ -737,7 +702,7 @@ impl Raytracing
                     }
 
                     let shadow_ray = Ray::new(shadow_ray_start, shadow_ray_dir);
-                    let shadow_intersection = self.trace(&shadow_ray, true, true);
+                    let shadow_intersection = self.trace(&scene, &shadow_ray, true, true);
 
                     let mut in_light = shadow_intersection.is_none();
                     if !in_light && (light.light_type == LightType::Point || light.light_type == LightType::Spot)

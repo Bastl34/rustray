@@ -9,6 +9,7 @@ use crate::shape::{Shape, TextureType, Material};
 
 use crate::shape::sphere::Sphere;
 use crate::shape::mesh::Mesh;
+use crate::camera::Camera;
 
 use std::path::Path;
 
@@ -35,6 +36,8 @@ pub type ScemeItem = Box<dyn Shape + Send + Sync>;
 pub struct Scene
 {
     pub item_id: u32,
+
+    pub cam: Camera,
     pub items: Vec<ScemeItem>,
     pub lights: Vec<Box<Light>>,
 }
@@ -46,6 +49,8 @@ impl Scene
         Scene
         {
             item_id: 0,
+
+            cam: Camera::new(),
             items: vec![],
             lights: vec![]
         }
@@ -385,7 +390,7 @@ impl Scene
                             pos: Point3::<f32>::new(position.x, position.y, position.z),
                             dir: Vector3::<f32>::new(0.0, 0.0, 0.0),
                             color: Vector3::<f32>::new(color.x, color.y, color.z),
-                            intensity: intensity,
+                            intensity: intensity / 10.0,
                             max_angle: 0.0,
                             light_type: LightType::Point
                         }));
@@ -404,6 +409,8 @@ impl Scene
                     },
                     Spot { position, direction, color, intensity, inner_cone_angle, outer_cone_angle } =>
                     {
+                        println!("TODO: use inner_cone_angle: {}", inner_cone_angle);
+
                         self.lights.push(Box::new(Light
                         {
                             pos: Point3::<f32>::new(position.x, position.y, position.z),
@@ -426,7 +433,18 @@ impl Scene
             if scene.cameras.len() > 0
             {
                 let cam = &scene.cameras[0];
-                dbg!(cam);
+
+                let pos = cam.position();
+                let up = cam.up();
+                let forward = cam.forward();
+
+                self.cam.eye_pos = Point3::<f32>::new(pos.x, pos.y, pos.z);
+                self.cam.dir = Vector3::<f32>::new(forward.x, forward.y, forward.z).normalize();
+                self.cam.up = Vector3::<f32>::new(up.x, up.y, up.z).normalize();
+
+                self.cam.fov = cam.fov.0;
+                self.cam.clipping_near = cam.znear;
+                self.cam.clipping_far = cam.zfar;
             }
 
             // ********** objects **********
@@ -512,23 +530,7 @@ impl Scene
                 loaded_ids.push(item.get_basic().id);
 
                 self.items.push(Box::new(item));
-
-                /*
-                let vertices = model. vertices();
-                let indices = model.indices();
-                let indices = model.indices();
-                 */
             }
-
-            /*
-            println!
-            (
-                "Cameras: #{}  Lights: #{}  Models: #{}",
-                scene.cameras.len(),
-                scene.lights.len(),
-                scene.models.len()
-            )
-             */
         }
 
         loaded_ids
