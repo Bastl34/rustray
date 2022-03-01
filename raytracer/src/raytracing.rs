@@ -503,15 +503,15 @@ impl Raytracing
     pub fn get_tex_color(&self, item: &dyn Shape, hit_point: Point3<f32>, face_id: u32, tex_type: TextureType) -> Option<Vector3<f32>>
     {
         //texture
-        if (*item).get_basic().has_texture(tex_type)
+        if (*item).get_basic().material.has_texture(tex_type)
         {
             let uv = (*item).get_uv(hit_point, face_id);
 
-            let tex_dims = (*item).get_basic().texture_dimension(tex_type);
+            let tex_dims = (*item).get_basic().material.texture_dimension(tex_type);
             let tex_x = self.wrap(uv.x, tex_dims.0);
             let tex_y = self.wrap(uv.y, tex_dims.1);
 
-            let tex_color = (*item).get_basic().get_texture_pixel(tex_x, tex_y, tex_type);
+            let tex_color = (*item).get_basic().material.get_texture_pixel(tex_x, tex_y, tex_type);
 
             return Some(tex_color);
         }

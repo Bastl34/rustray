@@ -38,12 +38,6 @@ pub struct Material
     pub base_color: Vector3<f32>,
     pub specular_color: Vector3<f32>,
 
-    pub texture_ambient_path: String,
-    pub texture_base_path: String,
-    pub texture_specular_path: String,
-    pub texture_normal_path: String,
-    pub texture_alpha_path: String,
-
     pub texture_ambient: DynamicImage,
     pub texture_base: DynamicImage,
     pub texture_specular: DynamicImage,
@@ -75,12 +69,6 @@ impl Material
             ambient_color: Vector3::<f32>::new(0.0, 0.0, 0.0),
             base_color: Vector3::<f32>::new(1.0, 1.0, 1.0),
             specular_color: Vector3::<f32>::new(0.8, 0.8, 0.8),
-
-            texture_ambient_path: String::new(),
-            texture_base_path: String::new(),
-            texture_specular_path: String::new(),
-            texture_normal_path: String::new(),
-            texture_alpha_path: String::new(),
 
             texture_ambient: DynamicImage::new_rgb8(0,0),
             texture_base: DynamicImage::new_rgb8(0,0),
@@ -148,38 +136,33 @@ impl Material
         // ********** textures **********
 
         // ambient
-        if default_material.texture_ambient_path != new_mat.texture_ambient_path
+        if default_material.texture_ambient != new_mat.texture_ambient
         {
             self.texture_ambient = new_mat.texture_ambient.clone();
-            self.texture_ambient_path = new_mat.texture_ambient_path.clone();
         }
 
         // base
-        if default_material.texture_base_path != new_mat.texture_base_path
+        if default_material.texture_base != new_mat.texture_base
         {
             self.texture_base = new_mat.texture_base.clone();
-            self.texture_base_path = new_mat.texture_base_path.clone();
         }
 
         // specular
-        if default_material.texture_specular_path != new_mat.texture_specular_path
+        if default_material.texture_specular != new_mat.texture_specular
         {
             self.texture_specular = new_mat.texture_specular.clone();
-            self.texture_specular_path = new_mat.texture_specular_path.clone();
         }
 
         // normal
-        if default_material.texture_normal_path != new_mat.texture_normal_path
+        if default_material.texture_normal != new_mat.texture_normal
         {
             self.texture_normal = new_mat.texture_normal.clone();
-            self.texture_normal_path = new_mat.texture_normal_path.clone();
         }
 
         // alpha
-        if default_material.texture_alpha_path != new_mat.texture_alpha_path
+        if default_material.texture_alpha != new_mat.texture_alpha
         {
             self.texture_alpha = new_mat.texture_alpha.clone();
-            self.texture_alpha_path = new_mat.texture_alpha_path.clone();
         }
 
         // ********** other attributes **********
@@ -225,6 +208,117 @@ impl Material
         println!("surface_roughness: {:?}", self.surface_roughness);
 
         println!("smooth_shading: {:?}", self.smooth_shading);
+    }
+
+    pub fn load_texture(&mut self, path: &str, tex_type: TextureType)
+    {
+        println!("loading texture: {}", path);
+
+        let tex = image::open(path).unwrap();
+        match tex_type
+        {
+            TextureType::Base =>
+            {
+                self.texture_base = tex;
+            },
+            TextureType::Ambient =>
+            {
+                self.texture_ambient = tex;
+            },
+            TextureType::Specular =>
+            {
+                self.texture_specular = tex;
+            },
+            TextureType::Normal =>
+            {
+                self.texture_normal = tex;
+            },
+            TextureType::Alpha =>
+            {
+                self.texture_alpha = tex;
+            },
+        }
+    }
+
+    pub fn load_texture_buffer(&mut self, image: &DynamicImage, tex_type: TextureType)
+    {
+        println!("loading texture from buffer");
+
+        match tex_type
+        {
+            TextureType::Base =>
+            {
+                self.texture_base = image.clone();
+            },
+            TextureType::Ambient =>
+            {
+                self.texture_ambient = image.clone();
+            },
+            TextureType::Specular =>
+            {
+                self.texture_specular = image.clone();
+            },
+            TextureType::Normal =>
+            {
+                self.texture_normal = image.clone();
+            },
+            TextureType::Alpha =>
+            {
+                self.texture_alpha = image.clone();
+            },
+        }
+    }
+
+    pub fn has_texture(&self, tex_type: TextureType) -> bool
+    {
+        match tex_type
+        {
+            TextureType::Base => self.texture_base.width() > 0,
+            TextureType::Ambient => self.texture_ambient.width() > 0,
+            TextureType::Specular => self.texture_specular.width() > 0,
+            TextureType::Normal => self.texture_normal.width() > 0,
+            TextureType::Alpha => self.texture_alpha.width() > 0,
+        }
+    }
+
+    pub fn texture_dimension(&self, tex_type: TextureType) -> (u32, u32)
+    {
+        match tex_type
+        {
+            TextureType::Base => self.texture_base.dimensions(),
+            TextureType::Ambient => self.texture_ambient.dimensions(),
+            TextureType::Specular => self.texture_specular.dimensions(),
+            TextureType::Normal => self.texture_normal.dimensions(),
+            TextureType::Alpha => self.texture_alpha.dimensions(),
+        }
+    }
+
+    pub fn get_texture_pixel(&self, x: u32, y: u32, tex_type: TextureType) -> Vector3<f32>
+    {
+        if !self.has_texture(tex_type)
+        {
+            return Vector3::<f32>::new(0.0, 0.0, 0.0);
+        }
+
+        let pixel;
+
+        match tex_type
+        {
+            TextureType::Base => { pixel = self.texture_base.get_pixel(x, y); },
+            TextureType::Ambient => { pixel = self.texture_ambient.get_pixel(x, y); },
+            TextureType::Specular => { pixel = self.texture_specular.get_pixel(x, y); },
+            TextureType::Normal => { pixel = self.texture_normal.get_pixel(x, y); },
+            TextureType::Alpha => { pixel = self.texture_alpha.get_pixel(x, y); },
+        }
+
+        let rgb = pixel.to_rgb();
+
+        Vector3::<f32>::new
+        (
+            (rgb[0] as f32) / 255.0,
+            (rgb[1] as f32) / 255.0,
+            (rgb[2] as f32) / 255.0
+        )
     }
 }
 
@@ -297,127 +391,6 @@ impl ShapeBasics
         let ray_inverse_dir = self.tran_inverse * ray.dir.to_homogeneous();
 
         Ray::new(Point3::from_homogeneous(ray_inverse_start).unwrap(), Vector3::from_homogeneous(ray_inverse_dir).unwrap())
-    }
-
-    pub fn load_texture(&mut self, path: &str, tex_type: TextureType)
-    {
-        println!("loading texture: {}", path);
-
-        let tex = image::open(path).unwrap();
-        match tex_type
-        {
-            TextureType::Base =>
-            {
-                self.material.texture_base_path = path.to_string();
-                self.material.texture_base = tex;
-            },
-            TextureType::Ambient =>
-            {
-                self.material.texture_ambient_path = path.to_string();
-                self.material.texture_ambient = tex;
-            },
-            TextureType::Specular =>
-            {
-                self.material.texture_specular_path = path.to_string();
-                self.material.texture_specular = tex;
-            },
-            TextureType::Normal =>
-            {
-                self.material.texture_normal_path = path.to_string();
-                self.material.texture_normal = tex;
-            },
-            TextureType::Alpha =>
-            {
-                self.material.texture_alpha_path = path.to_string();
-                self.material.texture_alpha = tex;
-            },
-        }
-    }
-
-    pub fn load_texture_buffer(&mut self, image: &DynamicImage, tex_type: TextureType)
-    {
-        println!("loading texture from buffer");
-
-        match tex_type
-        {
-            TextureType::Base =>
-            {
-                self.material.texture_base_path = String::from("from buffer");
-                self.material.texture_base = image.clone();
-            },
-            TextureType::Ambient =>
-            {
-                self.material.texture_ambient_path = String::from("from buffer");
-                self.material.texture_ambient = image.clone();
-            },
-            TextureType::Specular =>
-            {
-                self.material.texture_specular_path = String::from("from buffer");
-                self.material.texture_specular = image.clone();
-            },
-            TextureType::Normal =>
-            {
-                self.material.texture_normal_path = String::from("from buffer");
-                self.material.texture_normal = image.clone();
-            },
-            TextureType::Alpha =>
-            {
-                self.material.texture_alpha_path = String::from("from buffer");
-                self.material.texture_alpha = image.clone();
-            },
-        }
-    }
-
-    pub fn has_texture(&self, tex_type: TextureType) -> bool
-    {
-        match tex_type
-        {
-            TextureType::Base => self.material.texture_base.width() > 0,
-            TextureType::Ambient => self.material.texture_ambient.width() > 0,
-            TextureType::Specular => self.material.texture_specular.width() > 0,
-            TextureType::Normal => self.material.texture_normal.width() > 0,
-            TextureType::Alpha => self.material.texture_alpha.width() > 0,
-        }
-    }
-
-    pub fn texture_dimension(&self, tex_type: TextureType) -> (u32, u32)
-    {
-        match tex_type
-        {
-            TextureType::Base => self.material.texture_base.dimensions(),
-            TextureType::Ambient => self.material.texture_ambient.dimensions(),
-            TextureType::Specular => self.material.texture_specular.dimensions(),
-            TextureType::Normal => self.material.texture_normal.dimensions(),
-            TextureType::Alpha => self.material.texture_alpha.dimensions(),
-        }
-    }
-
-    pub fn get_texture_pixel(&self, x: u32, y: u32, tex_type: TextureType) -> Vector3<f32>
-    {
-        if !self.has_texture(tex_type)
-        {
-            return Vector3::<f32>::new(0.0, 0.0, 0.0);
-        }
-
-        let pixel;
-
-        match tex_type
-        {
-            TextureType::Base => { pixel = self.material.texture_base.get_pixel(x, y); },
-            TextureType::Ambient => { pixel = self.material.texture_ambient.get_pixel(x, y); },
-            TextureType::Specular => { pixel = self.material.texture_specular.get_pixel(x, y); },
-            TextureType::Normal => { pixel = self.material.texture_normal.get_pixel(x, y); },
-            TextureType::Alpha => { pixel = self.material.texture_alpha.get_pixel(x, y); },
-        }
-
-        let rgb = pixel.to_rgb();
-
-        Vector3::<f32>::new
-        (
-            (rgb[0] as f32) / 255.0,
-            (rgb[1] as f32) / 255.0,
-            (rgb[2] as f32) / 255.0
-        )
     }
 
     pub fn calc_inverse(&mut self)

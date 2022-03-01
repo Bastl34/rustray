@@ -227,6 +227,7 @@ fn main_sdl()
     //scene.load_json("scene/earth.json");
     scene.load_gltf("scene/models/monkey/monkey.glb");
     //scene.get_by_name("unknown").unwrap().get_basic_mut().material.smooth_shading = false;
+    //scene.load_gltf("scene/bmw27_cpu.glb");
     scene.print();
 
     let scene = std::sync::Arc::new(std::sync::RwLock::new(scene));

@@ -180,6 +180,42 @@ impl Scene
                     if !&object["surface_roughness"].is_null() { material.surface_roughness = object["surface_roughness"].as_f64().unwrap() as f32; }
                     if !&object["smooth_shading"].is_null() { material.smooth_shading = object["smooth_shading"].as_bool().unwrap(); }
 
+                    // ***** textures
+                    let texture = &object["texture"];
+
+                    if !texture.is_null()
+                    {
+                        // base
+                        if texture["base"].is_string()
+                        {
+                            material.load_texture(texture["base"].as_str().unwrap(), TextureType::Base);
+                        }
+
+                        // ambient
+                        if texture["ambient"].is_string()
+                        {
+                            material.load_texture(texture["ambient"].as_str().unwrap(), TextureType::Ambient);
+                        }
+
+                        // specular
+                        if texture["specular"].is_string()
+                        {
+                            material.load_texture(texture["specular"].as_str().unwrap(), TextureType::Specular);
+                        }
+
+                        // normal
+                        if texture["normal"].is_string()
+                        {
+                            material.load_texture(texture["normal"].as_str().unwrap(), TextureType::Normal);
+                        }
+
+                        // alpha
+                        if texture["alpha"].is_string()
+                        {
+                            material.load_texture(texture["alpha"].as_str().unwrap(), TextureType::Alpha);
+                        }
+                    }
+
                     // ***** other settings
                     let mut visible = true;
                     if !&object["visible"].is_null() { visible = object["visible"].as_bool().unwrap(); }
@@ -258,42 +294,6 @@ impl Scene
                         shape.get_basic_mut().material = material;
                         shape.get_basic_mut().visible = visible;
                         shape.get_basic_mut().apply_transformation(translation, scale, rotation);
-
-                        // ***** textures
-                        let texture = &object["texture"];
-
-                        if !texture.is_null()
-                        {
-                            // base
-                            if texture["base"].is_string()
-                            {
-                                shape.get_basic_mut().load_texture(texture["base"].as_str().unwrap(), TextureType::Base);
-                            }
-
-                            // ambient
-                            if texture["ambient"].is_string()
-                            {
-                                shape.get_basic_mut().load_texture(texture["ambient"].as_str().unwrap(), TextureType::Ambient);
-                            }
-
-                            // specular
-                            if texture["specular"].is_string()
-                            {
-                                shape.get_basic_mut().load_texture(texture["specular"].as_str().unwrap(), TextureType::Specular);
-                            }
-
-                            // normal
-                            if texture["normal"].is_string()
-                            {
-                                shape.get_basic_mut().load_texture(texture["normal"].as_str().unwrap(), TextureType::Normal);
-                            }
-
-                            // alpha
-                            if texture["alpha"].is_string()
-                            {
-                                shape.get_basic_mut().load_texture(texture["alpha"].as_str().unwrap(), TextureType::Alpha);
-                            }
-                        }
 
                         shape.get_basic_mut().id = self.get_next_id();
 
@@ -516,14 +516,14 @@ impl Scene
                 if material.pbr.base_color_texture.is_some()
                 {
                     let img = self.get_dyn_image_from_gltf_material(&material, TextureType::Base);
-                    item.basic.load_texture_buffer(&img, TextureType::Base);
+                    item.basic.material.load_texture_buffer(&img, TextureType::Base);
                 }
 
                 // normal map
                 if material.normal.is_some()
                 {
                     let img = self.get_dyn_image_from_gltf_material(&material, TextureType::Normal);
-                    item.basic.load_texture_buffer(&img, TextureType::Normal);
+                    item.basic.material.load_texture_buffer(&img, TextureType::Normal);
                 }
 
                 item.get_basic_mut().id = self.get_next_id();
@@ -705,21 +705,47 @@ impl Scene
                         }
                     }
 
-                    //texture
+                    // base texture
                     if !mat.diffuse_texture.is_empty()
                     {
-                        let mut tex_path = mat.diffuse_texture.clone();
-
-                        if Path::new(&tex_path).is_relative()
-                        {
-                            let parent = Path::new(path).parent();
-                            if let Some(parent) = parent
-                            {
-                                tex_path = parent.join(tex_path).to_str().unwrap().to_string();
-                            }
-                        }
-                        item.basic.load_texture(&tex_path, TextureType::Base);
+                        let tex_path = self.get_texture_path(&mat.diffuse_texture, path);
+                        dbg!(&tex_path);
+                        item.basic.material.load_texture(&tex_path, TextureType::Base);
                     }
+
+                    // normal texture
+                    if !mat.normal_texture.is_empty()
+                    {
+                        let tex_path = self.get_texture_path(&mat.normal_texture, path);
+                        dbg!(&tex_path);
+                        item.basic.material.load_texture(&tex_path, TextureType::Normal);
+                    }
+
+                    // ambient texture
+                    if !mat.ambient_texture.is_empty()
+                    {
+                        let tex_path = self.get_texture_path(&mat.ambient_texture, path);
+                        dbg!(&tex_path);
+                        item.basic.material.load_texture(&tex_path, TextureType::Ambient);
+                    }
+
+                    // specular texture
+                    if !mat.specular_texture.is_empty()
+                    {
+                        let tex_path = self.get_texture_path(&mat.specular_texture, path);
+                        dbg!(&tex_path);
+                        item.basic.material.load_texture(&tex_path, TextureType::Specular);
+                    }
+
+                    // specular texture
+                    if !mat.dissolve_texture.is_empty()
+                    {
+                        let tex_path = self.get_texture_path(&mat.dissolve_texture, path);
+                        dbg!(&tex_path);
+                        item.basic.material.load_texture(&tex_path, TextureType::Alpha);
+                    }
+
+                    // shininess_texture is not supported
                 }
 
                 item.get_basic_mut().id = self.get_next_id();
@@ -732,7 +758,21 @@ impl Scene
         loaded_ids
     }
 
+    pub fn get_texture_path(&self, tex_path: &String, mtl_path: &str) -> String
+    {
+        let mut tex_path = tex_path.clone();
 
+        if Path::new(&tex_path).is_relative()
+        {
+            let parent = Path::new(mtl_path).parent();
+            if let Some(parent) = parent
+            {
+                tex_path = parent.join(tex_path).to_str().unwrap().to_string();
+            }
+        }
+
+        tex_path
+    }
 
     pub fn update(&mut self)
     {
