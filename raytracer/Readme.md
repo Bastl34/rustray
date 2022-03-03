@@ -22,4 +22,3 @@
 
 ## TODO
 * animation
-* gltf scene loading

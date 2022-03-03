@@ -225,9 +225,10 @@ fn main_sdl()
     //scene.load_json("scene/monkey.json");
     //scene.load_json("scene/kbert.json");
     //scene.load_json("scene/earth.json");
-    scene.load_gltf("scene/models/monkey/monkey.glb");
+    //scene.load_gltf("scene/models/monkey/monkey.glb");
     //scene.get_by_name("unknown").unwrap().get_basic_mut().material.smooth_shading = false;
     //scene.load_gltf("scene/bmw27_cpu.glb");
+    //scene.load_gltf("scene/models/Sponza/glTF/Sponza.gltf");
     scene.print();
 
     let scene = std::sync::Arc::new(std::sync::RwLock::new(scene));
