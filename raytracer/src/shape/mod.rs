@@ -1,4 +1,4 @@
-use nalgebra::{Matrix4, Vector3, Point2, Point3, Rotation3};
+use nalgebra::{Matrix4, Vector3, Point2, Point3, Rotation3, Vector4};
 use parry3d::query::{Ray};
 
 use parry3d::bounding_volume::AABB;
@@ -242,7 +242,7 @@ impl Material
 
     pub fn load_texture_buffer(&mut self, image: &DynamicImage, tex_type: TextureType)
     {
-        println!("loading texture from buffer");
+        println!("loading texture from buffer: {:?}", tex_type);
 
         match tex_type
         {
@@ -293,11 +293,11 @@ impl Material
         }
     }
 
-    pub fn get_texture_pixel(&self, x: u32, y: u32, tex_type: TextureType) -> Vector3<f32>
+    pub fn get_texture_pixel(&self, x: u32, y: u32, tex_type: TextureType) -> Vector4<f32>
     {
         if !self.has_texture(tex_type)
         {
-            return Vector3::<f32>::new(0.0, 0.0, 0.0);
+            return Vector4::<f32>::new(0.0, 0.0, 0.0, 1.0);
         }
 
         let pixel;
@@ -311,18 +311,19 @@ impl Material
             TextureType::Alpha => { pixel = self.texture_alpha.get_pixel(x, y); },
         }
 
-        let rgb = pixel.to_rgb();
+        let rgba = pixel.to_rgba();
 
-        Vector3::<f32>::new
+        Vector4::<f32>::new
         (
-            (rgb[0] as f32) / 255.0,
-            (rgb[1] as f32) / 255.0,
-            (rgb[2] as f32) / 255.0
+            (rgba[0] as f32) / 255.0,
+            (rgba[1] as f32) / 255.0,
+            (rgba[2] as f32) / 255.0,
+            (rgba[3] as f32) / 255.0
         )
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum TextureType
 {
     Base,

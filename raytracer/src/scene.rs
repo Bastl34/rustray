@@ -390,7 +390,7 @@ impl Scene
                             pos: Point3::<f32>::new(position.x, position.y, position.z),
                             dir: Vector3::<f32>::new(0.0, 0.0, 0.0),
                             color: Vector3::<f32>::new(color.x, color.y, color.z),
-                            intensity: intensity / 10.0,
+                            intensity: intensity,
                             max_angle: 0.0,
                             light_type: LightType::Point
                         }));
@@ -439,7 +439,7 @@ impl Scene
                 let forward = cam.forward();
 
                 self.cam.eye_pos = Point3::<f32>::new(pos.x, pos.y, pos.z);
-                self.cam.dir = Vector3::<f32>::new(forward.x, forward.y, forward.z).normalize();
+                self.cam.dir = Vector3::<f32>::new(-forward.x, -forward.y, -forward.z).normalize();
                 self.cam.up = Vector3::<f32>::new(up.x, up.y, up.z).normalize();
 
                 self.cam.fov = cam.fov.0;
@@ -553,6 +553,7 @@ impl Scene
                         for y in 0..height
                         {
                             let pixel = base_map.get_pixel(x, y);
+
                             img.put_pixel(x, y, Rgba([pixel[0], pixel[1], pixel[2], pixel[3]]));
                         }
                     }
@@ -795,12 +796,41 @@ impl Scene
         None
     }
 
+    pub fn get_vec_by_name(&mut self, name: &str) -> Vec<&mut ScemeItem>
+    {
+        let mut vec = vec![];
+        for item in & mut self.items
+        {
+            if item.get_name() == name
+            {
+                vec.push(item);
+            }
+        }
+
+        vec
+    }
+
     pub fn print(&self)
     {
+        println!("cam:");
+        println!("==========");
+        self.cam.print();
+
         println!("scene:");
+        println!("==========");
         for item in &self.items
         {
-            println!(" - {}: {} (visible: {})", item.get_basic().id, item.get_name(), item.get_basic().visible);
+            let id = item.get_basic().id;
+            let name = item.get_name();
+            let visible = item.get_basic().visible;
+
+            let b_tex = item.get_basic().material.has_texture(TextureType::Base);
+            let am_tex = item.get_basic().material.has_texture(TextureType::Alpha);
+            let s_tex = item.get_basic().material.has_texture(TextureType::Specular);
+            let n_tex = item.get_basic().material.has_texture(TextureType::Normal);
+            let a_tex = item.get_basic().material.has_texture(TextureType::Alpha);
+
+            println!(" - {}: {} (visible: {}, bTex: {}, amTex: {}, sTex: {}, nTex: {}, aTex: {})", id, name, visible, b_tex, am_tex, s_tex, n_tex, a_tex);
         }
     }
 }

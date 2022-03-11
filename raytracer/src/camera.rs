@@ -66,11 +66,32 @@ impl Camera
     {
         self.projection = Perspective3::new(self.aspect_ratio, self.fov, self.clipping_near, self.clipping_far);
 
-        let target = Point3::<f32>::new(self.dir.x, self.dir.y, self.dir.z);
+        //let target = Point3::<f32>::new(self.dir.x, self.dir.y, self.dir.z);
+        let target = self.eye_pos + self.dir;
 
         self.view = Isometry3::look_at_rh(&self.eye_pos, &target, &self.up).to_homogeneous();
 
         self.projection_inverse = self.projection.inverse();
         self.view_inverse = self.view.try_inverse().unwrap();
+    }
+
+    pub fn print(&self)
+    {
+        println!("width: {:?}", self.width);
+        println!("height: {:?}", self.height);
+        println!("aspect_ratio: {:?}", self.aspect_ratio);
+
+        println!("fov: {:?}", self.fov);
+
+        println!("eye_pos: {:?}", self.eye_pos);
+
+        println!("up: {:?}", self.up);
+        println!("dir: {:?}", self.dir);
+
+        println!("clipping_near: {:?}", self.clipping_near);
+        println!("clipping_far: {:?}", self.clipping_far);
+
+        println!("projection: {:?}", self.projection);
+        println!("view: {:?}", self.view);
     }
 }

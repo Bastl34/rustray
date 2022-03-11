@@ -228,8 +228,14 @@ fn main_sdl()
     //scene.load_gltf("scene/models/monkey/monkey.glb");
     //scene.get_by_name("unknown").unwrap().get_basic_mut().material.smooth_shading = false;
     //scene.load_gltf("scene/bmw27_cpu.glb");
-    //scene.load_gltf("scene/models/Sponza/glTF/Sponza.gltf");
-    scene.print();
+    scene.load_gltf("scene/models/Sponza/glTF/Sponza_fixed.gltf");
+    for item in scene.get_vec_by_name("unknown")
+    {
+        //item.get_basic_mut().material.texture_ambient = item.get_basic_mut().material.texture_base.clone();
+        //item.get_basic_mut().material.ambient_color = item.get_basic_mut().material.base_color * 0.5;
+
+        //item.get_basic_mut().material.smooth_shading = true;
+    }
 
     let scene = std::sync::Arc::new(std::sync::RwLock::new(scene));
 
@@ -239,6 +245,7 @@ fn main_sdl()
 
     {
         scene.write().unwrap().cam.init(width as u32, height as u32);
+        scene.read().unwrap().print();
     }
 
     let raytracing_arc = std::sync::Arc::new(std::sync::RwLock::new(raytracing));

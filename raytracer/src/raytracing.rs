@@ -500,7 +500,7 @@ impl Raytracing
         }
     }
 
-    pub fn get_tex_color(&self, item: &dyn Shape, hit_point: Point3<f32>, face_id: u32, tex_type: TextureType) -> Option<Vector3<f32>>
+    pub fn get_tex_color(&self, item: &dyn Shape, hit_point: Point3<f32>, face_id: u32, tex_type: TextureType) -> Option<Vector4<f32>>
     {
         //texture
         if (*item).get_basic().material.has_texture(tex_type)
@@ -519,7 +519,7 @@ impl Raytracing
         None
     }
 
-    pub fn get_item_color(&self, item: &dyn Shape, hit_point: Point3<f32>, face_id: u32, color_type: LightningColorType) -> Vector3<f32>
+    pub fn get_item_color(&self, item: &dyn Shape, hit_point: Point3<f32>, face_id: u32, color_type: LightningColorType) -> Vector4<f32>
     {
         let mat = (*item).get_material();
 
@@ -529,17 +529,17 @@ impl Raytracing
         {
             LightningColorType::Ambient =>
             {
-                item_color = mat.ambient_color;
+                item_color = Vector4::<f32>::new(mat.ambient_color.x, mat.ambient_color.y, mat.ambient_color.z, 1.0);
                 tex_type = TextureType::Ambient;
             },
             LightningColorType::Base =>
             {
-                item_color = mat.base_color;
+                item_color = Vector4::<f32>::new(mat.base_color.x, mat.base_color.y, mat.base_color.z, 1.0);
                 tex_type = TextureType::Base;
             },
             LightningColorType::Specular =>
             {
-                item_color = mat.specular_color;
+                item_color = Vector4::<f32>::new(mat.specular_color.x, mat.specular_color.y, mat.specular_color.z, 1.0);
                 tex_type = TextureType::Specular;
             },
         }
@@ -552,6 +552,7 @@ impl Raytracing
             item_color.x *= tex_color.x;
             item_color.y *= tex_color.y;
             item_color.z *= tex_color.z;
+            item_color.w *= tex_color.w;
         }
 
         item_color
@@ -600,7 +601,7 @@ impl Raytracing
                 let bitangent = normal.cross(&tangent).normalize();
 
                 //to tagent space -- n * 2 - 1
-                let mut normal_map = normal_tex_color;
+                let mut normal_map = normal_tex_color.xyz();
                 normal_map.x = (normal_map.x * 2.0) - 1.0;
                 normal_map.y = (normal_map.y * 2.0) - 1.0;
                 normal_map.z = (normal_map.z * 2.0) - 1.0;
@@ -621,21 +622,21 @@ impl Raytracing
                 surface_normal = self.jitter(surface_normal, item.get_material().surface_roughness);
             }
 
+            //ambient, diffuse, specular colors
+            let ambient_color = self.get_item_color(item, hit_point, face_id, LightningColorType::Ambient);
+            let base_color = self.get_item_color(item, hit_point, face_id, LightningColorType::Base);
+            let specular_color = self.get_item_color(item, hit_point, face_id, LightningColorType::Specular);
+
             //alpha mapping
-            let mut alpha = item.get_material().alpha;
+            let mut alpha = item.get_material().alpha * base_color.w;
             let alpha_tex_color = self.get_tex_color(item, hit_point, face_id, TextureType::Alpha);
             if let Some(alpha_tex_color) = alpha_tex_color
             {
                 alpha *= alpha_tex_color.x;
             }
 
-            //ambient, diffuse, specular colors
-            let ambient_color = self.get_item_color(item, hit_point, face_id, LightningColorType::Ambient);
-            let base_color = self.get_item_color(item, hit_point, face_id, LightningColorType::Base);
-            let specular_color = self.get_item_color(item, hit_point, face_id, LightningColorType::Specular);
-
             //ambient
-            color = ambient_color;
+            color = ambient_color.xyz();
 
             //diffuse/specular color
             for light in &scene.lights
