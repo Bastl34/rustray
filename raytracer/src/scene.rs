@@ -391,6 +391,7 @@ impl Scene
                             dir: Vector3::<f32>::new(0.0, 0.0, 0.0),
                             color: Vector3::<f32>::new(color.x, color.y, color.z),
                             intensity: intensity / 10.0,
+                            //intensity: intensity / 2.0,
                             max_angle: 0.0,
                             light_type: LightType::Point
                         }));
@@ -510,7 +511,7 @@ impl Scene
                 item.get_basic_mut().material.base_color = Vector3::<f32>::new(base_color.x, base_color.y, base_color.z);
                 item.get_basic_mut().material.specular_color = item.get_basic_mut().material.base_color * 0.8;
 
-                item.get_basic_mut().material.surface_roughness = material.pbr.roughness_factor;
+                //item.get_basic_mut().material.surface_roughness = material.pbr.roughness_factor;
 
                 // base map
                 if material.pbr.base_color_texture.is_some()
@@ -524,6 +525,25 @@ impl Scene
                 {
                     let img = self.get_dyn_image_from_gltf_material(&material, TextureType::Normal);
                     item.basic.material.load_texture_buffer(&img, TextureType::Normal);
+                }
+
+                // metallic map
+                if material.pbr.metallic_texture.is_some()
+                {
+                    dbg!(" TODO: !!!!!!!!!! metallic_texture !!!!!!!!!!");
+                }
+
+                // roughness map
+                if material.pbr.roughness_texture.is_some()
+                {
+                    let img = self.get_dyn_image_from_gltf_material(&material, TextureType::Roughness);
+                    item.basic.material.load_texture_buffer(&img, TextureType::Roughness);
+                }
+
+                // occlusion map
+                if material.occlusion.is_some()
+                {
+                    dbg!(" TODO: !!!!!!!!!! occlusion_texture !!!!!!!!!!");
                 }
 
                 item.get_basic_mut().id = self.get_next_id();
@@ -576,6 +596,50 @@ impl Scene
                         {
                             let pixel = tex.get_pixel(x, y);
                             img.put_pixel(x, y, Rgba([pixel[0], pixel[1], pixel[2], 255]));
+                        }
+                    }
+
+                    return DynamicImage::ImageRgba8(img.clone());
+                }
+            },
+            TextureType::Roughness =>
+            {
+                if let Some(roughness_texture) = &mat.pbr.roughness_texture
+                {
+                    let tex = roughness_texture;
+                    let width = tex.width();
+                    let height = tex.height();
+
+                    let mut img: RgbaImage = ImageBuffer::new(width, height);
+                    for x in 0..width
+                    {
+                        for y in 0..height
+                        {
+                            let pixel = tex.get_pixel(x, y);
+                            let r = (pixel[0] as f32 * mat.pbr.roughness_factor) as u8;
+                            img.put_pixel(x, y, Rgba([r, r, r, r]));
+                        }
+                    }
+
+                    return DynamicImage::ImageRgba8(img.clone());
+                }
+            },
+            TextureType::AmbientOcclusion =>
+            {
+                if let Some(ambient_occlusion) = &mat.occlusion
+                {
+                    let tex = &ambient_occlusion.texture;
+                    let width = tex.width();
+                    let height = tex.height();
+
+                    let mut img: RgbaImage = ImageBuffer::new(width, height);
+                    for x in 0..width
+                    {
+                        for y in 0..height
+                        {
+                            let pixel = tex.get_pixel(x, y);
+                            let occlusion = (pixel[0] as f32 * ambient_occlusion.factor) as u8;
+                            img.put_pixel(x, y, Rgba([occlusion, occlusion, occlusion, occlusion]));
                         }
                     }
 

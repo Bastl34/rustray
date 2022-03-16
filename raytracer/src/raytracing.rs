@@ -616,11 +616,23 @@ impl Raytracing
                 surface_normal = (tbn * normal_map).normalize();
             }
 
-            //roughness
-            if self.monte_carlo && item.get_material().surface_roughness > 0.0
+            //roughness map (overwrites roughness material setting)
+            let roughness_tex_color = self.get_tex_color(item, hit_point, face_id, TextureType::Roughness);
+            if self.monte_carlo && (item.get_material().surface_roughness > 0.0 || roughness_tex_color.is_some())
             {
-                surface_normal = self.jitter(surface_normal, item.get_material().surface_roughness);
+                let mut roughness = item.get_material().surface_roughness;
+
+                if let Some(roughness_tex_color) = roughness_tex_color
+                {
+                    roughness = (1.0 / PI / 2.0) * roughness_tex_color.x;
+                }
+
+                surface_normal = self.jitter(surface_normal, roughness);
             }
+
+            // TODO metallic texture
+
+
 
             //ambient, diffuse, specular colors
             let ambient_color = self.get_item_color(item, hit_point, face_id, LightningColorType::Ambient);
@@ -787,6 +799,15 @@ impl Raytracing
                 let fog_amount = (self.fog_density * hit_dist).min(1.0);
 
                 color = ((1.0 - fog_amount) * color) + (self.fog_color * fog_amount);
+            }
+
+            //ambient occlusion
+            let ambient_occlusion = self.get_tex_color(item, hit_point, face_id, TextureType::AmbientOcclusion);
+            if let Some(ambient_occlusion) = ambient_occlusion
+            {
+                color.x *= ambient_occlusion.x;
+                color.y *= ambient_occlusion.y;
+                color.z *= ambient_occlusion.z;
             }
         }
 

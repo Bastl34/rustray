@@ -228,7 +228,8 @@ fn main_sdl()
     //scene.load_gltf("scene/models/monkey/monkey.glb");
     //scene.get_by_name("unknown").unwrap().get_basic_mut().material.smooth_shading = false;
     //scene.load_gltf("scene/bmw27_cpu.glb");
-    scene.load_gltf("scene/models/Sponza/glTF/Sponza_fixed.gltf");
+    scene.load_gltf("scene/models/Sponza/glTF/Sponza_fixed.glb");
+    /*
     for item in scene.get_vec_by_name("unknown")
     {
         item.get_basic_mut().material.texture_ambient = item.get_basic_mut().material.texture_base.clone();
@@ -236,6 +237,7 @@ fn main_sdl()
 
         item.get_basic_mut().material.smooth_shading = true;
     }
+     */
 
     let scene = std::sync::Arc::new(std::sync::RwLock::new(scene));
 

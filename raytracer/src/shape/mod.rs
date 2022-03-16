@@ -43,6 +43,8 @@ pub struct Material
     pub texture_specular: DynamicImage,
     pub texture_normal: DynamicImage,
     pub texture_alpha: DynamicImage,
+    pub texture_roughness: DynamicImage,
+    pub texture_ambient_occlusion: DynamicImage,
 
     pub alpha: f32,
     pub shininess: f32,
@@ -55,7 +57,7 @@ pub struct Material
     pub receive_shadow: bool,
     pub shadow_softness: f32,
 
-    pub surface_roughness: f32,
+    pub surface_roughness: f32, //degree in rad (max PI/2)
 
     pub smooth_shading: bool,
 }
@@ -75,6 +77,8 @@ impl Material
             texture_specular: DynamicImage::new_rgb8(0,0),
             texture_normal: DynamicImage::new_rgb8(0,0),
             texture_alpha: DynamicImage::new_rgb8(0,0),
+            texture_roughness: DynamicImage::new_rgb8(0,0),
+            texture_ambient_occlusion: DynamicImage::new_rgb8(0,0),
 
             alpha: 1.0,
             shininess: 150.0,
@@ -110,7 +114,7 @@ impl Material
             self.ambient_color = new_mat.ambient_color;
         }
 
-        // ambient
+        // base
         if
             !approx_equal(default_material.base_color.x, new_mat.base_color.x)
             ||
@@ -165,6 +169,18 @@ impl Material
             self.texture_alpha = new_mat.texture_alpha.clone();
         }
 
+        // roughness
+        if default_material.texture_roughness != new_mat.texture_roughness
+        {
+            self.texture_roughness = new_mat.texture_roughness.clone();
+        }
+
+        // ambient_occlusion
+        if default_material.texture_ambient_occlusion != new_mat.texture_ambient_occlusion
+        {
+            self.texture_ambient_occlusion = new_mat.texture_ambient_occlusion.clone();
+        }
+
         // ********** other attributes **********
         if !approx_equal(default_material.alpha, new_mat.alpha) { self.alpha = new_mat.alpha; }
         if !approx_equal(default_material.shininess, new_mat.shininess) { self.shininess = new_mat.shininess; }
@@ -193,6 +209,8 @@ impl Material
         println!("texture_specular: {:?}", self.texture_specular.width() > 0);
         println!("texture_normal: {:?}", self.texture_normal.width() > 0);
         println!("texture_alpha: {:?}", self.texture_alpha.width() > 0);
+        println!("texture_roughness: {:?}", self.texture_roughness.width() > 0);
+        println!("texture_ambient_occlusion: {:?}", self.texture_ambient_occlusion.width() > 0);
 
         println!("alpha: {:?}", self.alpha);
         println!("shininess: {:?}", self.shininess);
@@ -237,6 +255,14 @@ impl Material
             {
                 self.texture_alpha = tex;
             },
+            TextureType::Roughness=>
+            {
+                self.texture_roughness = tex;
+            },
+            TextureType::AmbientOcclusion=>
+            {
+                self.texture_ambient_occlusion = tex;
+            },
         }
     }
 
@@ -266,6 +292,14 @@ impl Material
             {
                 self.texture_alpha = image.clone();
             },
+            TextureType::Roughness =>
+            {
+                self.texture_roughness = image.clone();
+            },
+            TextureType::AmbientOcclusion =>
+            {
+                self.texture_ambient_occlusion = image.clone();
+            },
         }
     }
 
@@ -278,6 +312,8 @@ impl Material
             TextureType::Specular => self.texture_specular.width() > 0,
             TextureType::Normal => self.texture_normal.width() > 0,
             TextureType::Alpha => self.texture_alpha.width() > 0,
+            TextureType::Roughness => self.texture_roughness.width() > 0,
+            TextureType::AmbientOcclusion => self.texture_ambient_occlusion.width() > 0,
         }
     }
 
@@ -290,6 +326,8 @@ impl Material
             TextureType::Specular => self.texture_specular.dimensions(),
             TextureType::Normal => self.texture_normal.dimensions(),
             TextureType::Alpha => self.texture_alpha.dimensions(),
+            TextureType::Roughness => self.texture_roughness.dimensions(),
+            TextureType::AmbientOcclusion => self.texture_ambient_occlusion.dimensions(),
         }
     }
 
@@ -309,6 +347,8 @@ impl Material
             TextureType::Specular => { pixel = self.texture_specular.get_pixel(x, y); },
             TextureType::Normal => { pixel = self.texture_normal.get_pixel(x, y); },
             TextureType::Alpha => { pixel = self.texture_alpha.get_pixel(x, y); },
+            TextureType::Roughness => { pixel = self.texture_roughness.get_pixel(x, y); },
+            TextureType::AmbientOcclusion => { pixel = self.texture_ambient_occlusion.get_pixel(x, y); },
         }
 
         let rgba = pixel.to_rgba();
@@ -323,14 +363,16 @@ impl Material
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum TextureType
 {
     Base,
     Ambient,
     Specular,
     Normal,
-    Alpha
+    Alpha,
+    Roughness,
+    AmbientOcclusion,
 }
 
 pub struct ShapeBasics
