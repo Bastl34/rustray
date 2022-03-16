@@ -231,10 +231,10 @@ fn main_sdl()
     scene.load_gltf("scene/models/Sponza/glTF/Sponza_fixed.gltf");
     for item in scene.get_vec_by_name("unknown")
     {
-        //item.get_basic_mut().material.texture_ambient = item.get_basic_mut().material.texture_base.clone();
-        //item.get_basic_mut().material.ambient_color = item.get_basic_mut().material.base_color * 0.5;
+        item.get_basic_mut().material.texture_ambient = item.get_basic_mut().material.texture_base.clone();
+        item.get_basic_mut().material.ambient_color = item.get_basic_mut().material.base_color * 0.5;
 
-        //item.get_basic_mut().material.smooth_shading = true;
+        item.get_basic_mut().material.smooth_shading = true;
     }
 
     let scene = std::sync::Arc::new(std::sync::RwLock::new(scene));

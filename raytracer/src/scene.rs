@@ -390,7 +390,7 @@ impl Scene
                             pos: Point3::<f32>::new(position.x, position.y, position.z),
                             dir: Vector3::<f32>::new(0.0, 0.0, 0.0),
                             color: Vector3::<f32>::new(color.x, color.y, color.z),
-                            intensity: intensity,
+                            intensity: intensity / 10.0,
                             max_angle: 0.0,
                             light_type: LightType::Point
                         }));
@@ -480,7 +480,7 @@ impl Scene
                         }
 
                         // texture uv coord
-                        uvs.push(Point2::<f32>::new(vertex.tex_coords.x, vertex.tex_coords.y));
+                        uvs.push(Point2::<f32>::new(vertex.tex_coords.x, -vertex.tex_coords.y));
                     }
 
                     // ***** indices
