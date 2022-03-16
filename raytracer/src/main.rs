@@ -220,7 +220,7 @@ fn main_sdl()
 
     let mut scene = Scene::new();
     scene.clear();
-    //scene.load_json("scene/room.json");
+    //scene.load_json("scene/room2.json");
     //scene.load_json("scene/spheres.json");
     //scene.load_json("scene/monkey.json");
     //scene.load_json("scene/kbert.json");

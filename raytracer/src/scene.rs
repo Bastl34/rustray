@@ -214,6 +214,18 @@ impl Scene
                         {
                             material.load_texture(texture["alpha"].as_str().unwrap(), TextureType::Alpha);
                         }
+
+                        // roughness
+                        if texture["roughness"].is_string()
+                        {
+                            material.load_texture(texture["roughness"].as_str().unwrap(), TextureType::Roughness);
+                        }
+
+                        // ambient_occlusion
+                        if texture["ambient_occlusion"].is_string()
+                        {
+                            material.load_texture(texture["ambient_occlusion"].as_str().unwrap(), TextureType::AmbientOcclusion);
+                        }
                     }
 
                     // ***** other settings
@@ -391,7 +403,6 @@ impl Scene
                             dir: Vector3::<f32>::new(0.0, 0.0, 0.0),
                             color: Vector3::<f32>::new(color.x, color.y, color.z),
                             intensity: intensity / 10.0,
-                            //intensity: intensity / 2.0,
                             max_angle: 0.0,
                             light_type: LightType::Point
                         }));
@@ -543,7 +554,8 @@ impl Scene
                 // occlusion map
                 if material.occlusion.is_some()
                 {
-                    dbg!(" TODO: !!!!!!!!!! occlusion_texture !!!!!!!!!!");
+                    let img = self.get_dyn_image_from_gltf_material(&material, TextureType::AmbientOcclusion);
+                    item.basic.material.load_texture_buffer(&img, TextureType::AmbientOcclusion);
                 }
 
                 item.get_basic_mut().id = self.get_next_id();

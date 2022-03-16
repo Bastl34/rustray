@@ -806,8 +806,8 @@ impl Raytracing
             if let Some(ambient_occlusion) = ambient_occlusion
             {
                 color.x *= ambient_occlusion.x;
-                color.y *= ambient_occlusion.y;
-                color.z *= ambient_occlusion.z;
+                color.y *= ambient_occlusion.x;
+                color.z *= ambient_occlusion.x;
             }
         }
 
