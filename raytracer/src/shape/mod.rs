@@ -303,6 +303,23 @@ impl Material
         }
     }
 
+    pub fn has_any_texture(&self) -> bool
+    {
+        self.texture_base.width() > 0
+        ||
+        self.texture_ambient.width() > 0
+        ||
+        self.texture_specular.width() > 0
+        ||
+        self.texture_normal.width() > 0
+        ||
+        self.texture_alpha.width() > 0
+        ||
+        self.texture_roughness.width() > 0
+        ||
+        self.texture_ambient_occlusion.width() > 0
+    }
+
     pub fn has_texture(&self, tex_type: TextureType) -> bool
     {
         match tex_type

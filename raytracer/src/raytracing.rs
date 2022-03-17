@@ -6,7 +6,7 @@ use crate::pixel_color::PixelColor;
 
 use crate::scene::{Scene, LightType};
 
-use nalgebra::{Point3, Vector3, Matrix3, Vector4};
+use nalgebra::{Point3, Vector3, Matrix3, Vector4, Point2};
 use parry3d::query::{Ray};
 
 use rand::Rng;
@@ -500,12 +500,12 @@ impl Raytracing
         }
     }
 
-    pub fn get_tex_color(&self, item: &dyn Shape, hit_point: Point3<f32>, face_id: u32, tex_type: TextureType) -> Option<Vector4<f32>>
+    pub fn get_tex_color(&self, item: &dyn Shape, uv: &Option<Point2<f32>>, tex_type: TextureType) -> Option<Vector4<f32>>
     {
         //texture
-        if (*item).get_basic().material.has_texture(tex_type)
+        if (*item).get_basic().material.has_texture(tex_type) && uv.is_some()
         {
-            let uv = (*item).get_uv(hit_point, face_id);
+            let uv = uv.unwrap();
 
             let tex_dims = (*item).get_basic().material.texture_dimension(tex_type);
             let tex_x = self.wrap(uv.x, tex_dims.0);
@@ -519,7 +519,7 @@ impl Raytracing
         None
     }
 
-    pub fn get_item_color(&self, item: &dyn Shape, hit_point: Point3<f32>, face_id: u32, color_type: LightningColorType) -> Vector4<f32>
+    pub fn get_item_color(&self, item: &dyn Shape, uv: &Option<Point2<f32>>, color_type: LightningColorType) -> Vector4<f32>
     {
         let mat = (*item).get_material();
 
@@ -545,7 +545,7 @@ impl Raytracing
         }
 
         //texture color
-        let tex_color = self.get_tex_color(item, hit_point, face_id, tex_type);
+        let tex_color = self.get_tex_color(item, uv, tex_type);
 
         if let Some(tex_color) = tex_color
         {
@@ -586,8 +586,15 @@ impl Raytracing
             let mut surface_normal = normal;
             let hit_point = r.origin + (r.dir * hit_dist);
 
+            //get uv
+            let mut uv = None;
+            if item.get_material().has_any_texture()
+            {
+                uv = Some((*item).get_uv(hit_point, face_id));
+            }
+
             //normal mapping
-            let normal_tex_color = self.get_tex_color(item, hit_point, face_id, TextureType::Normal);
+            let normal_tex_color = self.get_tex_color(item, &uv, TextureType::Normal);
             if let Some(normal_tex_color) = normal_tex_color
             {
                 let mut tangent = normal.cross(&Vector3::<f32>::new(0.0, 1.0, 0.0));
@@ -617,7 +624,7 @@ impl Raytracing
             }
 
             //roughness map (overwrites roughness material setting)
-            let roughness_tex_color = self.get_tex_color(item, hit_point, face_id, TextureType::Roughness);
+            let roughness_tex_color = self.get_tex_color(item, &uv, TextureType::Roughness);
             if self.monte_carlo && (item.get_material().surface_roughness > 0.0 || roughness_tex_color.is_some())
             {
                 let mut roughness = item.get_material().surface_roughness;
@@ -635,13 +642,13 @@ impl Raytracing
 
 
             //ambient, diffuse, specular colors
-            let ambient_color = self.get_item_color(item, hit_point, face_id, LightningColorType::Ambient);
-            let base_color = self.get_item_color(item, hit_point, face_id, LightningColorType::Base);
-            let specular_color = self.get_item_color(item, hit_point, face_id, LightningColorType::Specular);
+            let ambient_color = self.get_item_color(item, &uv, LightningColorType::Ambient);
+            let base_color = self.get_item_color(item, &uv, LightningColorType::Base);
+            let specular_color = self.get_item_color(item, &uv, LightningColorType::Specular);
 
             //alpha mapping
             let mut alpha = item.get_material().alpha * base_color.w;
-            let alpha_tex_color = self.get_tex_color(item, hit_point, face_id, TextureType::Alpha);
+            let alpha_tex_color = self.get_tex_color(item, &uv, TextureType::Alpha);
             if let Some(alpha_tex_color) = alpha_tex_color
             {
                 alpha *= alpha_tex_color.x;
@@ -736,7 +743,8 @@ impl Raytracing
 
                         let shadow_hit_point = shadow_ray.origin + (shadow_ray.dir * shadow_intersection.unwrap().0);
 
-                        let shadow_alpha_tex_color = self.get_tex_color(shadow_obj, shadow_hit_point, shadow_face_id, TextureType::Alpha);
+                        let shadow_uv = (*item).get_uv(shadow_hit_point, shadow_face_id);
+                        let shadow_alpha_tex_color = self.get_tex_color(shadow_obj, &Some(shadow_uv), TextureType::Alpha);
                         if let Some(shadow_alpha_tex_color) = shadow_alpha_tex_color
                         {
                             shadow_source_alpha *= shadow_alpha_tex_color.x;
@@ -802,7 +810,7 @@ impl Raytracing
             }
 
             //ambient occlusion
-            let ambient_occlusion = self.get_tex_color(item, hit_point, face_id, TextureType::AmbientOcclusion);
+            let ambient_occlusion = self.get_tex_color(item, &uv, TextureType::AmbientOcclusion);
             if let Some(ambient_occlusion) = ambient_occlusion
             {
                 color.x *= ambient_occlusion.x;
