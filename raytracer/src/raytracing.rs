@@ -162,6 +162,47 @@ impl Raytracing
         linear.powf(1.0 / GAMMA)
     }
 
+    pub fn pick(&self, x: i32, y: i32) -> Option<(String, f32)>
+    {
+        let scene = self.scene.read().unwrap();
+
+        let x_f = x as f32;
+        let y_f = y as f32;
+
+        let w = scene.cam.width as f32;
+        let h = scene.cam.height as f32;
+
+        //map x/y to -1 <=> +1
+        let sensor_x = ((x_f + 0.5) / w) * 2.0 - 1.0;
+        let sensor_y = 1.0 - ((y_f + 0.5) / h) * 2.0;
+
+        let mut pixel_pos = Vector4::new(sensor_x, sensor_y, -CAM_CLIPPING_PLANE_DIST, 1.0);
+        pixel_pos = scene.cam.projection_inverse * pixel_pos;
+        pixel_pos.w = 1.0;
+
+        let mut ray_dir = pixel_pos - DEFAILT_VIEW_POS;
+        ray_dir.w = 0.0;
+
+        let origin = scene.cam.view_inverse * pixel_pos;
+        let dir = scene.cam.view_inverse * ray_dir;
+
+        let mut ray = Ray::new(Point3::<f32>::from(origin.xyz()), Vector3::<f32>::from(dir.xyz()));
+        ray.dir = ray.dir.normalize();
+
+        //scene
+        let scene = self.scene.read().unwrap();
+
+        //intersect
+        let intersection = self.trace(&scene, &ray, false, false);
+
+        if let Some(intersection) = intersection
+        {
+            return Some((intersection.2.get_name().to_string(), intersection.0));
+        }
+
+        None
+    }
+
     pub fn render(&self, x: i32, y: i32) -> PixelColor
     {
         let scene = self.scene.read().unwrap();

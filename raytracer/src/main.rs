@@ -5,6 +5,7 @@ extern crate rand;
 extern crate image;
 
 use chrono::{Datelike, Timelike, Utc};
+use sdl2::mouse::MouseButton;
 
 use std::{io::Write, thread};
 use std::time::{Instant, Duration};
@@ -284,6 +285,16 @@ fn main_sdl()
                     image = ImageBuffer::new(width as u32, height as u32);
 
                     completed = false;
+                },
+                sdl2::event::Event::MouseButtonDown { mouse_btn: MouseButton::Left, x, y, .. } =>
+                {
+                    let rt = raytracing_arc.read().unwrap();
+                    let pick_res = rt.pick(x, y);
+
+                    if let Some(pick_res) = pick_res
+                    {
+                        dbg!(pick_res);
+                    }
                 },
                 //restart rendering on resize
                 sdl2::event::Event::Window { win_event: WindowEvent::Resized(w, h), ..} =>
