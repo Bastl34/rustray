@@ -236,10 +236,12 @@ fn main_sdl()
     //scene.load_gltf("scene/models/ambient/ambient_sphere.glb");
     //scene.items[0].get_basic_mut().material.reflection_only = true;
 
-    scene.load_json("scene/environment.json");
+    //scene.load_json("scene/environment.json");
 
-    scene.load_gltf("scene/models/helmet/DamagedHelmet_fixed.glb");
+    //scene.load_gltf("scene/models/helmet/DamagedHelmet_fixed.glb");
     //scene.load_gltf("scene/models/MetalRoughSpheres.glb");
+
+    scene.load_json("scene/helmet.json");
 
     /*
     let mut i = 0;

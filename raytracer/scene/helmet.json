@@ -1,0 +1,40 @@
+{
+    "name": "Helmet",
+    "camera":
+    {
+        "fov": 23,
+        "pos": {"x": 4.2011, "y": 2.7027438, "z": 3.71161},
+        "up": { "x": -0.32401347, "y": 0.8953957, "z": -0.30542085},
+        "dir": { "x": -0.6515582, "y": -0.4452714, "z": -0.61417043},
+        "z_near": 0.1,
+        "z_far": 100.0
+    },
+    "lights":
+    [
+        {
+            "name": "light point",
+            "pos": {"x": 6.8627195, "y": 3.287831, "z": 1.4585655},
+            "color": {"r": 1.0, "g": 1.0, "b": 1.0},
+            "intensity": 100.0,
+            "light_type": "point"
+        }
+    ],
+    "objects":
+    [
+        {
+            "type": "json",
+            "path": "scene/environment.json"
+        },
+        {
+            "type": "gltf",
+            "url": "https://github.com/KhronosGroup/glTF-Sample-Models/raw/master/2.0/DamagedHelmet/glTF-Binary/DamagedHelmet.glb",
+            "path": "data/temp/DamagedHelmet.glb",
+            "__path": "scene/models/helmet/DamagedHelmet_fixed.glb",
+            "transformation":
+            {
+                "rotation": {"x": -25.0, "y": 15.0, "z": 0.0},
+                "scale": {"x": 1.3, "y": 1.3, "z": 1.3}
+            }
+        }
+    ]
+}

@@ -467,11 +467,14 @@ impl ShapeBasics
         let rotation_y  = Rotation3::from_euler_angles(0.0, rotation.y, 0.0).to_homogeneous();
         let rotation_z  = Rotation3::from_euler_angles(0.0, 0.0, rotation.z).to_homogeneous();
 
+        let rotation  = Rotation3::new(rotation).to_homogeneous();
+
         self.trans = self.trans * translation;
         self.trans = self.trans * scale;
-        self.trans = self.trans * rotation_x;
-        self.trans = self.trans * rotation_y;
-        self.trans = self.trans * rotation_z;
+        self.trans = self.trans * rotation;
+        //self.trans = self.trans * rotation_z;
+        //self.trans = self.trans * rotation_y;
+        //self.trans = self.trans * rotation_x;
 
         self.calc_inverse();
     }
