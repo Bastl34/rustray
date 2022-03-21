@@ -238,7 +238,7 @@ fn main_sdl()
 
     scene.load_json("scene/environment.json");
 
-    scene.load_gltf("scene/models/DamagedHelmet_fixed.glb");
+    scene.load_gltf("scene/models/helmet/DamagedHelmet_fixed.glb");
     //scene.load_gltf("scene/models/MetalRoughSpheres.glb");
 
     /*
