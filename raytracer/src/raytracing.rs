@@ -45,6 +45,9 @@ https://wzhfantastic.github.io/2018/04/09/RayTracingInUnity(PartTwo)/
 
 hemi sphere sampling
 https://www.gamedev.net/forums/topic/683176-finding-a-random-point-on-a-sphere-with-spread-and-direction/
+
+pbr shading
+https://gist.github.com/galek/53557375251e1a942dfa
 */
 
 pub struct HitResult<'a>
@@ -193,7 +196,7 @@ impl Raytracing
         let scene = self.scene.read().unwrap();
 
         //intersect
-        let intersection = self.trace(&scene, &ray, false, false);
+        let intersection = self.trace(&scene, &ray, false, false, 1);
 
         if let Some(intersection) = intersection
         {
@@ -349,7 +352,7 @@ impl Raytracing
         }
     }
 
-    pub fn trace<'a>(&self, scene: &'a Scene, ray: &Ray, stop_on_first_hit: bool, for_shadow: bool) -> Option<(f32, Vector3<f32>, &'a dyn Shape, u32)>
+    pub fn trace<'a>(&self, scene: &'a Scene, ray: &Ray, stop_on_first_hit: bool, for_shadow: bool, depth: u16) -> Option<(f32, Vector3<f32>, &'a dyn Shape, u32)>
     {
         //find hits (bbox based)
         let mut hits: Vec<HitResult> = vec![];
@@ -358,7 +361,7 @@ impl Raytracing
             let dist = item.intersect_b_box(&ray);
             if let Some(dist) = dist
             {
-                if item.get_basic().visible && item.get_material().alpha > 0.0 && (!for_shadow || item.get_material().cast_shadow)
+                if item.get_basic().visible && item.get_material().alpha > 0.0 && (!for_shadow || item.get_material().cast_shadow) && (!item.get_material().reflection_only || depth > 1)
                 {
                     hits.push(HitResult{ item: item.as_ref(), dist: dist });
                 }
@@ -541,6 +544,13 @@ impl Raytracing
         }
     }
 
+    /*
+    fn mix(&self, x: &Vector3<f32>, y: &Vector3<f32>, a: f32) -> Vector3<f32>
+    {
+        x * (1.0 - a) + y * a
+    }
+    */
+
     pub fn get_tex_color(&self, item: &dyn Shape, uv: &Option<Point2<f32>>, tex_type: TextureType) -> Option<Vector4<f32>>
     {
         //texture
@@ -571,7 +581,7 @@ impl Raytracing
             LightningColorType::Ambient =>
             {
                 item_color = Vector4::<f32>::new(mat.ambient_color.x, mat.ambient_color.y, mat.ambient_color.z, 1.0);
-                tex_type = TextureType::Ambient;
+                tex_type = TextureType::AmbientEmissive;
             },
             LightningColorType::Base =>
             {
@@ -613,7 +623,7 @@ impl Raytracing
         r.dir = r.dir.normalize();
 
         //intersect
-        let intersection = self.trace(&scene, &r, false, false);
+        let intersection = self.trace(&scene, &r, false, false, depth);
 
         let mut color = Vector3::new(0.0, 0.0, 0.0);
 
@@ -666,9 +676,9 @@ impl Raytracing
 
             //roughness map (overwrites roughness material setting)
             let roughness_tex_color = self.get_tex_color(item, &uv, TextureType::Roughness);
-            if self.monte_carlo && (item.get_material().surface_roughness > 0.0 || roughness_tex_color.is_some())
+            if self.monte_carlo && (item.get_material().roughness > 0.0 || roughness_tex_color.is_some())
             {
-                let mut roughness = item.get_material().surface_roughness;
+                let mut roughness = item.get_material().roughness;
 
                 if let Some(roughness_tex_color) = roughness_tex_color
                 {
@@ -677,10 +687,6 @@ impl Raytracing
 
                 surface_normal = self.jitter(surface_normal, roughness);
             }
-
-            // TODO metallic texture
-
-
 
             //ambient, diffuse, specular colors
             let ambient_color = self.get_item_color(item, &uv, LightningColorType::Ambient);
@@ -694,9 +700,6 @@ impl Raytracing
             {
                 alpha *= alpha_tex_color.x;
             }
-
-            //ambient
-            color = ambient_color.xyz();
 
             //diffuse/specular color
             for light in &scene.lights
@@ -763,7 +766,7 @@ impl Raytracing
                     }
 
                     let shadow_ray = Ray::new(shadow_ray_start, shadow_ray_dir);
-                    let shadow_intersection = self.trace(&scene, &shadow_ray, true, true);
+                    let shadow_intersection = self.trace(&scene, &shadow_ray, true, true, depth);
 
                     let mut in_light = shadow_intersection.is_none();
                     if !in_light && (light.light_type == LightType::Point || light.light_type == LightType::Spot)
@@ -807,7 +810,13 @@ impl Raytracing
             let kr = self.fresnel(r.dir, surface_normal, refraction_index);
 
             //reflectivity
-            let reflectivity = item.get_material().reflectivity;
+            let mut reflectivity = item.get_material().reflectivity;
+            let tex_reflexivity = self.get_tex_color(item, &uv, TextureType::Reflectivity);
+            if let Some(tex_reflexivity) = tex_reflexivity
+            {
+                reflectivity = tex_reflexivity.x;
+            }
+
             color = color * (1.0 - reflectivity);
 
             if item.get_material().reflectivity > 0.0 && depth <= self.max_recursion
@@ -858,6 +867,9 @@ impl Raytracing
                 color.y *= ambient_occlusion.x;
                 color.z *= ambient_occlusion.x;
             }
+
+            //ambient / emissive
+            color += ambient_color.xyz();
         }
 
         color

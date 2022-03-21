@@ -177,8 +177,9 @@ impl Scene
                     if !&object["cast_shadow"].is_null() { material.cast_shadow = object["cast_shadow"].as_bool().unwrap(); }
                     if !&object["receive_shadow"].is_null() { material.receive_shadow = object["receive_shadow"].as_bool().unwrap(); }
                     if !&object["shadow_softness"].is_null() { material.shadow_softness = object["shadow_softness"].as_f64().unwrap() as f32; }
-                    if !&object["surface_roughness"].is_null() { material.surface_roughness = object["surface_roughness"].as_f64().unwrap() as f32; }
+                    if !&object["roughness"].is_null() { material.roughness = object["roughness"].as_f64().unwrap() as f32; }
                     if !&object["smooth_shading"].is_null() { material.smooth_shading = object["smooth_shading"].as_bool().unwrap(); }
+                    if !&object["reflection_only"].is_null() { material.reflection_only = object["reflection_only"].as_bool().unwrap(); }
 
                     // ***** textures
                     let texture = &object["texture"];
@@ -194,7 +195,7 @@ impl Scene
                         // ambient
                         if texture["ambient"].is_string()
                         {
-                            material.load_texture(texture["ambient"].as_str().unwrap(), TextureType::Ambient);
+                            material.load_texture(texture["ambient"].as_str().unwrap(), TextureType::AmbientEmissive);
                         }
 
                         // specular
@@ -522,7 +523,8 @@ impl Scene
                 item.get_basic_mut().material.base_color = Vector3::<f32>::new(base_color.x, base_color.y, base_color.z);
                 item.get_basic_mut().material.specular_color = item.get_basic_mut().material.base_color * 0.8;
 
-                //item.get_basic_mut().material.surface_roughness = material.pbr.roughness_factor;
+                item.get_basic_mut().material.reflectivity = material.pbr.metallic_factor;
+                item.get_basic_mut().material.roughness = material.pbr.roughness_factor;
 
                 // base map
                 if material.pbr.base_color_texture.is_some()
@@ -541,7 +543,18 @@ impl Scene
                 // metallic map
                 if material.pbr.metallic_texture.is_some()
                 {
-                    dbg!(" TODO: !!!!!!!!!! metallic_texture !!!!!!!!!!");
+                    let img = self.get_dyn_image_from_gltf_material(&material, TextureType::Reflectivity);
+                    item.basic.material.load_texture_buffer(&img, TextureType::Reflectivity);
+                }
+
+                // emissive
+                if material.emissive.texture.is_some()
+                {
+                    let img = self.get_dyn_image_from_gltf_material(&material, TextureType::AmbientEmissive);
+                    item.basic.material.load_texture_buffer(&img, TextureType::AmbientEmissive);
+                    item.basic.material.ambient_color.x = material.emissive.factor.x;
+                    item.basic.material.ambient_color.y = material.emissive.factor.y;
+                    item.basic.material.ambient_color.z = material.emissive.factor.z;
                 }
 
                 // roughness map
@@ -628,7 +641,8 @@ impl Scene
                         for y in 0..height
                         {
                             let pixel = tex.get_pixel(x, y);
-                            let r = (pixel[0] as f32 * mat.pbr.roughness_factor) as u8;
+                            //let r = (pixel[0] as f32 * mat.pbr.roughness_factor) as u8;
+                            let r = pixel[0];
                             img.put_pixel(x, y, Rgba([r, r, r, r]));
                         }
                     }
@@ -652,6 +666,54 @@ impl Scene
                             let pixel = tex.get_pixel(x, y);
                             let occlusion = (pixel[0] as f32 * ambient_occlusion.factor) as u8;
                             img.put_pixel(x, y, Rgba([occlusion, occlusion, occlusion, occlusion]));
+                        }
+                    }
+
+                    return DynamicImage::ImageRgba8(img.clone());
+                }
+            },
+            TextureType::Reflectivity =>
+            {
+                if let Some(metallic) = &mat.pbr.metallic_texture
+                {
+                    let tex = metallic;
+                    let width = tex.width();
+                    let height = tex.height();
+
+                    let mut img: RgbaImage = ImageBuffer::new(width, height);
+                    for x in 0..width
+                    {
+                        for y in 0..height
+                        {
+                            let pixel = tex.get_pixel(x, y);
+                            //let m = (pixel[0] as f32 * mat.pbr.metallic_factor) as u8;
+                            let m = pixel[0];
+                            img.put_pixel(x, y, Rgba([m, m, m, m]));
+                        }
+                    }
+
+                    return DynamicImage::ImageRgba8(img.clone());
+                }
+            },
+            TextureType::AmbientEmissive =>
+            {
+                if let Some(emissive) = &mat.emissive.texture
+                {
+                    let tex = emissive;
+                    let width = tex.width();
+                    let height = tex.height();
+
+                    let mut img: RgbaImage = ImageBuffer::new(width, height);
+                    for x in 0..width
+                    {
+                        for y in 0..height
+                        {
+                            let pixel = tex.get_pixel(x, y);
+                            let r = pixel[0];
+                            let g = pixel[1];
+                            let b = pixel[2];
+
+                            img.put_pixel(x, y, Rgba([r, g, b, 255]));
                         }
                     }
 
@@ -803,7 +865,7 @@ impl Scene
                     {
                         let tex_path = self.get_texture_path(&mat.ambient_texture, path);
                         dbg!(&tex_path);
-                        item.basic.material.load_texture(&tex_path, TextureType::Ambient);
+                        item.basic.material.load_texture(&tex_path, TextureType::AmbientEmissive);
                     }
 
                     // specular texture

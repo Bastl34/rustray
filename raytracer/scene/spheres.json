@@ -94,7 +94,7 @@
             "alpha": 0.9,
             "refraction_index": 1.0,
             "normal_map_strength": 10.0,
-            "surface_roughness": 0.05
+            "roughness": 0.05
         },
         {
             "name": "sphere_not_visible",

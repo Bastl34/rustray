@@ -221,6 +221,8 @@ fn main_sdl()
 
     let mut scene = Scene::new();
     scene.clear();
+    //scene.load_json("scene/room.json");
+    //scene.load_json("scene/floor.json");
     //scene.load_json("scene/room2.json");
     //scene.load_json("scene/spheres.json");
     //scene.load_json("scene/monkey.json");
@@ -229,7 +231,37 @@ fn main_sdl()
     //scene.load_gltf("scene/models/monkey/monkey.glb");
     //scene.get_by_name("unknown").unwrap().get_basic_mut().material.smooth_shading = false;
     //scene.load_gltf("scene/bmw27_cpu.glb");
-    scene.load_gltf("scene/models/Sponza/glTF/Sponza_fixed.glb");
+    //scene.load_gltf("scene/models/Sponza/glTF/Sponza_fixed.glb");
+
+    //scene.load_gltf("scene/models/ambient/ambient_sphere.glb");
+    //scene.items[0].get_basic_mut().material.reflection_only = true;
+
+    scene.load_json("scene/environment.json");
+
+    scene.load_gltf("scene/models/DamagedHelmet_fixed.glb");
+    //scene.load_gltf("scene/models/MetalRoughSpheres.glb");
+
+    /*
+    let mut i = 0;
+    let scene_size = scene.items.len();
+
+    for item in scene.get_vec_by_name("unknown")
+    {
+        item.get_basic_mut().material.smooth_shading = true;
+
+        if i == scene_size - 1
+        {
+            item.get_basic_mut().material.reflection_only = true;
+        }
+
+        i += 1;
+    }
+     */
+
+    //scene.get_by_name("unknown").unwrap().get_basic_mut().material.reflectivity = 0.8;
+    //scene.get_by_name("unknown").unwrap().get_basic_mut().material.alpha = 0.01;
+    //scene.get_by_name("unknown").unwrap().get_basic_mut().material.refraction_index = 1.5;
+
     /*
     for item in scene.get_vec_by_name("unknown")
     {

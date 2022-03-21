@@ -45,6 +45,7 @@ pub struct Material
     pub texture_alpha: DynamicImage,
     pub texture_roughness: DynamicImage,
     pub texture_ambient_occlusion: DynamicImage,
+    pub texture_reflectivity: DynamicImage,
 
     pub alpha: f32,
     pub shininess: f32,
@@ -57,9 +58,11 @@ pub struct Material
     pub receive_shadow: bool,
     pub shadow_softness: f32,
 
-    pub surface_roughness: f32, //degree in rad (max PI/2)
+    pub roughness: f32, //degree in rad (max PI/2)
 
     pub smooth_shading: bool,
+
+    pub reflection_only: bool
 }
 
 impl Material
@@ -79,6 +82,7 @@ impl Material
             texture_alpha: DynamicImage::new_rgb8(0,0),
             texture_roughness: DynamicImage::new_rgb8(0,0),
             texture_ambient_occlusion: DynamicImage::new_rgb8(0,0),
+            texture_reflectivity: DynamicImage::new_rgb8(0,0),
 
             alpha: 1.0,
             shininess: 150.0,
@@ -91,9 +95,11 @@ impl Material
             receive_shadow: true,
             shadow_softness: 0.01,
 
-            surface_roughness: 0.0,
+            roughness: 0.0,
 
-            smooth_shading: true
+            smooth_shading: true,
+
+            reflection_only: false
         }
     }
 
@@ -181,6 +187,12 @@ impl Material
             self.texture_ambient_occlusion = new_mat.texture_ambient_occlusion.clone();
         }
 
+        // metallic
+        if default_material.texture_reflectivity != new_mat.texture_reflectivity
+        {
+            self.texture_reflectivity = new_mat.texture_reflectivity.clone();
+        }
+
         // ********** other attributes **********
         if !approx_equal(default_material.alpha, new_mat.alpha) { self.alpha = new_mat.alpha; }
         if !approx_equal(default_material.shininess, new_mat.shininess) { self.shininess = new_mat.shininess; }
@@ -193,9 +205,11 @@ impl Material
         if default_material.receive_shadow != new_mat.receive_shadow { self.receive_shadow = new_mat.receive_shadow; }
         if !approx_equal(default_material.shadow_softness, new_mat.shadow_softness) { self.shadow_softness = new_mat.shadow_softness; }
 
-        if !approx_equal(default_material.surface_roughness, new_mat.surface_roughness) { self.surface_roughness = new_mat.surface_roughness; }
+        if !approx_equal(default_material.roughness, new_mat.roughness) { self.roughness = new_mat.roughness; }
 
         if default_material.smooth_shading != new_mat.smooth_shading { self.smooth_shading = new_mat.smooth_shading; }
+
+        if default_material.reflection_only != new_mat.reflection_only { self.reflection_only = new_mat.reflection_only; }
     }
 
     pub fn print(&self)
@@ -211,6 +225,7 @@ impl Material
         println!("texture_alpha: {:?}", self.texture_alpha.width() > 0);
         println!("texture_roughness: {:?}", self.texture_roughness.width() > 0);
         println!("texture_ambient_occlusion: {:?}", self.texture_ambient_occlusion.width() > 0);
+        println!("texture_reflectivity: {:?}", self.texture_reflectivity.width() > 0);
 
         println!("alpha: {:?}", self.alpha);
         println!("shininess: {:?}", self.shininess);
@@ -223,9 +238,11 @@ impl Material
         println!("receive_shadow: {:?}", self.receive_shadow);
         println!("shadow_softness: {:?}", self.shadow_softness);
 
-        println!("surface_roughness: {:?}", self.surface_roughness);
+        println!("roughness: {:?}", self.roughness);
 
         println!("smooth_shading: {:?}", self.smooth_shading);
+
+        println!("reflection_only: {:?}", self.reflection_only);
     }
 
     pub fn load_texture(&mut self, path: &str, tex_type: TextureType)
@@ -239,7 +256,7 @@ impl Material
             {
                 self.texture_base = tex;
             },
-            TextureType::Ambient =>
+            TextureType::AmbientEmissive =>
             {
                 self.texture_ambient = tex;
             },
@@ -255,13 +272,17 @@ impl Material
             {
                 self.texture_alpha = tex;
             },
-            TextureType::Roughness=>
+            TextureType::Roughness =>
             {
                 self.texture_roughness = tex;
             },
-            TextureType::AmbientOcclusion=>
+            TextureType::AmbientOcclusion =>
             {
                 self.texture_ambient_occlusion = tex;
+            },
+            TextureType::Reflectivity =>
+            {
+                self.texture_reflectivity = tex;
             },
         }
     }
@@ -276,7 +297,7 @@ impl Material
             {
                 self.texture_base = image.clone();
             },
-            TextureType::Ambient =>
+            TextureType::AmbientEmissive =>
             {
                 self.texture_ambient = image.clone();
             },
@@ -300,6 +321,10 @@ impl Material
             {
                 self.texture_ambient_occlusion = image.clone();
             },
+            TextureType::Reflectivity =>
+            {
+                self.texture_reflectivity = image.clone();
+            },
         }
     }
 
@@ -318,6 +343,8 @@ impl Material
         self.texture_roughness.width() > 0
         ||
         self.texture_ambient_occlusion.width() > 0
+        ||
+        self.texture_reflectivity.width() > 0
     }
 
     pub fn has_texture(&self, tex_type: TextureType) -> bool
@@ -325,12 +352,13 @@ impl Material
         match tex_type
         {
             TextureType::Base => self.texture_base.width() > 0,
-            TextureType::Ambient => self.texture_ambient.width() > 0,
+            TextureType::AmbientEmissive => self.texture_ambient.width() > 0,
             TextureType::Specular => self.texture_specular.width() > 0,
             TextureType::Normal => self.texture_normal.width() > 0,
             TextureType::Alpha => self.texture_alpha.width() > 0,
             TextureType::Roughness => self.texture_roughness.width() > 0,
             TextureType::AmbientOcclusion => self.texture_ambient_occlusion.width() > 0,
+            TextureType::Reflectivity => self.texture_reflectivity.width() > 0
         }
     }
 
@@ -339,12 +367,13 @@ impl Material
         match tex_type
         {
             TextureType::Base => self.texture_base.dimensions(),
-            TextureType::Ambient => self.texture_ambient.dimensions(),
+            TextureType::AmbientEmissive => self.texture_ambient.dimensions(),
             TextureType::Specular => self.texture_specular.dimensions(),
             TextureType::Normal => self.texture_normal.dimensions(),
             TextureType::Alpha => self.texture_alpha.dimensions(),
             TextureType::Roughness => self.texture_roughness.dimensions(),
             TextureType::AmbientOcclusion => self.texture_ambient_occlusion.dimensions(),
+            TextureType::Reflectivity => self.texture_reflectivity.dimensions()
         }
     }
 
@@ -360,12 +389,13 @@ impl Material
         match tex_type
         {
             TextureType::Base => { pixel = self.texture_base.get_pixel(x, y); },
-            TextureType::Ambient => { pixel = self.texture_ambient.get_pixel(x, y); },
+            TextureType::AmbientEmissive => { pixel = self.texture_ambient.get_pixel(x, y); },
             TextureType::Specular => { pixel = self.texture_specular.get_pixel(x, y); },
             TextureType::Normal => { pixel = self.texture_normal.get_pixel(x, y); },
             TextureType::Alpha => { pixel = self.texture_alpha.get_pixel(x, y); },
             TextureType::Roughness => { pixel = self.texture_roughness.get_pixel(x, y); },
             TextureType::AmbientOcclusion => { pixel = self.texture_ambient_occlusion.get_pixel(x, y); },
+            TextureType::Reflectivity => { pixel = self.texture_reflectivity.get_pixel(x, y); }
         }
 
         let rgba = pixel.to_rgba();
@@ -384,12 +414,13 @@ impl Material
 pub enum TextureType
 {
     Base,
-    Ambient,
+    AmbientEmissive,
     Specular,
     Normal,
     Alpha,
     Roughness,
     AmbientOcclusion,
+    Reflectivity,
 }
 
 pub struct ShapeBasics

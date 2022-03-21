@@ -51,7 +51,8 @@ impl Shape for Mesh
     {
         let ray_inverse = self.basic.get_inverse_ray(ray);
 
-        let solid = !(self.basic.material.alpha < 1.0 || self.basic.material.has_texture(TextureType::Alpha));
+        //let solid = !(self.basic.material.alpha < 1.0 || self.basic.material.has_texture(TextureType::Alpha));
+        let solid = false;
 
         self.basic.b_box.cast_local_ray(&ray_inverse, std::f32::MAX, solid)
     }
@@ -60,7 +61,8 @@ impl Shape for Mesh
     {
         let ray_inverse = self.basic.get_inverse_ray(ray);
 
-        let solid = !(self.basic.material.alpha < 1.0 || self.basic.material.has_texture(TextureType::Alpha));
+        //let solid = !(self.basic.material.alpha < 1.0 || self.basic.material.has_texture(TextureType::Alpha));
+        let solid = false;
         let res = self.mesh.cast_local_ray_and_get_normal(&ray_inverse, std::f32::MAX, solid);
         if let Some(res) = res
         {
