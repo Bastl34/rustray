@@ -88,13 +88,13 @@
             },
             "texture":
             {
-                "base": "scene/earth/2k_earth_normal_map.jpg"
+                "base": "scene/textures/earth/2k_earth_normal_map.jpg"
             },
             "reflectivity": 0.5,
             "alpha": 0.9,
             "refraction_index": 1.0,
             "normal_map_strength": 10.0,
-            "surface_roughness": 0.05
+            "roughness": 0.05
         },
         {
             "name": "sphere_not_visible",

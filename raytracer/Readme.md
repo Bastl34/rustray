@@ -19,7 +19,8 @@
 * Fog
 * Matrix based transformations
 * Json based scenes
+* GLTF based scenes
+* PBR (sort of)
 
 ## TODO
 * animation
-* gltf scene loading

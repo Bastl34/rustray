@@ -1,0 +1,39 @@
+{
+    "name": "Lantern",
+    "camera":
+    {
+        "fov": 23,
+        "pos": {"x": 4.2011, "y": 2.7027438, "z": 3.71161},
+        "up": { "x": -0.32401347, "y": 0.8953957, "z": -0.30542085},
+        "dir": { "x": -0.6515582, "y": -0.4452714, "z": -0.61417043},
+        "z_near": 0.1,
+        "z_far": 100.0
+    },
+    "lights":
+    [
+        {
+            "name": "light point",
+            "pos": {"x": 6.8627195, "y": 3.287831, "z": 1.4585655},
+            "color": {"r": 1.0, "g": 1.0, "b": 1.0},
+            "intensity": 100.0,
+            "light_type": "point"
+        }
+    ],
+    "objects":
+    [
+        {
+            "type": "json",
+            "path": "scene/environment.json"
+        },
+        {
+            "type": "gltf",
+            "url": "https://github.com/KhronosGroup/glTF-Sample-Models/raw/master/2.0/Lantern/glTF-Binary/Lantern.glb",
+            "path": "data/temp/Lantern.glb",
+            "transformation":
+            {
+                "scale": {"x": 0.08, "y": 0.08, "z": 0.08},
+                "translation": {"x": 0.0, "y": -1.25, "z": 0.0}
+            }
+        }
+    ]
+}

@@ -7,10 +7,11 @@
     [
         {
             "type": "wavefront",
-            "path": "scene/monkey.obj",
+            "path": "scene/models/monkey/monkey.obj",
             "reflectivity": 0.5,
             "smooth_shading": true,
             "alpha": 0.5,
+            "refraction_index": 1.5,
             "transformation":
             {
                 "scale": {"x": 1.3, "y": 1.3, "z": 1.3},

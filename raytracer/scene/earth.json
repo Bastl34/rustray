@@ -25,9 +25,9 @@
             },
             "texture":
             {
-                "base": "scene/earth/2k_earth_daymap.jpg",
-                "normal": "scene/earth/2k_earth_normal_map.jpg",
-                "specular": "scene/earth/2k_earth_specular_map.jpg"
+                "base": "scene/textures/earth/2k_earth_daymap.jpg",
+                "normal": "scene/textures/earth/2k_earth_normal_map.jpg",
+                "specular": "scene/textures/earth/2k_earth_specular_map.jpg"
             },
             "transformation":
             {
@@ -39,7 +39,7 @@
             "alpha": 0.9,
             "refraction_index": 1.5,
             "normal_map_strength": 10.0,
-            "surface_roughness": 0.15
+            "roughness": 0.15
         }
     ]
 }

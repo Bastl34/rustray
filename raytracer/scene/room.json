@@ -1,21 +1,5 @@
 {
     "name": "Room",
-    "settings":
-    {
-        "monte_carlo": true,
-        "samples": 8,
-
-        "focal_length": 8.0,
-        "aperture_size": 64.0,
-
-        "fog_density": 0.0,
-        "fog_color": {"r": 0.4, "g": 0.4, "b": 0.4},
-
-        "max_recursion": 6,
-        "gamma_correction": false,
-
-        "fov": 90.0
-    },
     "lights":
     [
         {
@@ -69,7 +53,7 @@
             },
             "texture":
             {
-                "base": "scene/checkerboard.png"
+                "base": "scene/textures/checkerboard.png"
             },
             "reflectivity": 0.4
         },
@@ -90,7 +74,7 @@
             },
             "texture":
             {
-                "base": "scene/floor/base.gif"
+                "base": "scene/textures/floor/base.gif"
             },
             "reflectivity": 0.4
         },
@@ -111,7 +95,7 @@
             },
             "texture":
             {
-                "base": "scene/floor/base.gif"
+                "base": "scene/textures/floor/base.gif"
             },
             "reflectivity": 0.4
         },
@@ -132,7 +116,7 @@
             },
             "texture":
             {
-                "base": "scene/floor/base.gif"
+                "base": "scene/textures/floor/base.gif"
             },
             "reflectivity": 0.4
         },
@@ -153,7 +137,7 @@
             },
             "texture":
             {
-                "base": "scene/floor/base.gif"
+                "base": "scene/textures/floor/base.gif"
             },
             "reflectivity": 0.4
         },
@@ -174,7 +158,7 @@
             },
             "texture":
             {
-                "base": "scene/floor/base.gif"
+                "base": "scene/textures/floor/base.gif"
             },
             "reflectivity": 0.4
         }

@@ -8,7 +8,6 @@ use crate::shape::{Shape, ShapeBasics, Material, TextureType};
 pub struct Mesh
 {
     pub basic: ShapeBasics,
-    pub name: String,
 
     pub mesh: TriMesh,
 
@@ -21,11 +20,6 @@ pub struct Mesh
 
 impl Shape for Mesh
 {
-    fn get_name(&self) -> &String
-    {
-        &self.name
-    }
-
     fn get_material(&self) -> &Material
     {
         &self.basic.material
@@ -51,7 +45,7 @@ impl Shape for Mesh
     {
         let ray_inverse = self.basic.get_inverse_ray(ray);
 
-        let solid = !(self.basic.material.alpha < 1.0 || self.basic.has_texture(TextureType::Alpha));
+        let solid = !(self.basic.material.alpha < 1.0 || self.basic.material.has_texture(TextureType::Alpha)) && self.basic.material.backface_cullig;
 
         self.basic.b_box.cast_local_ray(&ray_inverse, std::f32::MAX, solid)
     }
@@ -60,7 +54,7 @@ impl Shape for Mesh
     {
         let ray_inverse = self.basic.get_inverse_ray(ray);
 
-        let solid = !(self.basic.material.alpha < 1.0 || self.basic.has_texture(TextureType::Alpha));
+        let solid = !(self.basic.material.alpha < 1.0 || self.basic.material.has_texture(TextureType::Alpha)) && self.basic.material.backface_cullig;
         let res = self.mesh.cast_local_ray_and_get_normal(&ray_inverse, std::f32::MAX, solid);
         if let Some(res) = res
         {
@@ -148,8 +142,7 @@ impl Mesh
     {
         let mut mesh = Mesh
         {
-            basic: ShapeBasics::new(),
-            name: String::from("Mesh"),
+            basic: ShapeBasics::new("Mesh"),
             mesh: TriMesh::new(vec![], vec![]),
             uvs: vec![],
             uv_indices: vec![],
@@ -166,8 +159,7 @@ impl Mesh
     {
         let mut mesh = Mesh
         {
-            basic: ShapeBasics::new(),
-            name: String::from(name),
+            basic: ShapeBasics::new(name),
             mesh: TriMesh::new(vertices, indices),
             uvs: uvs,
             uv_indices: uv_indices,

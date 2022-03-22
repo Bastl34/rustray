@@ -5,6 +5,7 @@ extern crate rand;
 extern crate image;
 
 use chrono::{Datelike, Timelike, Utc};
+use sdl2::mouse::MouseButton;
 
 use std::{io::Write, thread};
 use std::time::{Instant, Duration};
@@ -29,6 +30,7 @@ pub mod shape;
 pub mod renderer;
 pub mod raytracing;
 pub mod scene;
+pub mod camera;
 
 use renderer::RendererManager;
 use raytracing::Raytracing;
@@ -85,12 +87,13 @@ fn main_cmd()
     let timer = Instant::now();
 
     let mut scene = Scene::new();
+    scene.cam.init(width as u32, height as u32);
     scene.load_json("scene/room.json");
     scene.print();
 
-    let mut raytracing = Raytracing::new(scene);
+    let scene = std::sync::Arc::new(std::sync::RwLock::new(scene));
 
-    raytracing.init_camera(width as u32, height as u32);
+    let raytracing = Raytracing::new(scene);
 
     let raytracing_arc = std::sync::Arc::new(std::sync::RwLock::new(raytracing));
 
@@ -218,18 +221,71 @@ fn main_sdl()
 
     let mut scene = Scene::new();
     scene.clear();
-    scene.load_json("scene/room.json");
+    //scene.load_json("scene/room.json");
+    //scene.load_json("scene/floor.json");
+    //scene.load_json("scene/room2.json");
     //scene.load_json("scene/spheres.json");
     //scene.load_json("scene/monkey.json");
     //scene.load_json("scene/kbert.json");
-    scene.load_json("scene/earth.json");
-    scene.print();
+    //scene.load_json("scene/earth.json");
+    //scene.load_gltf("scene/models/monkey/monkey.glb");
+    //scene.get_by_name("unknown").unwrap().get_basic_mut().material.smooth_shading = false;
+    //scene.load_gltf("scene/bmw27_cpu.glb");
+    //scene.load_gltf("scene/models/Sponza/glTF/Sponza_fixed.glb");
 
-    let mut raytracing = Raytracing::new(scene);
+    //scene.load_gltf("scene/models/ambient/ambient_sphere.glb");
+    //scene.items[0].get_basic_mut().material.reflection_only = true;
+
+    //scene.load_json("scene/environment.json");
+
+    //scene.load_gltf("scene/models/helmet/DamagedHelmet_fixed.glb");
+    //scene.load_gltf("scene/models/MetalRoughSpheres.glb");
+
+    scene.load_json("scene/helmet.json");
+    //scene.load_json("scene/latern.json");
+    //scene.load_json("scene/corset.json");
+
+    /*
+    let mut i = 0;
+    let scene_size = scene.items.len();
+
+    for item in scene.get_vec_by_name("unknown")
+    {
+        item.get_basic_mut().material.smooth_shading = true;
+
+        if i == scene_size - 1
+        {
+            item.get_basic_mut().material.reflection_only = true;
+        }
+
+        i += 1;
+    }
+     */
+
+    //scene.get_by_name("unknown").unwrap().get_basic_mut().material.reflectivity = 0.8;
+    //scene.get_by_name("unknown").unwrap().get_basic_mut().material.alpha = 0.01;
+    //scene.get_by_name("unknown").unwrap().get_basic_mut().material.refraction_index = 1.5;
+
+    /*
+    for item in scene.get_vec_by_name("unknown")
+    {
+        item.get_basic_mut().material.texture_ambient = item.get_basic_mut().material.texture_base.clone();
+        item.get_basic_mut().material.ambient_color = item.get_basic_mut().material.base_color * 0.5;
+
+        item.get_basic_mut().material.smooth_shading = true;
+    }
+     */
+
+    let scene = std::sync::Arc::new(std::sync::RwLock::new(scene));
+
+    let mut raytracing = Raytracing::new(scene.clone());
     raytracing.load_settings("scene/default_render_settings.json");
     raytracing.print_settings();
 
-    raytracing.init_camera(width as u32, height as u32);
+    {
+        scene.write().unwrap().cam.init(width as u32, height as u32);
+        scene.read().unwrap().print();
+    }
 
     let raytracing_arc = std::sync::Arc::new(std::sync::RwLock::new(raytracing));
 
@@ -266,6 +322,16 @@ fn main_sdl()
 
                     completed = false;
                 },
+                sdl2::event::Event::MouseButtonDown { mouse_btn: MouseButton::Left, x, y, .. } =>
+                {
+                    let rt = raytracing_arc.read().unwrap();
+                    let pick_res = rt.pick(x, y);
+
+                    if let Some(pick_res) = pick_res
+                    {
+                        dbg!(pick_res);
+                    }
+                },
                 //restart rendering on resize
                 sdl2::event::Event::Window { win_event: WindowEvent::Resized(w, h), ..} =>
                 {
@@ -286,8 +352,8 @@ fn main_sdl()
                     render_canvas.clear();
 
                     {
-                        let mut rt = raytracing_arc.write().unwrap();
-                        rt.init_camera(width as u32, height as u32);
+                        let mut scene = scene.write().unwrap();
+                        scene.cam.init(width as u32, height as u32);
                     }
 
                     rendering.restart(width, height);

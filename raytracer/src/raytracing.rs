@@ -1,11 +1,12 @@
 use std::f32::consts::PI;
+use std::sync::{RwLock, Arc};
 
 use crate::shape::{Shape, TextureType};
 use crate::pixel_color::PixelColor;
 
 use crate::scene::{Scene, LightType};
 
-use nalgebra::{Perspective3, Isometry3, Point3, Vector3, Matrix3, Matrix4, Vector4};
+use nalgebra::{Point3, Vector3, Matrix3, Vector4, Point2};
 use parry3d::query::{Ray};
 
 use rand::Rng;
@@ -44,6 +45,9 @@ https://wzhfantastic.github.io/2018/04/09/RayTracingInUnity(PartTwo)/
 
 hemi sphere sampling
 https://www.gamedev.net/forums/topic/683176-finding-a-random-point-on-a-sphere-with-spread-and-direction/
+
+pbr shading
+https://gist.github.com/galek/53557375251e1a942dfa
 */
 
 pub struct HitResult<'a>
@@ -61,11 +65,7 @@ pub enum LightningColorType
 
 pub struct Raytracing
 {
-    scene: Scene,
-
-    width: u32,
-    height: u32,
-    aspect_ratio: f32,
+    scene: Arc<RwLock<Scene>>,
 
     monte_carlo: bool,
 
@@ -78,28 +78,16 @@ pub struct Raytracing
     fog_color: Vector3<f32>,
 
     max_recursion: u16,
-    gamma_correction: bool,
-
-    fov: f32,
-
-    projection: Perspective3<f32>,
-    view: Matrix4<f32>,
-
-    projection_inverse: Matrix4<f32>,
-    view_inverse: Matrix4<f32>,
+    gamma_correction: bool
 }
 
 impl Raytracing
 {
-    pub fn new(scene: Scene) -> Raytracing
+    pub fn new(scene: Arc<RwLock<Scene>>) -> Raytracing
     {
         Raytracing
         {
             scene: scene,
-
-            width: 0,
-            height: 0,
-            aspect_ratio: 0.0,
 
             monte_carlo: true,
 
@@ -112,21 +100,14 @@ impl Raytracing
             fog_color: Vector3::<f32>::new(0.4, 0.4, 0.4),
 
             max_recursion: 6,
-            gamma_correction: false,
-
-            fov: 90.0f32.to_radians(),
-
-            projection: Perspective3::<f32>::new(1.0f32, 0.0f32, 0.001, 1000.0),
-            view: Matrix4::<f32>::identity(),
-
-            projection_inverse: Matrix4::<f32>::identity(),
-            view_inverse: Matrix4::<f32>::identity(),
+            gamma_correction: false
         }
     }
 
     pub fn load_settings(&mut self, path: &str)
     {
         let data = std::fs::read_to_string(path);
+
         if data.is_ok()
         {
             let str = data.unwrap();
@@ -151,9 +132,15 @@ impl Raytracing
 
                 if !&data["max_recursion"].is_null() { self.max_recursion = data["max_recursion"].as_u64().unwrap() as u16; }
                 if !&data["gamma_correction"].is_null() { self.gamma_correction = data["gamma_correction"].as_bool().unwrap(); }
-
-                if !&data["fov"].is_null() { self.fov = data["fov"].as_f64().unwrap().to_radians() as f32; }
             }
+            else
+            {
+                println!("error can not parse settings file: {}", path);
+            }
+        }
+        else
+        {
+            println!("error can not load settings file: {}", path);
         }
     }
 
@@ -170,28 +157,6 @@ impl Raytracing
 
         println!("max_recursion: {:?}", self.max_recursion);
         println!("gamma_correction: {:?}", self.gamma_correction);
-
-        println!("fov: {:?}", self.fov);
-    }
-
-    pub fn init_camera(&mut self, width: u32, height: u32)
-    {
-        self.width = width;
-        self.height = height;
-
-        self.aspect_ratio = width as f32 / height as f32;
-
-        self.projection = Perspective3::new(self.aspect_ratio, self.fov, 0.001, 1000.0);
-
-        let eye    = Point3::new(0.0, 0.0, 0.0);
-        let target = Point3::new(0.0, 0.0, -1.0);
-
-        self.view = Isometry3::look_at_rh(&eye, &target, &Vector3::y()).to_homogeneous();
-
-        self.view = self.view.append_translation(&Vector3::new(-0.0, 0.0, 0.0));
-
-        self.projection_inverse = self.projection.inverse();
-        self.view_inverse = self.view.try_inverse().unwrap();
     }
 
     pub fn gamma_encode(&self, linear: f32) -> f32
@@ -200,13 +165,56 @@ impl Raytracing
         linear.powf(1.0 / GAMMA)
     }
 
-    pub fn render(&self, x: i32, y: i32) -> PixelColor
+    pub fn pick(&self, x: i32, y: i32) -> Option<(String, f32)>
     {
+        let scene = self.scene.read().unwrap();
+
         let x_f = x as f32;
         let y_f = y as f32;
 
-        let w = self.width as f32;
-        let h = self.height as f32;
+        let w = scene.cam.width as f32;
+        let h = scene.cam.height as f32;
+
+        //map x/y to -1 <=> +1
+        let sensor_x = ((x_f + 0.5) / w) * 2.0 - 1.0;
+        let sensor_y = 1.0 - ((y_f + 0.5) / h) * 2.0;
+
+        let mut pixel_pos = Vector4::new(sensor_x, sensor_y, -CAM_CLIPPING_PLANE_DIST, 1.0);
+        pixel_pos = scene.cam.projection_inverse * pixel_pos;
+        pixel_pos.w = 1.0;
+
+        let mut ray_dir = pixel_pos - DEFAILT_VIEW_POS;
+        ray_dir.w = 0.0;
+
+        let origin = scene.cam.view_inverse * pixel_pos;
+        let dir = scene.cam.view_inverse * ray_dir;
+
+        let mut ray = Ray::new(Point3::<f32>::from(origin.xyz()), Vector3::<f32>::from(dir.xyz()));
+        ray.dir = ray.dir.normalize();
+
+        //scene
+        let scene = self.scene.read().unwrap();
+
+        //intersect
+        let intersection = self.trace(&scene, &ray, false, false, 1);
+
+        if let Some(intersection) = intersection
+        {
+            return Some((intersection.2.get_basic().name.clone(), intersection.0));
+        }
+
+        None
+    }
+
+    pub fn render(&self, x: i32, y: i32) -> PixelColor
+    {
+        let scene = self.scene.read().unwrap();
+
+        let x_f = x as f32;
+        let y_f = y as f32;
+
+        let w = scene.cam.width as f32;
+        let h = scene.cam.height as f32;
 
         let x_step = 2.0 / w;
         let y_step = 2.0 / h;
@@ -258,7 +266,7 @@ impl Raytracing
             //DOF (depth of field)
             if self.aperture_size > 1.0 && self.focal_length > 1.0
             {
-                let aperture_scale = self.width as f32 / APERTURE_BASE_RESOLUTION;
+                let aperture_scale = scene.cam.width as f32 / APERTURE_BASE_RESOLUTION;
                 x_trans *= self.aperture_size * aperture_scale;
                 y_trans *= self.aperture_size * aperture_scale;
 
@@ -267,14 +275,14 @@ impl Raytracing
                 let center_y = 1.0 - ((y_f + 0.5) / h) * 2.0;
 
                 let mut center_pixel_pos = Vector4::new(center_x, center_y, -CAM_CLIPPING_PLANE_DIST, 1.0);
-                center_pixel_pos = self.projection_inverse * center_pixel_pos;
+                center_pixel_pos = scene.cam.projection_inverse * center_pixel_pos;
                 center_pixel_pos.w = 1.0;
 
                 let mut ray_dir = center_pixel_pos - DEFAILT_VIEW_POS;
                 ray_dir.w = 0.0;
 
-                let origin = self.view_inverse * DEFAILT_VIEW_POS;
-                let dir = (self.view_inverse * ray_dir).normalize();
+                let origin = scene.cam.view_inverse * DEFAILT_VIEW_POS;
+                let dir = (scene.cam.view_inverse * ray_dir).normalize();
 
                 let dist = ray_dir.xyz().magnitude();
 
@@ -287,10 +295,10 @@ impl Raytracing
                 let ray_sensor_y = (1.0 - ((y_f + 0.5) / h) * 2.0) + y_trans;
 
                 let mut pixel_pos = Vector4::new(ray_sensor_x, ray_sensor_y, -CAM_CLIPPING_PLANE_DIST, 1.0);
-                pixel_pos = self.projection_inverse * pixel_pos;
+                pixel_pos = scene.cam.projection_inverse * pixel_pos;
                 pixel_pos.w = 1.0;
 
-                let ray_origin = self.view_inverse * pixel_pos;
+                let ray_origin = scene.cam.view_inverse * pixel_pos;
                 let mut ray_dir = p - ray_origin; //p is already in view mat space
                 ray_dir.w = 0.0;
 
@@ -304,14 +312,14 @@ impl Raytracing
                 let sensor_y = (1.0 - ((y_f + 0.5) / h) * 2.0) + y_trans;
 
                 let mut pixel_pos = Vector4::new(sensor_x, sensor_y, -CAM_CLIPPING_PLANE_DIST, 1.0);
-                pixel_pos = self.projection_inverse * pixel_pos;
+                pixel_pos = scene.cam.projection_inverse * pixel_pos;
                 pixel_pos.w = 1.0;
 
                 let mut ray_dir = pixel_pos - DEFAILT_VIEW_POS;
                 ray_dir.w = 0.0;
 
-                let origin = self.view_inverse * pixel_pos;
-                let dir = self.view_inverse * ray_dir;
+                let origin = scene.cam.view_inverse * pixel_pos;
+                let dir = scene.cam.view_inverse * ray_dir;
 
                 ray = Ray::new(Point3::<f32>::from(origin.xyz()), Vector3::<f32>::from(dir.xyz()));
             }
@@ -344,22 +352,21 @@ impl Raytracing
         }
     }
 
-    pub fn trace(&self, ray: &Ray, stop_on_first_hit: bool, for_shadow: bool) -> Option<(f32, Vector3<f32>, &dyn Shape, u32)>
+    pub fn trace<'a>(&self, scene: &'a Scene, ray: &Ray, stop_on_first_hit: bool, for_shadow: bool, depth: u16) -> Option<(f32, Vector3<f32>, &'a dyn Shape, u32)>
     {
         //find hits (bbox based)
         let mut hits: Vec<HitResult> = vec![];
-        for item in &self.scene.items
+        for item in &scene.items
         {
             let dist = item.intersect_b_box(&ray);
             if let Some(dist) = dist
             {
-                if item.get_basic().visible && item.get_material().alpha > 0.0 && (!for_shadow || item.get_material().cast_shadow)
+                if item.get_basic().visible && item.get_material().alpha > 0.0 && (!for_shadow || item.get_material().cast_shadow) && (!item.get_material().reflection_only || depth > 1)
                 {
                     hits.push(HitResult{ item: item.as_ref(), dist: dist });
                 }
             }
         }
-
         if hits.len() == 0
         {
             return None;
@@ -537,18 +544,25 @@ impl Raytracing
         }
     }
 
-    pub fn get_tex_color(&self, item: &dyn Shape, hit_point: Point3<f32>, face_id: u32, tex_type: TextureType) -> Option<Vector3<f32>>
+    /*
+    fn mix(&self, x: &Vector3<f32>, y: &Vector3<f32>, a: f32) -> Vector3<f32>
+    {
+        x * (1.0 - a) + y * a
+    }
+    */
+
+    pub fn get_tex_color(&self, item: &dyn Shape, uv: &Option<Point2<f32>>, tex_type: TextureType) -> Option<Vector4<f32>>
     {
         //texture
-        if (*item).get_basic().has_texture(tex_type)
+        if (*item).get_basic().material.has_texture(tex_type) && uv.is_some()
         {
-            let uv = (*item).get_uv(hit_point, face_id);
+            let uv = uv.unwrap();
 
-            let tex_dims = (*item).get_basic().texture_dimension(tex_type);
+            let tex_dims = (*item).get_basic().material.texture_dimension(tex_type);
             let tex_x = self.wrap(uv.x, tex_dims.0);
             let tex_y = self.wrap(uv.y, tex_dims.1);
 
-            let tex_color = (*item).get_basic().get_texture_pixel(tex_x, tex_y, tex_type);
+            let tex_color = (*item).get_basic().material.get_texture_pixel(tex_x, tex_y, tex_type);
 
             return Some(tex_color);
         }
@@ -556,7 +570,7 @@ impl Raytracing
         None
     }
 
-    pub fn get_item_color(&self, item: &dyn Shape, hit_point: Point3<f32>, face_id: u32, color_type: LightningColorType) -> Vector3<f32>
+    pub fn get_item_color(&self, item: &dyn Shape, uv: &Option<Point2<f32>>, color_type: LightningColorType) -> Vector4<f32>
     {
         let mat = (*item).get_material();
 
@@ -566,29 +580,30 @@ impl Raytracing
         {
             LightningColorType::Ambient =>
             {
-                item_color = mat.ambient_color;
-                tex_type = TextureType::Ambient;
+                item_color = Vector4::<f32>::new(mat.ambient_color.x, mat.ambient_color.y, mat.ambient_color.z, 1.0);
+                tex_type = TextureType::AmbientEmissive;
             },
             LightningColorType::Base =>
             {
-                item_color = mat.base_color;
+                item_color = Vector4::<f32>::new(mat.base_color.x, mat.base_color.y, mat.base_color.z, 1.0);
                 tex_type = TextureType::Base;
             },
             LightningColorType::Specular =>
             {
-                item_color = mat.specular_color;
+                item_color = Vector4::<f32>::new(mat.specular_color.x, mat.specular_color.y, mat.specular_color.z, 1.0);
                 tex_type = TextureType::Specular;
             },
         }
 
         //texture color
-        let tex_color = self.get_tex_color(item, hit_point, face_id, tex_type);
+        let tex_color = self.get_tex_color(item, uv, tex_type);
 
         if let Some(tex_color) = tex_color
         {
             item_color.x *= tex_color.x;
             item_color.y *= tex_color.y;
             item_color.z *= tex_color.z;
+            item_color.w *= tex_color.w;
         }
 
         item_color
@@ -602,11 +617,13 @@ impl Raytracing
 
     pub fn get_color(&self, ray: Ray, depth: u16) -> Vector3<f32>
     {
+        let scene = self.scene.read().unwrap();
+
         let mut r = ray;
         r.dir = r.dir.normalize();
 
         //intersect
-        let intersection = self.trace(&r, false, false);
+        let intersection = self.trace(&scene, &r, false, false, depth);
 
         let mut color = Vector3::new(0.0, 0.0, 0.0);
 
@@ -620,8 +637,15 @@ impl Raytracing
             let mut surface_normal = normal;
             let hit_point = r.origin + (r.dir * hit_dist);
 
+            //get uv
+            let mut uv = None;
+            if item.get_material().has_any_texture()
+            {
+                uv = Some((*item).get_uv(hit_point, face_id));
+            }
+
             //normal mapping
-            let normal_tex_color = self.get_tex_color(item, hit_point, face_id, TextureType::Normal);
+            let normal_tex_color = self.get_tex_color(item, &uv, TextureType::Normal);
             if let Some(normal_tex_color) = normal_tex_color
             {
                 let mut tangent = normal.cross(&Vector3::<f32>::new(0.0, 1.0, 0.0));
@@ -635,7 +659,7 @@ impl Raytracing
                 let bitangent = normal.cross(&tangent).normalize();
 
                 //to tagent space -- n * 2 - 1
-                let mut normal_map = normal_tex_color;
+                let mut normal_map = normal_tex_color.xyz();
                 normal_map.x = (normal_map.x * 2.0) - 1.0;
                 normal_map.y = (normal_map.y * 2.0) - 1.0;
                 normal_map.z = (normal_map.z * 2.0) - 1.0;
@@ -650,30 +674,35 @@ impl Raytracing
                 surface_normal = (tbn * normal_map).normalize();
             }
 
-            //roughness
-            if self.monte_carlo && item.get_material().surface_roughness > 0.0
+            //roughness map (overwrites roughness material setting)
+            let roughness_tex_color = self.get_tex_color(item, &uv, TextureType::Roughness);
+            if self.monte_carlo && (item.get_material().roughness > 0.0 || roughness_tex_color.is_some())
             {
-                surface_normal = self.jitter(surface_normal, item.get_material().surface_roughness);
+                let mut roughness = item.get_material().roughness;
+
+                if let Some(roughness_tex_color) = roughness_tex_color
+                {
+                    roughness = (1.0 / PI / 2.0) * roughness_tex_color.x;
+                }
+
+                surface_normal = self.jitter(surface_normal, roughness);
             }
 
+            //ambient, diffuse, specular colors
+            let ambient_color = self.get_item_color(item, &uv, LightningColorType::Ambient);
+            let base_color = self.get_item_color(item, &uv, LightningColorType::Base);
+            let specular_color = self.get_item_color(item, &uv, LightningColorType::Specular);
+
             //alpha mapping
-            let mut alpha = item.get_material().alpha;
-            let alpha_tex_color = self.get_tex_color(item, hit_point, face_id, TextureType::Alpha);
+            let mut alpha = item.get_material().alpha * base_color.w;
+            let alpha_tex_color = self.get_tex_color(item, &uv, TextureType::Alpha);
             if let Some(alpha_tex_color) = alpha_tex_color
             {
                 alpha *= alpha_tex_color.x;
             }
 
-            //ambient, diffuse, specular colors
-            let ambient_color = self.get_item_color(item, hit_point, face_id, LightningColorType::Ambient);
-            let base_color = self.get_item_color(item, hit_point, face_id, LightningColorType::Base);
-            let specular_color = self.get_item_color(item, hit_point, face_id, LightningColorType::Specular);
-
-            //ambient
-            color = ambient_color;
-
             //diffuse/specular color
-            for light in &self.scene.lights
+            for light in &scene.lights
             {
                 //get direction to light based on light type
                 let direction_to_light;
@@ -737,7 +766,7 @@ impl Raytracing
                     }
 
                     let shadow_ray = Ray::new(shadow_ray_start, shadow_ray_dir);
-                    let shadow_intersection = self.trace(&shadow_ray, true, true);
+                    let shadow_intersection = self.trace(&scene, &shadow_ray, true, true, depth);
 
                     let mut in_light = shadow_intersection.is_none();
                     if !in_light && (light.light_type == LightType::Point || light.light_type == LightType::Spot)
@@ -758,7 +787,8 @@ impl Raytracing
 
                         let shadow_hit_point = shadow_ray.origin + (shadow_ray.dir * shadow_intersection.unwrap().0);
 
-                        let shadow_alpha_tex_color = self.get_tex_color(shadow_obj, shadow_hit_point, shadow_face_id, TextureType::Alpha);
+                        let shadow_uv = (*item).get_uv(shadow_hit_point, shadow_face_id);
+                        let shadow_alpha_tex_color = self.get_tex_color(shadow_obj, &Some(shadow_uv), TextureType::Alpha);
                         if let Some(shadow_alpha_tex_color) = shadow_alpha_tex_color
                         {
                             shadow_source_alpha *= shadow_alpha_tex_color.x;
@@ -780,7 +810,13 @@ impl Raytracing
             let kr = self.fresnel(r.dir, surface_normal, refraction_index);
 
             //reflectivity
-            let reflectivity = item.get_material().reflectivity;
+            let mut reflectivity = item.get_material().reflectivity;
+            let tex_reflexivity = self.get_tex_color(item, &uv, TextureType::Reflectivity);
+            if let Some(tex_reflexivity) = tex_reflexivity
+            {
+                reflectivity = tex_reflexivity.x;
+            }
+
             color = color * (1.0 - reflectivity);
 
             if item.get_material().reflectivity > 0.0 && depth <= self.max_recursion
@@ -822,6 +858,18 @@ impl Raytracing
 
                 color = ((1.0 - fog_amount) * color) + (self.fog_color * fog_amount);
             }
+
+            //ambient occlusion
+            let ambient_occlusion = self.get_tex_color(item, &uv, TextureType::AmbientOcclusion);
+            if let Some(ambient_occlusion) = ambient_occlusion
+            {
+                color.x *= ambient_occlusion.x;
+                color.y *= ambient_occlusion.x;
+                color.z *= ambient_occlusion.x;
+            }
+
+            //ambient / emissive
+            color += ambient_color.xyz();
         }
 
         color

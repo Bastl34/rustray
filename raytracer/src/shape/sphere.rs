@@ -8,18 +8,12 @@ use crate::shape::{Shape, ShapeBasics, Material, TextureType};
 pub struct Sphere
 {
     pub basic: ShapeBasics,
-    name: String,
 
     ball: Ball
 }
 
 impl Shape for Sphere
 {
-    fn get_name(&self) -> &String
-    {
-        &self.name
-    }
-
     fn get_material(&self) -> &Material
     {
         &self.basic.material
@@ -45,7 +39,7 @@ impl Shape for Sphere
     {
         let ray_inverse = self.basic.get_inverse_ray(ray);
 
-        let solid = !(self.basic.material.alpha < 1.0 || self.basic.has_texture(TextureType::Alpha));
+        let solid = !(self.basic.material.alpha < 1.0 || self.basic.material.has_texture(TextureType::Alpha)) && self.basic.material.backface_cullig;
         self.basic.b_box.cast_local_ray(&ray_inverse, std::f32::MAX, solid)
     }
 
@@ -53,7 +47,7 @@ impl Shape for Sphere
     {
         let ray_inverse = self.basic.get_inverse_ray(ray);
 
-        let solid = !(self.basic.material.alpha < 1.0 || self.basic.has_texture(TextureType::Alpha));
+        let solid = !(self.basic.material.alpha < 1.0 || self.basic.material.has_texture(TextureType::Alpha)) && self.basic.material.backface_cullig;
         let res = self.ball.cast_local_ray_and_get_normal(&ray_inverse, std::f32::MAX, solid);
         if let Some(res) = res
         {
@@ -102,8 +96,7 @@ impl Sphere
     {
         let mut sphere = Sphere
         {
-            basic: ShapeBasics::new(),
-            name: String::from("Sphere"),
+            basic: ShapeBasics::new("Sphere"),
             ball: Ball::new(r)
         };
 
@@ -116,8 +109,7 @@ impl Sphere
     {
         let mut sphere = Sphere
         {
-            basic: ShapeBasics::new(),
-            name: String::from(name),
+            basic: ShapeBasics::new(name),
             ball: Ball::new(r)
         };
 

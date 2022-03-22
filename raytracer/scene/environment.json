@@ -1,0 +1,23 @@
+{
+    "name": "Environment",
+    "objects":
+    [
+        {
+            "name": "environment",
+            "type": "sphere",
+            "pos": {"x": 0.0, "y": 0.0, "z": 0.0},
+            "radius": 100.0,
+            "color":
+            {
+                "base": {"r": 0.0, "g": 0.0, "b": 0.0},
+                "ambient": {"r": 1.0, "g": 1.0, "b": 1.0}
+            },
+            "texture":
+            {
+                "ambient": "scene/textures/environment/footprint_court.jpg"
+            },
+            "reflection_only": true,
+            "backface_cullig": false
+        }
+    ]
+}
