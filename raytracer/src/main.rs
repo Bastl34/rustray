@@ -242,6 +242,8 @@ fn main_sdl()
     //scene.load_gltf("scene/models/MetalRoughSpheres.glb");
 
     scene.load_json("scene/helmet.json");
+    //scene.load_json("scene/latern.json");
+    //scene.load_json("scene/corset.json");
 
     /*
     let mut i = 0;
