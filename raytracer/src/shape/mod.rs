@@ -12,7 +12,6 @@ pub mod mesh;
 
 pub trait Shape
 {
-    fn get_name(&self) -> &String;
     fn get_material(&self) -> &Material;
     fn get_basic(&self) -> &ShapeBasics;
     fn get_basic_mut(&mut self) -> &mut ShapeBasics;
@@ -62,7 +61,8 @@ pub struct Material
 
     pub smooth_shading: bool,
 
-    pub reflection_only: bool
+    pub reflection_only: bool,
+    pub backface_cullig: bool
 }
 
 impl Material
@@ -99,7 +99,8 @@ impl Material
 
             smooth_shading: true,
 
-            reflection_only: false
+            reflection_only: false,
+            backface_cullig: true,
         }
     }
 
@@ -210,6 +211,7 @@ impl Material
         if default_material.smooth_shading != new_mat.smooth_shading { self.smooth_shading = new_mat.smooth_shading; }
 
         if default_material.reflection_only != new_mat.reflection_only { self.reflection_only = new_mat.reflection_only; }
+        if default_material.backface_cullig != new_mat.backface_cullig { self.backface_cullig = new_mat.backface_cullig; }
     }
 
     pub fn print(&self)
@@ -243,6 +245,7 @@ impl Material
         println!("smooth_shading: {:?}", self.smooth_shading);
 
         println!("reflection_only: {:?}", self.reflection_only);
+        println!("backface_cullig: {:?}", self.backface_cullig);
     }
 
     pub fn load_texture(&mut self, path: &str, tex_type: TextureType)
@@ -426,6 +429,7 @@ pub enum TextureType
 pub struct ShapeBasics
 {
     pub id: u32,
+    pub name: String,
     pub visible: bool,
     pub trans: Matrix4<f32>,
     tran_inverse: Matrix4<f32>,
@@ -437,11 +441,12 @@ pub struct ShapeBasics
 
 impl ShapeBasics
 {
-    pub fn new() -> ShapeBasics
+    pub fn new(name: &str) -> ShapeBasics
     {
         ShapeBasics
         {
             id: 0,
+            name: name.to_string(),
             visible: true,
             trans: Matrix4::<f32>::identity(),
             tran_inverse: Matrix4::<f32>::identity(),
@@ -467,14 +472,14 @@ impl ShapeBasics
         let rotation_y  = Rotation3::from_euler_angles(0.0, rotation.y, 0.0).to_homogeneous();
         let rotation_z  = Rotation3::from_euler_angles(0.0, 0.0, rotation.z).to_homogeneous();
 
-        let rotation  = Rotation3::new(rotation).to_homogeneous();
+        //let rotation  = Rotation3::new(rotation).to_homogeneous();
 
         self.trans = self.trans * translation;
         self.trans = self.trans * scale;
-        self.trans = self.trans * rotation;
-        //self.trans = self.trans * rotation_z;
-        //self.trans = self.trans * rotation_y;
-        //self.trans = self.trans * rotation_x;
+        //self.trans = self.trans * rotation;
+        self.trans = self.trans * rotation_z;
+        self.trans = self.trans * rotation_y;
+        self.trans = self.trans * rotation_x;
 
         self.calc_inverse();
     }

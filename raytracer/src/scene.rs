@@ -222,6 +222,7 @@ impl Scene
                         if !&object["roughness"].is_null() { material.roughness = object["roughness"].as_f64().unwrap() as f32; }
                         if !&object["smooth_shading"].is_null() { material.smooth_shading = object["smooth_shading"].as_bool().unwrap(); }
                         if !&object["reflection_only"].is_null() { material.reflection_only = object["reflection_only"].as_bool().unwrap(); }
+                        if !&object["backface_cullig"].is_null() { material.backface_cullig = object["backface_cullig"].as_bool().unwrap(); }
 
                         // ***** textures
                         let texture = &object["texture"];
@@ -382,6 +383,11 @@ impl Scene
                                 {
                                     if *item_id == item.get_basic().id
                                     {
+                                        if !object["name"].is_null()
+                                        {
+                                            item.get_basic_mut().name = name.to_string();
+                                        }
+
                                         item.get_basic_mut().material.apply_diff(&material);
                                         item.get_basic_mut().visible = visible;
                                         item.get_basic_mut().apply_transformation(translation, scale, rotation);
@@ -1019,7 +1025,7 @@ impl Scene
     {
         for item in & mut self.items
         {
-            if item.get_name() == name
+            if item.get_basic().name == name
             {
                 return Some(item);
             }
@@ -1033,7 +1039,7 @@ impl Scene
         let mut vec = vec![];
         for item in & mut self.items
         {
-            if item.get_name() == name
+            if item.get_basic().name == name
             {
                 vec.push(item);
             }
@@ -1067,7 +1073,7 @@ impl Scene
         for item in &self.items
         {
             let id = item.get_basic().id;
-            let name = item.get_name();
+            let name = item.get_basic().name.clone();
             let visible = item.get_basic().visible;
 
             let b_tex = item.get_basic().material.has_texture(TextureType::Base);

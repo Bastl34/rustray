@@ -200,7 +200,7 @@ impl Raytracing
 
         if let Some(intersection) = intersection
         {
-            return Some((intersection.2.get_name().to_string(), intersection.0));
+            return Some((intersection.2.get_basic().name.clone(), intersection.0));
         }
 
         None

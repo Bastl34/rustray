@@ -26,10 +26,10 @@
             "path": "scene/environment.json"
         },
         {
+            "name": "helmet",
             "type": "gltf",
             "url": "https://github.com/KhronosGroup/glTF-Sample-Models/raw/master/2.0/DamagedHelmet/glTF-Binary/DamagedHelmet.glb",
             "path": "data/temp/DamagedHelmet.glb",
-            "__path": "scene/models/helmet/DamagedHelmet_fixed.glb",
             "transformation":
             {
                 "rotation": {"x": -25.0, "y": 15.0, "z": 0.0},

@@ -16,7 +16,8 @@
             {
                 "ambient": "scene/textures/environment/footprint_court.jpg"
             },
-            "reflection_only": true
+            "reflection_only": true,
+            "backface_cullig": false
         }
     ]
 }
