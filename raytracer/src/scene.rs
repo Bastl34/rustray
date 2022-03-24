@@ -1,4 +1,5 @@
 use nalgebra::{Point2, Point3, Vector3};
+use parry3d::partitioning::QBVH;
 use serde_json::{Value};
 
 use easy_gltf::Light::{Directional, Point, Spot};
@@ -41,6 +42,8 @@ pub struct Scene
     pub cam: Camera,
     pub items: Vec<ScemeItem>,
     pub lights: Vec<Box<Light>>,
+
+    bvh: QBVH<u32>
 }
 
 impl Scene
@@ -53,7 +56,9 @@ impl Scene
 
             cam: Camera::new(),
             items: vec![],
-            lights: vec![]
+            lights: vec![],
+
+            bvh: QBVH::new()
         }
     }
 
@@ -540,7 +545,7 @@ impl Scene
             // ********** camera **********
             if scene.cameras.len() > 2
             {
-                println!("only one camera is supported");
+                println!("only one camera is supported (using first one)");
             }
 
             if scene.cameras.len() > 0
@@ -1019,6 +1024,18 @@ impl Scene
         {
             item.update();
         }
+
+        //update bvh
+        let data = self.items.iter().enumerate().map(|(i, item)|
+        {
+            //todo: transform by matrix
+            let aabb = item.get_basic().b_box;
+            let verts = aabb.vertices();
+
+            (i as u32, aabb)
+        });
+
+        self.bvh.clear_and_rebuild(data, 0.0);
     }
 
     pub fn get_by_name(&mut self, name: &str) -> Option<&mut ScemeItem>

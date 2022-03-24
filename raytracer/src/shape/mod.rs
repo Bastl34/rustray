@@ -434,7 +434,7 @@ pub struct ShapeBasics
     pub trans: Matrix4<f32>,
     tran_inverse: Matrix4<f32>,
 
-    b_box: AABB,
+    pub b_box: AABB,
 
     pub material: Material
 }

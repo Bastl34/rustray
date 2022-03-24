@@ -232,6 +232,7 @@ fn main_sdl()
     //scene.get_by_name("unknown").unwrap().get_basic_mut().material.smooth_shading = false;
     //scene.load_gltf("scene/bmw27_cpu.glb");
     //scene.load_gltf("scene/models/Sponza/glTF/Sponza_fixed.glb");
+    scene.load_gltf("scene/barbershop_interior.glb");
 
     //scene.load_gltf("scene/models/ambient/ambient_sphere.glb");
     //scene.items[0].get_basic_mut().material.reflection_only = true;
@@ -241,7 +242,7 @@ fn main_sdl()
     //scene.load_gltf("scene/models/helmet/DamagedHelmet_fixed.glb");
     //scene.load_gltf("scene/models/MetalRoughSpheres.glb");
 
-    scene.load_json("scene/helmet.json");
+    //scene.load_json("scene/helmet.json");
     //scene.load_json("scene/latern.json");
     //scene.load_json("scene/corset.json");
 
