@@ -1,5 +1,6 @@
+use bvh::bvh::BVHNode;
 use nalgebra::{Point2, Point3, Vector3};
-use parry3d::partitioning::QBVH;
+use parry3d::query::Ray;
 use serde_json::{Value};
 
 use easy_gltf::Light::{Directional, Point, Spot};
@@ -43,7 +44,7 @@ pub struct Scene
     pub items: Vec<ScemeItem>,
     pub lights: Vec<Box<Light>>,
 
-    bvh: QBVH<u32>
+    bvh: bvh::bvh::BVH
 }
 
 impl Scene
@@ -58,7 +59,7 @@ impl Scene
             items: vec![],
             lights: vec![],
 
-            bvh: QBVH::new()
+            bvh: bvh::bvh::BVH { nodes: vec![] }
         }
     }
 
@@ -74,6 +75,43 @@ impl Scene
         self.item_id = self.item_id + 1;
 
         self.item_id
+    }
+
+    pub fn load(&mut self, path: &str) -> Vec<u32>
+    {
+        let mut loaded_ids: Vec<u32> = vec![];
+
+        // ********** load based on extension **********
+        let extension = Path::new(path).extension();
+
+        if extension.is_none()
+        {
+            println!("can not load {}", path);
+            return vec![];
+        }
+        let extension = extension.unwrap();
+
+        if extension == "json"
+        {
+            loaded_ids = self.load_json(path);
+        }
+        else if extension == "gltf" || extension == "glb"
+        {
+            loaded_ids = self.load_gltf(path);
+        }
+        else if extension == "obj"
+        {
+            loaded_ids = self.load_wavefront(path);
+        }
+        else
+        {
+            println!("can not load {}", path);
+        }
+
+        // ********** update data and bvh **********
+        self.update();
+
+        loaded_ids
     }
 
     pub fn load_json(&mut self, path: &str) -> Vec<u32>
@@ -426,8 +464,6 @@ impl Scene
         {
             println!("error can not load file {}", path);
         }
-
-        self.update();
 
         loaded_ids
     }
@@ -1026,16 +1062,21 @@ impl Scene
         }
 
         //update bvh
-        let data = self.items.iter().enumerate().map(|(i, item)|
-        {
-            //todo: transform by matrix
-            let aabb = item.get_basic().b_box;
-            let verts = aabb.vertices();
+        let indices = (0..self.items.len()).collect::<Vec<usize>>();
+        let expected_node_count = self.items.len() * 2;
+        let mut nodes = Vec::with_capacity(expected_node_count);
+        BVHNode::build(&mut self.items, &indices, &mut nodes, 0, 0);
 
-            (i as u32, aabb)
-        });
+        self.bvh.nodes = nodes;
+    }
 
-        self.bvh.clear_and_rebuild(data, 0.0);
+    pub fn get_possible_hits_by_ray(&self, ray: &Ray) -> Vec<&ScemeItem>
+    {
+        let origin = bvh::Point3::new(ray.origin.x, ray.origin.y, ray.origin.z);
+        let direction = bvh::Vector3::new(ray.dir.x, ray.dir.y, ray.dir.z);
+        let ray = bvh::ray::Ray::new(origin, direction);
+
+        self.bvh.traverse(&ray, &self.items)
     }
 
     pub fn get_by_name(&mut self, name: &str) -> Option<&mut ScemeItem>

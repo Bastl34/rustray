@@ -1,3 +1,5 @@
+use bvh::aabb::Bounded;
+use bvh::bounding_hierarchy::BHShape;
 use nalgebra::{Matrix4, Vector3, Point2, Point3, Rotation3, Vector4};
 use parry3d::query::{Ray};
 
@@ -29,6 +31,52 @@ pub trait Shape
         self.get_basic_mut().calc_inverse();
     }
 }
+
+impl Bounded for Box<(dyn Shape + Send + Sync + 'static)>
+{
+    fn aabb(&self) -> bvh::aabb::AABB
+    {
+        let aabb = self.get_basic().b_box;
+        let verts = aabb.vertices();
+
+        let trans = self.get_basic().trans;
+
+        let mut min = verts[0];
+        let mut max = verts[0];
+
+        for vert in &verts
+        {
+            let transfmed = trans * vert.to_homogeneous();
+
+            min.x = min.x.min(transfmed.x);
+            min.y = min.y.min(transfmed.y);
+            min.z = min.z.min(transfmed.z);
+
+            max.x = max.x.max(transfmed.x);
+            max.y = max.y.max(transfmed.y);
+            max.z = max.z.max(transfmed.z);
+        }
+
+        let min = bvh::Point3::new(min.x, min.y, min.z);
+        let max = bvh::Point3::new(max.x, max.y, max.z);
+
+        bvh::aabb::AABB::with_bounds(min, max)
+    }
+}
+
+impl BHShape for Box<(dyn Shape + Send + Sync + 'static)>
+{
+    fn set_bh_node_index(&mut self, index: usize)
+    {
+        self.get_basic_mut().node_index = index;
+    }
+
+    fn bh_node_index(&self) -> usize
+    {
+        self.get_basic().node_index
+    }
+}
+
 
 #[derive(Debug)]
 pub struct Material
@@ -436,7 +484,9 @@ pub struct ShapeBasics
 
     pub b_box: AABB,
 
-    pub material: Material
+    pub material: Material,
+
+    pub node_index: usize,
 }
 
 impl ShapeBasics
@@ -451,7 +501,9 @@ impl ShapeBasics
             trans: Matrix4::<f32>::identity(),
             tran_inverse: Matrix4::<f32>::identity(),
             b_box: AABB::new_invalid(),
-            material: Material::new()
+            material: Material::new(),
+
+            node_index: 0
         }
     }
 

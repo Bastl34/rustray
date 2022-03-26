@@ -1,0 +1,53 @@
+{
+    "name": "Corset",
+    "camera":
+    {
+        "fov": 23,
+        "pos": {"x": 4.2011, "y": 2.7027438, "z": 3.71161},
+        "up": { "x": -0.32401347, "y": 0.8953957, "z": -0.30542085},
+        "dir": { "x": -0.6515582, "y": -0.4452714, "z": -0.61417043},
+        "z_near": 0.1,
+        "z_far": 100.0
+    },
+    "lights":
+    [
+        {
+            "name": "light point",
+            "pos": {"x": 6.8627195, "y": 3.287831, "z": 1.4585655},
+            "color": {"r": 1.0, "g": 1.0, "b": 1.0},
+            "intensity": 200.0,
+            "light_type": "point"
+        }
+    ],
+    "objects":
+    [
+        {
+            "type": "gltf",
+            "url": "https://github.com/KhronosGroup/glTF-Sample-Models/raw/master/2.0/Corset/glTF-Binary/Corset.glb",
+            "path": "data/temp/Corset.glb",
+            "transformation":
+            {
+                "translation": {"x": 0.15, "y": -0.7, "z": -0.2},
+                "scale": {"x": 25.0, "y": 25.0, "z": 25.0}
+            }
+        },
+        {
+            "name": "floor",
+            "type": "plane",
+            "vertices":
+            [
+                {"x": -10.0, "y": -0.7, "z": 10.0},
+                {"x": 10.0, "y": -0.7, "z": 10.0},
+                {"x": 10.0, "y": -0.7, "z": -10.0},
+                {"x": -10.0, "y": -0.7, "z": -10.0}
+            ],
+            "color":
+            {
+                "base": {"r": 1.0, "g": 1.0, "b": 1.0},
+                "specular": {"factor": 0.8}
+            },
+            "reflectivity": 0.9,
+            "roughness": 0.015
+        }
+    ]
+}

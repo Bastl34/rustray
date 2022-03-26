@@ -19,6 +19,8 @@ const APERTURE_BASE_RESOLUTION: f32 = 800.0;
 const CAM_CLIPPING_PLANE_DIST: f32 = 1.0;
 const DEFAILT_VIEW_POS: Vector4::<f32> = Vector4::<f32>::new(0.0, 0.0, 0.0, 1.0);
 
+const BVH_MIN_ITEMS: usize = 50;
+
 /*
 some resources:
 
@@ -354,9 +356,24 @@ impl Raytracing
 
     pub fn trace<'a>(&self, scene: &'a Scene, ray: &Ray, stop_on_first_hit: bool, for_shadow: bool, depth: u16) -> Option<(f32, Vector3<f32>, &'a dyn Shape, u32)>
     {
+        let mut items = vec![];
+
+        // use bvh only if there are "some" objects
+        if scene.items.len() > BVH_MIN_ITEMS
+        {
+            items = scene.get_possible_hits_by_ray(ray);
+        }
+        else
+        {
+            for item in &scene.items
+            {
+                items.push(item);
+            }
+        }
+
         //find hits (bbox based)
         let mut hits: Vec<HitResult> = vec![];
-        for item in &scene.items
+        for item in items
         {
             let dist = item.intersect_b_box(&ray);
             if let Some(dist) = dist

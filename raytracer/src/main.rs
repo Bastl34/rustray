@@ -221,30 +221,31 @@ fn main_sdl()
 
     let mut scene = Scene::new();
     scene.clear();
-    //scene.load_json("scene/room.json");
-    //scene.load_json("scene/floor.json");
-    //scene.load_json("scene/room2.json");
-    //scene.load_json("scene/spheres.json");
-    //scene.load_json("scene/monkey.json");
-    //scene.load_json("scene/kbert.json");
-    //scene.load_json("scene/earth.json");
-    //scene.load_gltf("scene/models/monkey/monkey.glb");
+    //scene.load("scene/room.json");
+    //scene.load("scene/floor.json");
+    //scene.load("scene/room2.json");
+    //scene.load("scene/spheres.json");
+    //scene.load("scene/monkey.json");
+    //scene.load("scene/kbert.json");
+    //scene.load("scene/earth.json");
+    //scene.load("scene/models/monkey/monkey.glb");
     //scene.get_by_name("unknown").unwrap().get_basic_mut().material.smooth_shading = false;
-    //scene.load_gltf("scene/bmw27_cpu.glb");
-    //scene.load_gltf("scene/models/Sponza/glTF/Sponza_fixed.glb");
-    scene.load_gltf("scene/barbershop_interior.glb");
+    //scene.load("scene/bmw27_cpu.glb");
+    //scene.load("scene/models/Sponza/glTF/Sponza_fixed.glb");
+    //scene.load("scene/barbershop_interior.glb");
 
-    //scene.load_gltf("scene/models/ambient/ambient_sphere.glb");
+    //scene.load("scene/models/ambient/ambient_sphere.glb");
     //scene.items[0].get_basic_mut().material.reflection_only = true;
 
-    //scene.load_json("scene/environment.json");
+    //scene.load("scene/environment.json");
 
-    //scene.load_gltf("scene/models/helmet/DamagedHelmet_fixed.glb");
-    //scene.load_gltf("scene/models/MetalRoughSpheres.glb");
+    //scene.load("scene/models/helmet/DamagedHelmet_fixed.glb");
+    //scene.load("scene/models/MetalRoughSpheres.glb");
 
-    //scene.load_json("scene/helmet.json");
-    //scene.load_json("scene/latern.json");
-    //scene.load_json("scene/corset.json");
+    //scene.load("scene/helmet.json");
+    //scene.load("scene/latern.json");
+    scene.load("scene/corset.json");
+    //scene.load("scene/sponza.json");
 
     /*
     let mut i = 0;
