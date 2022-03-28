@@ -375,7 +375,7 @@ impl Raytracing
         let mut hits: Vec<HitResult> = vec![];
         for item in items
         {
-            let dist = item.intersect_b_box(&ray);
+            let dist = item.intersect_b_box(&ray, for_shadow);
             if let Some(dist) = dist
             {
                 if item.get_basic().visible && item.get_material().alpha > 0.0 && (!for_shadow || item.get_material().cast_shadow) && (!item.get_material().reflection_only || depth > 1)
@@ -396,7 +396,7 @@ impl Raytracing
 
         for item in hits
         {
-            let intersection = item.item.intersect(&ray);
+            let intersection = item.item.intersect(&ray, for_shadow);
 
             if let Some(intersection) = intersection
             {

@@ -242,9 +242,9 @@ fn main_sdl()
     //scene.load("scene/models/helmet/DamagedHelmet_fixed.glb");
     //scene.load("scene/models/MetalRoughSpheres.glb");
 
-    //scene.load("scene/helmet.json");
+    scene.load("scene/helmet.json");
     //scene.load("scene/latern.json");
-    scene.load("scene/corset.json");
+    //scene.load("scene/corset.json");
     //scene.load("scene/sponza.json");
 
     /*

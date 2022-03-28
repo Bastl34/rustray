@@ -35,19 +35,19 @@ impl Shape for Sphere
         self.basic.b_box = self.ball.aabb(&trans);
     }
 
-    fn intersect_b_box(&self, ray: &Ray) -> Option<f32>
+    fn intersect_b_box(&self, ray: &Ray, force_not_solid: bool) -> Option<f32>
     {
         let ray_inverse = self.basic.get_inverse_ray(ray);
 
-        let solid = !(self.basic.material.alpha < 1.0 || self.basic.material.has_texture(TextureType::Alpha)) && self.basic.material.backface_cullig;
+        let solid = !(self.basic.material.alpha < 1.0 || self.basic.material.has_texture(TextureType::Alpha)) && self.basic.material.backface_cullig && !force_not_solid;
         self.basic.b_box.cast_local_ray(&ray_inverse, std::f32::MAX, solid)
     }
 
-    fn intersect(&self, ray: &Ray) -> Option<(f32, Vector3<f32>, u32)>
+    fn intersect(&self, ray: &Ray, force_not_solid: bool) -> Option<(f32, Vector3<f32>, u32)>
     {
         let ray_inverse = self.basic.get_inverse_ray(ray);
 
-        let solid = !(self.basic.material.alpha < 1.0 || self.basic.material.has_texture(TextureType::Alpha)) && self.basic.material.backface_cullig;
+        let solid = !(self.basic.material.alpha < 1.0 || self.basic.material.has_texture(TextureType::Alpha)) && self.basic.material.backface_cullig && !force_not_solid;
         let res = self.ball.cast_local_ray_and_get_normal(&ray_inverse, std::f32::MAX, solid);
         if let Some(res) = res
         {

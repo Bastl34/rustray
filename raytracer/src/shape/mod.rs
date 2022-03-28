@@ -20,8 +20,8 @@ pub trait Shape
 
     fn calc_bbox(&mut self);
 
-    fn intersect_b_box(&self, ray: &Ray) -> Option<f32>;
-    fn intersect(&self, ray: &Ray) -> Option<(f32, Vector3<f32>, u32)>;
+    fn intersect_b_box(&self, ray: &Ray, force_not_solid: bool) -> Option<f32>;
+    fn intersect(&self, ray: &Ray, force_not_solid: bool) -> Option<(f32, Vector3<f32>, u32)>;
 
     fn get_uv(&self, hit: Point3<f32>, face_id: u32) -> Point2<f32>;
 
