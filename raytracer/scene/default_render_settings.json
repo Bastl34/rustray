@@ -1,5 +1,5 @@
 {
-    "monte_carlo": true,
+    "monte_carlo": false,
     "samples": 32,
 
     "focal_length": 20.0,

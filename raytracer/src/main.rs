@@ -1,5 +1,3 @@
-//#![feature(get_mut_unchecked)]
-
 extern crate sdl2;
 extern crate rand;
 extern crate image;
@@ -31,21 +29,14 @@ pub mod renderer;
 pub mod raytracing;
 pub mod scene;
 pub mod camera;
+pub mod animation;
 
 use renderer::RendererManager;
 use raytracing::Raytracing;
 use scene::Scene;
 
-/*SDL stuff:
-
-https://crates.io/crates/sdl2
-https://docs.rs/sdl2/0.30.0/sdl2/render/struct.Canvas.html
-http://nercury.github.io/rust/opengl/tutorial/2018/02/09/opengl-in-rust-from-scratch-02-opengl-context.html
-
-*/
-
-//const DATA_PATH: &str = "data";
 const IMAGE_PATH: &str = "data/output";
+const ANIMATION_PATH: &str = "data/output/animation";
 const POS_PATH: &str = "data/pos.data";
 
 
@@ -217,6 +208,8 @@ fn main_sdl()
     let mut last_time: u128 = 0;
     let mut current_time: u128;
 
+    let mut frame = 0;
+
     let timer = Instant::now();
 
     let mut scene = Scene::new();
@@ -289,15 +282,44 @@ fn main_sdl()
         scene.read().unwrap().print();
     }
 
+    {
+        scene.write().unwrap().apply_frame(frame);
+    }
+
+    let output_time = Utc::now();
+
+
+    let has_animation = scene.read().unwrap().animation.has_animation();
+
+    //some debug printing
+
+    let mut out_dir = IMAGE_PATH;
+    if has_animation
+    {
+        out_dir = ANIMATION_PATH;
+    }
+
+    let filename = format!("{}/output_{}-{}-{} {}-{}-{}_%08d.png", out_dir, output_time.year(), output_time.month(), output_time.day(), output_time.hour(), output_time.minute(), output_time.second());
+    let filename_animation = format!("{}/output_{}-{}-{} {}-{}-{}", out_dir, output_time.year(), output_time.month(), output_time.day(), output_time.hour(), output_time.minute(), output_time.second());
+    let fps = scene.read().unwrap().animation.fps;
+
+    println!("use ffmpeg to combine frames:");
+    println!(" - for mp4:  ffmpeg -i \"{}\" -c:v libx264 -vf fps={} \"{}.mp4\"", filename, fps, filename_animation);
+    println!(" - for gif:  ffmpeg -i \"{}\" -vf fps={} \"{}.gif\"", filename, fps, filename_animation);
+    println!(" - for webp: ffmpeg -i \"{}\" -vcodec libwebp  -lossless 0  -loop 0  -an -vf fps={} \"{}.webp\"", filename, fps, filename_animation);
+
+
     let raytracing_arc = std::sync::Arc::new(std::sync::RwLock::new(raytracing));
 
     let mut rendering = RendererManager::new(width, height, raytracing_arc.clone());
     rendering.start();
+    println!("frame: {}", frame);
 
     let mut fps_display_update: u128 = 0;
     let mut pps = 0;
 
     let mut completed = false;
+
 
     'main: loop
     {
@@ -323,6 +345,7 @@ fn main_sdl()
                     image = ImageBuffer::new(width as u32, height as u32);
 
                     completed = false;
+                    frame = 0;
                 },
                 sdl2::event::Event::MouseButtonDown { mouse_btn: MouseButton::Left, x, y, .. } =>
                 {
@@ -363,6 +386,7 @@ fn main_sdl()
                     image = ImageBuffer::new(width as u32, height as u32);
 
                     completed = false;
+                    frame = 0;
 
                     //save to file
                     let mut file = File::create(POS_PATH).unwrap();
@@ -427,7 +451,7 @@ fn main_sdl()
 
             let window = canvas.window_mut();
 
-            let title = format!("Raytracer (FPS: {:.2}, PPS: {} Res: {}x{}, Complete: {:.2}%, Pixels: {}, Time: {:.2}s, Done: {})",fps, pps, width, height, percentage, pixels, elapsed, is_done);
+            let title = format!("Raytracer (FPS: {:.2}, PPS: {} Frame: {}, Res: {}x{}, Complete: {:.2}%, Pixels: {}, Time: {:.2}s, Done: {})",fps, pps, frame, width, height, percentage, pixels, elapsed, is_done);
 
             window.set_title(&title).unwrap();
 
@@ -439,9 +463,7 @@ fn main_sdl()
                 completed = true;
 
                 //save
-                let now = Utc::now();
-
-                let filename = format!("{}/output_{}-{}-{} {}-{}-{}.png", IMAGE_PATH, now.year(), now.month(), now.day(), now.hour(), now.minute(), now.second());
+                let filename = format!("{}/output_{}-{}-{} {}-{}-{}_{:0>8}.png", out_dir, output_time.year(), output_time.month(), output_time.day(), output_time.hour(), output_time.minute(), output_time.second(), frame);
                 image.save(filename).unwrap();
             }
 
@@ -451,6 +473,35 @@ fn main_sdl()
             }
         }
 
+        //frame
+        let has_next_frame;
+        {
+            has_next_frame = scene.read().unwrap().frame_exists(frame + 1);
+        }
+
+        if completed && has_next_frame
+        {
+            rendering.stop();
+            thread::sleep(Duration::from_millis(100));
+
+            {
+                let mut scene = scene.write().unwrap();
+
+                frame += 1;
+                scene.apply_frame(frame);
+            }
+
+            render_canvas = sdl2::surface::Surface::new(width as u32, height as u32, PixelFormatEnum::RGBA32).unwrap().into_canvas().unwrap();
+            render_canvas.set_draw_color(Color::RGB(255, 255, 255));
+            render_canvas.clear();
+
+            rendering.restart(width, height);
+            println!("frame: {}", frame);
+
+            image = ImageBuffer::new(width as u32, height as u32);
+
+            completed = false;
+        }
     }
 
     rendering.stop();

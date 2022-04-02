@@ -13,6 +13,7 @@ use crate::shape::{Shape, TextureType, Material};
 use crate::shape::sphere::Sphere;
 use crate::shape::mesh::Mesh;
 use crate::camera::Camera;
+use crate::animation::{Animation, Frame, Keyframe};
 
 use std::path::Path;
 
@@ -43,6 +44,7 @@ pub struct Scene
     pub cam: Camera,
     pub items: Vec<ScemeItem>,
     pub lights: Vec<Box<Light>>,
+    pub animation: Animation,
 
     bvh: bvh::bvh::BVH
 }
@@ -58,6 +60,7 @@ impl Scene
             cam: Camera::new(),
             items: vec![],
             lights: vec![],
+            animation: Animation::new(),
 
             bvh: bvh::bvh::BVH { nodes: vec![] }
         }
@@ -109,6 +112,7 @@ impl Scene
         }
 
         // ********** update data and bvh **********
+        self.init();
         self.update();
 
         loaded_ids
@@ -130,6 +134,7 @@ impl Scene
                 let camera = &data["camera"];
                 let lights = data["lights"].as_array();
                 let objects = data["objects"].as_array();
+                let animation = &data["animation"];
 
                 // ********** camera **********
                 if !camera.is_null()
@@ -225,9 +230,9 @@ impl Scene
 
                         // name
                         let mut name = "unknown";
-                        if !object["name"].is_null()
+                        if !object["object_name"].is_null()
                         {
-                            name = object["name"].as_str().unwrap();
+                            name = object["object_name"].as_str().unwrap();
                         }
 
                         // ***** colors
@@ -426,7 +431,7 @@ impl Scene
                                 {
                                     if *item_id == item.get_basic().id
                                     {
-                                        if !object["name"].is_null()
+                                        if !object["object_name"].is_null()
                                         {
                                             item.get_basic_mut().name = name.to_string();
                                         }
@@ -452,6 +457,87 @@ impl Scene
 
                             self.items.push(shape);
                         }
+                    }
+                }
+
+                // ********** animation **********
+                if !animation.is_null()
+                {
+                    let fps = animation["fps"].as_u64();
+                    if let Some(fps) = fps
+                    {
+                        self.animation.fps = fps as u32;
+                    }
+
+                    let enabled = animation["enabled"].as_bool();
+                    if let Some(enabled) = enabled
+                    {
+                        self.animation.enabled = enabled;
+                    }
+
+                    // ********** keyframes
+                    let keyframes = animation["keyframes"].as_array();
+
+                    let mut keyframes_data = vec![];
+
+                    if let Some(keyframes) = keyframes
+                    {
+                        for keyframe in keyframes
+                        {
+                            let time = keyframe["time"].as_u64();
+
+                            if time.is_none()
+                            {
+                                println!("error: kexframe has no timestamp");
+                                continue;
+                            }
+
+                            let time = time.unwrap();
+
+                            let objects = keyframe["objects"].as_array();
+
+                            let mut keyframe_data = vec![];
+
+                            // ********** keyframe data
+                            if let Some(objects) = objects
+                            {
+                                for object in objects
+                                {
+                                    let object_name = object["name"].as_str().unwrap();
+
+                                    let mut rotation = None;
+                                    let mut scale = None;
+                                    let mut translation = None;
+
+                                    if !object["transformation"].is_null()
+                                    {
+                                        scale = self.get_vec_from_json_object_option("scale", &object["transformation"]);
+                                        translation = self.get_vec_from_json_object_option("translation", &object["transformation"]);
+                                        rotation = self.get_vec_from_json_object_option("rotation", &object["transformation"]);
+
+                                        //to rad
+                                        if let Some(r) = rotation
+                                        {
+                                            let mut rotation_rad = r;
+                                            rotation_rad.x = r.x.to_radians();
+                                            rotation_rad.y = r.y.to_radians();
+                                            rotation_rad.z = r.z.to_radians();
+
+                                            rotation = Some(rotation_rad);
+                                        }
+                                    }
+
+                                    let frame = Frame::new(object_name.to_string(), translation, rotation, scale);
+                                    keyframe_data.push(frame);
+                                }
+                            }
+
+                            let keyframe = Keyframe::new(time, keyframe_data);
+                            keyframes_data.push(keyframe);
+                        }
+
+                        // apply animation data
+                        self.animation.keyframes = keyframes_data;
                     }
                 }
             }
@@ -523,6 +609,28 @@ impl Scene
         }
 
         v
+    }
+
+    pub fn get_vec_from_json_object_option(&self, key: &str, json_obj: &Value) -> Option<Vector3::<f32>>
+    {
+        if json_obj.is_null()
+        {
+            return None;
+        }
+
+        if !json_obj[key].is_null() && !json_obj[key]["x"].is_null() && !json_obj[key]["y"].is_null() && !json_obj[key]["z"].is_null()
+        {
+            let mut v = Vector3::<f32>::new(0.0, 0.0, 0.0);
+            v.x = json_obj[key]["x"].as_f64().unwrap() as f32;
+            v.y = json_obj[key]["y"].as_f64().unwrap() as f32;
+            v.z = json_obj[key]["z"].as_f64().unwrap() as f32;
+
+            return Some(v);
+        }
+        else
+        {
+            return None;
+        }
     }
 
     pub fn load_gltf(&mut self, path: &str) -> Vec<u32>
@@ -1054,6 +1162,14 @@ impl Scene
         tex_path
     }
 
+    pub fn init(&mut self)
+    {
+        for item in & mut self.items
+        {
+            item.init();
+        }
+    }
+
     pub fn update(&mut self)
     {
         for item in & mut self.items
@@ -1068,6 +1184,31 @@ impl Scene
         BVHNode::build(&mut self.items, &indices, &mut nodes, 0, 0);
 
         self.bvh.nodes = nodes;
+    }
+
+    pub fn frame_exists(&self, frame: u64) -> bool
+    {
+        self.animation.has_animation() && frame < self.animation.get_frames_amount_to_render()
+    }
+
+    pub fn apply_frame(&mut self, frame: u64) -> bool
+    {
+        if !self.animation.has_animation() || frame > self.animation.get_frames_amount_to_render()
+        {
+            return false;
+        }
+
+        for item in &mut self.items
+        {
+            let item_trans = self.animation.get_trans_for_frame(frame, item.get_basic().name.to_string());
+
+            if let Some(item_trans) = item_trans
+            {
+                item.get_basic_mut().apply_mat(&item_trans);
+            }
+        }
+
+        true
     }
 
     pub fn get_possible_hits_by_ray(&self, ray: &Ray) -> Vec<&ScemeItem>
@@ -1142,5 +1283,14 @@ impl Scene
 
             println!(" - {}: {} (visible: {}, bTex: {}, amTex: {}, sTex: {}, nTex: {}, aTex: {})", id, name, visible, b_tex, am_tex, s_tex, n_tex, a_tex);
         }
+
+        println!("animation:");
+        println!("==========");
+        println!("activated: {}", self.animation.has_animation());
+        println!("fps: {}", self.animation.fps);
+        println!("frames_to_render: {}", self.animation.get_frames_amount_to_render());
+        //dbg!(&self.animation);
+
+        println!("");
     }
 }

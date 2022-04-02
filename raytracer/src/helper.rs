@@ -30,3 +30,8 @@ pub fn download(url: &str, local_path: &str) -> attohttpc::Result
 
     Ok(())
 }
+
+pub fn interpolate(a: f32, b: f32, f: f32) -> f32
+{
+    return a + f * (b - a);
+}

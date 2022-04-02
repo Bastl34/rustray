@@ -30,6 +30,13 @@ pub trait Shape
         self.calc_bbox();
         self.get_basic_mut().calc_inverse();
     }
+
+    fn init(&mut self)
+    {
+        self.calc_bbox();
+        self.get_basic_mut().calc_inverse();
+        self.get_basic_mut().init_animation_data();
+    }
 }
 
 impl Bounded for Box<(dyn Shape + Send + Sync + 'static)>
@@ -474,6 +481,22 @@ pub enum TextureType
     Reflectivity,
 }
 
+pub struct AnimationData
+{
+    pub trans_initial: Matrix4<f32>,
+}
+
+impl AnimationData
+{
+    pub fn new() -> AnimationData
+    {
+        AnimationData
+        {
+            trans_initial: Matrix4::<f32>::identity()
+        }
+    }
+}
+
 pub struct ShapeBasics
 {
     pub id: u32,
@@ -485,6 +508,8 @@ pub struct ShapeBasics
     pub b_box: AABB,
 
     pub material: Material,
+
+    pub animation_data: AnimationData,
 
     pub node_index: usize,
 }
@@ -502,6 +527,7 @@ impl ShapeBasics
             tran_inverse: Matrix4::<f32>::identity(),
             b_box: AABB::new_invalid(),
             material: Material::new(),
+            animation_data: AnimationData::new(),
 
             node_index: 0
         }
@@ -512,8 +538,10 @@ impl ShapeBasics
         self.trans
     }
 
-    pub fn apply_transformation(&mut self, translation: Vector3<f32>, scale: Vector3<f32>, rotation: Vector3<f32>)
+    pub fn get_transformation(trans: &Matrix4<f32>, translation: Vector3<f32>, scale: Vector3<f32>, rotation: Vector3<f32>) -> Matrix4<f32>
     {
+        let mut trans = trans.clone();
+
         let translation = nalgebra::Isometry3::translation(translation.x, translation.y, translation.z).to_homogeneous();
         let scale = Matrix4::new_nonuniform_scaling(&scale);
 
@@ -526,12 +554,26 @@ impl ShapeBasics
 
         //let rotation  = Rotation3::new(rotation).to_homogeneous();
 
-        self.trans = self.trans * translation;
-        self.trans = self.trans * scale;
-        //self.trans = self.trans * rotation;
-        self.trans = self.trans * rotation_z;
-        self.trans = self.trans * rotation_y;
-        self.trans = self.trans * rotation_x;
+        trans = trans * translation;
+        trans = trans * scale;
+        //trans = trans * rotation;
+        trans = trans * rotation_z;
+        trans = trans * rotation_y;
+        trans = trans * rotation_x;
+
+        trans
+    }
+
+    pub fn apply_transformation(&mut self, translation: Vector3<f32>, scale: Vector3<f32>, rotation: Vector3<f32>)
+    {
+        self.trans = ShapeBasics::get_transformation(&self.trans, translation, scale, rotation);
+
+        self.calc_inverse();
+    }
+
+    pub fn apply_mat(&mut self, trans: &Matrix4<f32>)
+    {
+        self.trans = trans.clone();
 
         self.calc_inverse();
     }
@@ -548,5 +590,10 @@ impl ShapeBasics
     {
         //because we are dealing with 4x4 matrices: unwrap should be fine
         self.tran_inverse = self.trans.try_inverse().unwrap();
+    }
+
+    pub fn init_animation_data(&mut self)
+    {
+        self.animation_data.trans_initial = self.trans;
     }
 }

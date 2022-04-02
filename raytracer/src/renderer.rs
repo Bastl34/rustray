@@ -91,6 +91,7 @@ impl RendererManager
 
     pub fn start(&mut self)
     {
+        println!("");
         println!("starting (w={}, h={})...", self.width, self.height);
         println!("block size: {}", BLOCK_SIZE);
 

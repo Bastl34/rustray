@@ -26,15 +26,54 @@
             "path": "scene/environment.json"
         },
         {
-            "name": "helmet",
+            "object_name": "helmet",
             "type": "gltf",
             "url": "https://github.com/KhronosGroup/glTF-Sample-Models/raw/master/2.0/DamagedHelmet/glTF-Binary/DamagedHelmet.glb",
             "path": "data/temp/DamagedHelmet.glb",
             "transformation":
             {
                 "rotation": {"x": -25.0, "y": 15.0, "z": 0.0},
-                "scale": {"x": 1.3, "y": 1.3, "z": 1.3}
+                "scale": {"x": 1.25, "y": 1.25, "z": 1.25},
+                "translation": {"x": 0.3, "y": 0.2, "z": 0.0}
             }
         }
-    ]
+    ],
+    "animation":
+    {
+        "fps": 25,
+        "enabled": true,
+        "keyframes":
+        [
+            {
+                "time": 0,
+                "objects":
+                [
+                    {
+                        "name": "helmet",
+                        "transformation":
+                        {
+                            "rotation": {"x": -25.0, "y": 15.0, "z": 0.0},
+                            "scale": {"x": 1.25, "y": 1.25, "z": 1.25},
+                            "translation": {"x": 0.3, "y": 0.2, "z": 0.0}
+                        }
+                    }
+                ]
+            },
+            {
+                "time": 6000,
+                "objects":
+                [
+                    {
+                        "name": "helmet",
+                        "transformation":
+                        {
+                            "rotation": {"x": -25.0, "y": 375.0, "z": 0.0},
+                            "scale": {"x": 1.25, "y": 1.25, "z": 1.25},
+                            "translation": {"x": 0.3, "y": 0.2, "z": 0.0}
+                        }
+                    }
+                ]
+            }
+        ]
+    }
 }
