@@ -1,6 +1,6 @@
 {
     "monte_carlo": false,
-    "samples": 32,
+    "samples": 1,
 
     "focal_length": 20.0,
     "aperture_size": 1.0,

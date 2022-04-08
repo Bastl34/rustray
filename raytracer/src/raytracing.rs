@@ -332,9 +332,9 @@ impl Raytracing
         color /= samples.len() as f32;
 
         //clamp
-        color.x.min(1.0);
-        color.y.min(1.0);
-        color.z.min(1.0);
+        color.x = color.x.min(1.0);
+        color.y = color.y.min(1.0);
+        color.z = color.z.min(1.0);
 
         if self.gamma_correction
         {

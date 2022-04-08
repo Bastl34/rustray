@@ -21,6 +21,8 @@ use image::{ImageBuffer, RgbImage, Rgb};
 
 use std::fs::File;
 
+use regex::Regex;
+
 pub mod helper;
 pub mod pixel_color;
 pub mod shape;
@@ -39,20 +41,40 @@ const IMAGE_PATH: &str = "data/output";
 const ANIMATION_PATH: &str = "data/output/animation";
 const POS_PATH: &str = "data/pos.data";
 
-
 fn main()
 {
     let args: Vec<String> = std::env::args().collect();
 
     let mut run_as_window = true;
+    let mut scenes = vec![];
+    let mut animation = false;
+    let mut resolution = (None, None);
 
-    if args.len() > 1
+    let res_regex = Regex::new(r"^\d+x\d+$").unwrap(); // example: 800x600
+
+    for arg in args
     {
-        let command = args[1].clone();
-
-        if command != "win"
+        if arg == "cmd"
         {
             run_as_window = false;
+        }
+        else if arg == "animate" || arg == "animation"
+        {
+            animation = false;
+        }
+        else if arg.ends_with(".json") || arg.ends_with(".gltf") || arg.ends_with(".glb") || arg.ends_with(".obj")
+        {
+            scenes.push(arg);
+        }
+        else if res_regex.is_match(arg.as_str())
+        {
+            let splits: Vec<&str> = arg.split("x").collect();
+            let splits_arr = splits.as_slice();
+
+            let width: u32 = splits_arr[0].parse().unwrap();
+            let height: u32 = splits_arr[1].parse().unwrap();
+
+            resolution = (Some(width), Some(height));
         }
     }
 
