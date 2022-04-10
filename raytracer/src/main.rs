@@ -1,3 +1,4 @@
+/*
 extern crate sdl2;
 extern crate rand;
 extern crate image;
@@ -21,7 +22,10 @@ use image::{ImageBuffer, RgbImage, Rgb};
 
 use std::fs::File;
 
+ */
+
 use regex::Regex;
+use run::Run;
 
 pub mod helper;
 pub mod pixel_color;
@@ -32,7 +36,9 @@ pub mod raytracing;
 pub mod scene;
 pub mod camera;
 pub mod animation;
+pub mod run;
 
+/*
 use renderer::RendererManager;
 use raytracing::Raytracing;
 use scene::Scene;
@@ -41,14 +47,19 @@ const IMAGE_PATH: &str = "data/output";
 const ANIMATION_PATH: &str = "data/output/animation";
 const POS_PATH: &str = "data/pos.data";
 
+const DEFAULT_RES: (i32, i32) = (800, 600);
+
+*/
+
 fn main()
 {
     let args: Vec<String> = std::env::args().collect();
 
-    let mut run_as_window = true;
+    let mut window = true;
     let mut scenes = vec![];
     let mut animation = false;
-    let mut resolution = (None, None);
+    let mut width = 0;
+    let mut height = 0;
 
     let res_regex = Regex::new(r"^\d+x\d+$").unwrap(); // example: 800x600
 
@@ -56,7 +67,7 @@ fn main()
     {
         if arg == "cmd"
         {
-            run_as_window = false;
+            window = false;
         }
         else if arg == "animate" || arg == "animation"
         {
@@ -71,27 +82,31 @@ fn main()
             let splits: Vec<&str> = arg.split("x").collect();
             let splits_arr = splits.as_slice();
 
-            let width: u32 = splits_arr[0].parse().unwrap();
-            let height: u32 = splits_arr[1].parse().unwrap();
-
-            resolution = (Some(width), Some(height));
+            width = splits_arr[0].parse().unwrap();
+            height = splits_arr[1].parse().unwrap();
         }
     }
 
+    let mut runnner = Run::new(width, height, window, scenes, animation);
+    runnner.start();
+
+    /*
     if run_as_window
     {
-        main_sdl();
+        //main_sdl();
     }
     else
     {
-        main_cmd();
+        //main_cmd();
     }
+     */
 }
 
+/*
 fn main_cmd()
 {
-    let width: i32 = 800;
-    let height: i32 = 600;
+    let width: i32 = DEFAULT_RES.0;
+    let height: i32 = DEFAULT_RES.1;
 
     let mut image: RgbImage = ImageBuffer::new(width as u32, height as u32);
 
@@ -178,7 +193,9 @@ fn main_cmd()
 
     println!("done");
 }
+ */
 
+/*
 fn main_sdl()
 {
     let sdl = sdl2::init().unwrap();
@@ -187,8 +204,8 @@ fn main_sdl()
 
     let video_subsystem = sdl.video().unwrap();
 
-    let mut width: i32 = 800;
-    let mut height: i32 = 600;
+    let mut width: i32 = DEFAULT_RES.0;
+    let mut height: i32 = DEFAULT_RES.1;
 
     let mut window_x = 0;
     let mut window_y = 0;
@@ -262,36 +279,32 @@ fn main_sdl()
     //scene.load("scene/corset.json");
     //scene.load("scene/sponza.json");
 
-    /*
-    let mut i = 0;
-    let scene_size = scene.items.len();
+    // let mut i = 0;
+    // let scene_size = scene.items.len();
 
-    for item in scene.get_vec_by_name("unknown")
-    {
-        item.get_basic_mut().material.smooth_shading = true;
+    // for item in scene.get_vec_by_name("unknown")
+    // {
+    //     item.get_basic_mut().material.smooth_shading = true;
 
-        if i == scene_size - 1
-        {
-            item.get_basic_mut().material.reflection_only = true;
-        }
+    //     if i == scene_size - 1
+    //     {
+    //         item.get_basic_mut().material.reflection_only = true;
+    //     }
 
-        i += 1;
-    }
-     */
+    //     i += 1;
+    // }
 
     //scene.get_by_name("unknown").unwrap().get_basic_mut().material.reflectivity = 0.8;
     //scene.get_by_name("unknown").unwrap().get_basic_mut().material.alpha = 0.01;
     //scene.get_by_name("unknown").unwrap().get_basic_mut().material.refraction_index = 1.5;
 
-    /*
-    for item in scene.get_vec_by_name("unknown")
-    {
-        item.get_basic_mut().material.texture_ambient = item.get_basic_mut().material.texture_base.clone();
-        item.get_basic_mut().material.ambient_color = item.get_basic_mut().material.base_color * 0.5;
+    //for item in scene.get_vec_by_name("unknown")
+    //{
+    //    item.get_basic_mut().material.texture_ambient = item.get_basic_mut().material.texture_base.clone();
+    //    item.get_basic_mut().material.ambient_color = item.get_basic_mut().material.base_color * 0.5;
 
-        item.get_basic_mut().material.smooth_shading = true;
-    }
-     */
+    //    item.get_basic_mut().material.smooth_shading = true;
+    //}
 
     let scene = std::sync::Arc::new(std::sync::RwLock::new(scene));
 
@@ -528,3 +541,4 @@ fn main_sdl()
 
     rendering.stop();
 }
+*/
