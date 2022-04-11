@@ -2,6 +2,9 @@ use nalgebra::{Vector3, Matrix4};
 
 use crate::{helper, shape::ShapeBasics};
 
+
+// ******************** Frame ********************
+
 #[derive(Debug)]
 pub struct Frame
 {
@@ -27,6 +30,8 @@ impl Frame
     }
 }
 
+// ******************** Keyframe ********************
+
 #[derive(Debug)]
 pub struct Keyframe
 {
@@ -47,6 +52,8 @@ impl Keyframe
         }
     }
 }
+
+// ******************** Animation ********************
 
 #[derive(Debug)]
 pub struct Animation

@@ -1,34 +1,7 @@
-/*
-extern crate sdl2;
-extern crate rand;
-extern crate image;
-
-use chrono::{Datelike, Timelike, Utc};
-use sdl2::mouse::MouseButton;
-
-use std::{io::Write, thread};
-use std::time::{Instant, Duration};
-
-use sdl2::rect::Point;
-use sdl2::pixels::Color;
-
-use sdl2::keyboard::Keycode;
-use sdl2::event::WindowEvent;
-use sdl2::pixels::PixelFormatEnum;
-
-use sdl2::video::WindowPos::Positioned;
-
-use image::{ImageBuffer, RgbImage, Rgb};
-
-use std::fs::File;
-
- */
-
 use regex::Regex;
 use run::Run;
 
 pub mod helper;
-pub mod pixel_color;
 pub mod shape;
 
 pub mod renderer;
@@ -37,19 +10,6 @@ pub mod scene;
 pub mod camera;
 pub mod animation;
 pub mod run;
-
-/*
-use renderer::RendererManager;
-use raytracing::Raytracing;
-use scene::Scene;
-
-const IMAGE_PATH: &str = "data/output";
-const ANIMATION_PATH: &str = "data/output/animation";
-const POS_PATH: &str = "data/pos.data";
-
-const DEFAULT_RES: (i32, i32) = (800, 600);
-
-*/
 
 fn main()
 {
@@ -60,6 +20,8 @@ fn main()
     let mut animation = false;
     let mut width = 0;
     let mut height = 0;
+    let mut monte_carlo = None;
+    let mut samples = None;
 
     let res_regex = Regex::new(r"^\d+x\d+$").unwrap(); // example: 800x600
 
@@ -73,6 +35,13 @@ fn main()
         {
             animation = false;
         }
+        else if arg.starts_with("monte_carlo=")
+        {
+            let splits: Vec<&str> = arg.split("=").collect();
+            let splits_arr = splits.as_slice();
+
+            monte_carlo = Some(splits_arr[1] == "1" || splits_arr[1] == "true");
+        }
         else if arg.ends_with(".json") || arg.ends_with(".gltf") || arg.ends_with(".glb") || arg.ends_with(".obj")
         {
             scenes.push(arg);
@@ -85,460 +54,33 @@ fn main()
             width = splits_arr[0].parse().unwrap();
             height = splits_arr[1].parse().unwrap();
         }
+        else if arg.starts_with("samples=")
+        {
+            let splits: Vec<&str> = arg.split("=").collect();
+            let splits_arr = splits.as_slice();
+
+            samples = Some(splits_arr[1].parse().unwrap());
+        }
     }
 
-    let mut runnner = Run::new(width, height, window, scenes, animation);
-    runnner.start();
+    window = true;
+    animation = true;
 
-    /*
-    if run_as_window
+
+    //debug
+    //scenes.push("scene/room.json".to_string());
+    //scenes.push("scene/helmet.json".to_string());
+
+    let mut runner = Run::new(width, height, window, scenes, animation);
+
+    runner.init();
+
+    //apply cmd settings
     {
-        //main_sdl();
+        let mut rt = runner.raytracing.write().unwrap();
+        if let Some(monte_carlo) = monte_carlo { rt.config.monte_carlo = monte_carlo }
+        if let Some(samples) = samples { rt.config.samples = samples }
     }
-    else
-    {
-        //main_cmd();
-    }
-     */
+
+    runner.start();
 }
-
-/*
-fn main_cmd()
-{
-    let width: i32 = DEFAULT_RES.0;
-    let height: i32 = DEFAULT_RES.1;
-
-    let mut image: RgbImage = ImageBuffer::new(width as u32, height as u32);
-
-    let mut current_time: u128;
-
-    let timer = Instant::now();
-
-    let mut scene = Scene::new();
-    scene.cam.init(width as u32, height as u32);
-    scene.load_json("scene/room.json");
-    scene.print();
-
-    let scene = std::sync::Arc::new(std::sync::RwLock::new(scene));
-
-    let raytracing = Raytracing::new(scene);
-
-    let raytracing_arc = std::sync::Arc::new(std::sync::RwLock::new(raytracing));
-
-    let mut rendering = RendererManager::new(width, height, raytracing_arc.clone());
-    rendering.start();
-
-    let mut fps_display_update: u128 = 0;
-    let mut pps = 0;
-
-    let mut completed = false;
-
-    while !completed
-    {
-        let receiver = rendering.get_message_receiver();
-
-        loop
-        {
-            let res = receiver.try_recv();
-
-            if res.is_err() { break }
-
-            if res.is_ok()
-            {
-                let item = res.unwrap();
-
-                //check range to prevent draing something outside while resizing
-                if item.x < image.width() as i32 && item.y < image.height() as i32
-                {
-                    image.put_pixel(item.x as u32, item.y as u32, Rgb([item.r, item.g, item.b]));
-                    pps += 1;
-                }
-            }
-        }
-
-        current_time = timer.elapsed().as_millis();
-
-        //update window title
-        if current_time - fps_display_update >= 1000
-        {
-            let pixels = rendering.get_rendered_pixels();
-            let is_done = rendering.is_done();
-            let elapsed = rendering.check_and_get_elapsed_time() as f64 / 1000.0;
-            let percentage = (pixels as f32 / (width * height) as f32) * 100.0;
-
-            println!("{:0>6.2}%, PPS: {} Pixels: {}, Time: {:.2}s",percentage, pps, pixels, elapsed);
-
-            fps_display_update = current_time;
-
-            if is_done && !completed
-            {
-                println!("rendering time: {}", elapsed);
-                completed = true;
-
-                //save
-                let now = Utc::now();
-
-                let filename = format!("{}/output_{}-{}-{} {}-{}-{}.png", IMAGE_PATH, now.year(), now.month(), now.day(), now.hour(), now.minute(), now.second());
-                image.save(filename).unwrap();
-            }
-
-            if !completed
-            {
-                pps = 0;
-            }
-        }
-
-        thread::sleep(Duration::from_millis(100));
-    }
-
-    println!("done");
-}
- */
-
-/*
-fn main_sdl()
-{
-    let sdl = sdl2::init().unwrap();
-
-    sdl2::hint::set("SDL_HINT_VIDEO_ALLOW_SCREENSAVER", "1");
-
-    let video_subsystem = sdl.video().unwrap();
-
-    let mut width: i32 = DEFAULT_RES.0;
-    let mut height: i32 = DEFAULT_RES.1;
-
-    let mut window_x = 0;
-    let mut window_y = 0;
-
-    //try to load window position
-    let data = std::fs::read_to_string(POS_PATH);
-    if data.is_ok()
-    {
-        let res = data.unwrap();
-        let splits: Vec<&str> = res.split("x").collect();
-        let splits_arr = splits.as_slice();
-
-        window_x = splits_arr[0].parse().unwrap();
-        window_y = splits_arr[1].parse().unwrap();
-        width = splits_arr[2].parse().unwrap();
-        height = splits_arr[3].parse().unwrap();
-    }
-
-    let mut window = video_subsystem.window("Raytracer", width as u32, height as u32).resizable().allow_highdpi().build().unwrap();
-    window.set_position(Positioned(window_x), Positioned(window_y));
-
-    let mut canvas = window.into_canvas().present_vsync().build().unwrap();
-
-    canvas.set_draw_color(Color::RGB(255, 255, 255));
-    canvas.clear();
-    canvas.present();
-
-    let mut image: RgbImage = ImageBuffer::new(width as u32, height as u32);
-
-    let mut render_canvas = sdl2::surface::Surface::new(width as u32, height as u32, PixelFormatEnum::RGBA32).unwrap().into_canvas().unwrap();
-    render_canvas.set_draw_color(Color::RGB(255, 255, 255));
-    render_canvas.clear();
-
-    let texture_creator = canvas.texture_creator();
-    let mut texture;
-
-    let mut event_pump = sdl.event_pump().unwrap();
-
-    let mut last_time: u128 = 0;
-    let mut current_time: u128;
-
-    let mut frame = 0;
-
-    let timer = Instant::now();
-
-    let mut scene = Scene::new();
-    scene.clear();
-    //scene.load("scene/room.json");
-    //scene.load("scene/floor.json");
-    //scene.load("scene/room2.json");
-    //scene.load("scene/spheres.json");
-    //scene.load("scene/monkey.json");
-    //scene.load("scene/kbert.json");
-    //scene.load("scene/earth.json");
-    //scene.load("scene/models/monkey/monkey.glb");
-    //scene.get_by_name("unknown").unwrap().get_basic_mut().material.smooth_shading = false;
-    //scene.load("scene/bmw27_cpu.glb");
-    //scene.load("scene/models/Sponza/glTF/Sponza_fixed.glb");
-    //scene.load("scene/barbershop_interior.glb");
-
-    //scene.load("scene/models/ambient/ambient_sphere.glb");
-    //scene.items[0].get_basic_mut().material.reflection_only = true;
-
-    //scene.load("scene/environment.json");
-
-    //scene.load("scene/models/helmet/DamagedHelmet_fixed.glb");
-    //scene.load("scene/models/MetalRoughSpheres.glb");
-
-    scene.load("scene/helmet.json");
-    //scene.load("scene/latern.json");
-    //scene.load("scene/corset.json");
-    //scene.load("scene/sponza.json");
-
-    // let mut i = 0;
-    // let scene_size = scene.items.len();
-
-    // for item in scene.get_vec_by_name("unknown")
-    // {
-    //     item.get_basic_mut().material.smooth_shading = true;
-
-    //     if i == scene_size - 1
-    //     {
-    //         item.get_basic_mut().material.reflection_only = true;
-    //     }
-
-    //     i += 1;
-    // }
-
-    //scene.get_by_name("unknown").unwrap().get_basic_mut().material.reflectivity = 0.8;
-    //scene.get_by_name("unknown").unwrap().get_basic_mut().material.alpha = 0.01;
-    //scene.get_by_name("unknown").unwrap().get_basic_mut().material.refraction_index = 1.5;
-
-    //for item in scene.get_vec_by_name("unknown")
-    //{
-    //    item.get_basic_mut().material.texture_ambient = item.get_basic_mut().material.texture_base.clone();
-    //    item.get_basic_mut().material.ambient_color = item.get_basic_mut().material.base_color * 0.5;
-
-    //    item.get_basic_mut().material.smooth_shading = true;
-    //}
-
-    let scene = std::sync::Arc::new(std::sync::RwLock::new(scene));
-
-    let mut raytracing = Raytracing::new(scene.clone());
-    raytracing.load_settings("scene/default_render_settings.json");
-    raytracing.print_settings();
-
-    {
-        scene.write().unwrap().cam.init(width as u32, height as u32);
-        scene.read().unwrap().print();
-    }
-
-    {
-        scene.write().unwrap().apply_frame(frame);
-    }
-
-    let output_time = Utc::now();
-
-
-    let has_animation = scene.read().unwrap().animation.has_animation();
-
-    //some debug printing
-
-    let mut out_dir = IMAGE_PATH;
-    if has_animation
-    {
-        out_dir = ANIMATION_PATH;
-    }
-
-    let filename = format!("{}/output_{}-{}-{} {}-{}-{}_%08d.png", out_dir, output_time.year(), output_time.month(), output_time.day(), output_time.hour(), output_time.minute(), output_time.second());
-    let filename_animation = format!("{}/output_{}-{}-{} {}-{}-{}", out_dir, output_time.year(), output_time.month(), output_time.day(), output_time.hour(), output_time.minute(), output_time.second());
-    let fps = scene.read().unwrap().animation.fps;
-
-    println!("use ffmpeg to combine frames:");
-    println!(" - for mp4:  ffmpeg -i \"{}\" -c:v libx264 -vf fps={} \"{}.mp4\"", filename, fps, filename_animation);
-    println!(" - for gif:  ffmpeg -i \"{}\" -vf fps={} \"{}.gif\"", filename, fps, filename_animation);
-    println!(" - for webp: ffmpeg -i \"{}\" -vcodec libwebp  -lossless 0  -loop 0  -an -vf fps={} \"{}.webp\"", filename, fps, filename_animation);
-
-
-    let raytracing_arc = std::sync::Arc::new(std::sync::RwLock::new(raytracing));
-
-    let mut rendering = RendererManager::new(width, height, raytracing_arc.clone());
-    rendering.start();
-    println!("frame: {}", frame);
-
-    let mut fps_display_update: u128 = 0;
-    let mut pps = 0;
-
-    let mut completed = false;
-
-
-    'main: loop
-    {
-        for event in event_pump.poll_iter()
-        {
-            match event
-            {
-                sdl2::event::Event::Quit { .. } =>
-                    break 'main,
-                sdl2::event::Event::KeyDown { keycode: Some(Keycode::Escape), .. } =>
-                    break 'main,
-                sdl2::event::Event::KeyDown { keycode: Some(Keycode::Space), .. } =>
-                {
-                    rendering.stop();
-                    thread::sleep(Duration::from_millis(100));
-
-                    render_canvas = sdl2::surface::Surface::new(width as u32, height as u32, PixelFormatEnum::RGBA32).unwrap().into_canvas().unwrap();
-                    render_canvas.set_draw_color(Color::RGB(255, 255, 255));
-                    render_canvas.clear();
-
-                    rendering.restart(width, height);
-
-                    image = ImageBuffer::new(width as u32, height as u32);
-
-                    completed = false;
-                    frame = 0;
-                },
-                sdl2::event::Event::MouseButtonDown { mouse_btn: MouseButton::Left, x, y, .. } =>
-                {
-                    let rt = raytracing_arc.read().unwrap();
-                    let pick_res = rt.pick(x, y);
-
-                    if let Some(pick_res) = pick_res
-                    {
-                        dbg!(pick_res);
-                    }
-                },
-                //restart rendering on resize
-                sdl2::event::Event::Window { win_event: WindowEvent::Resized(w, h), ..} =>
-                {
-                    //reset rendering canvas and buffer canvas
-                    rendering.stop();
-                    thread::sleep(Duration::from_millis(100));
-
-                    //apply
-                    width = w;
-                    height = h;
-
-                    canvas.set_draw_color(Color::RGB(255, 255, 255));
-                    canvas.clear();
-                    canvas.present();
-
-                    render_canvas = sdl2::surface::Surface::new(width as u32, height as u32, PixelFormatEnum::RGBA32).unwrap().into_canvas().unwrap();
-                    render_canvas.set_draw_color(Color::RGB(255, 255, 255));
-                    render_canvas.clear();
-
-                    {
-                        let mut scene = scene.write().unwrap();
-                        scene.cam.init(width as u32, height as u32);
-                    }
-
-                    rendering.restart(width, height);
-
-                    image = ImageBuffer::new(width as u32, height as u32);
-
-                    completed = false;
-                    frame = 0;
-
-                    //save to file
-                    let mut file = File::create(POS_PATH).unwrap();
-                    let _ = file.write(format!("{}x{}x{}x{}", window_x, window_y, width, height).as_bytes());
-                },
-                //save the window position
-                sdl2::event::Event::Window { win_event: WindowEvent::Moved(x, y), ..} =>
-                {
-                    //apply changes
-                    window_x = x;
-                    window_y = y;
-
-                    //save to file
-                    let mut file = File::create(POS_PATH).unwrap();
-                    let _ = file.write(format!("{}x{}x{}x{}", window_x, window_y, width, height).as_bytes());
-                },
-                _ => {},
-            }
-        }
-
-        let receiver = rendering.get_message_receiver();
-
-        loop
-        {
-            let res = receiver.try_recv();
-
-            if res.is_err() { break }
-
-            if res.is_ok()
-            {
-                let item = res.unwrap();
-
-                render_canvas.set_draw_color(Color::RGB(item.r, item.g, item.b));
-                render_canvas.draw_point(Point::new(item.x, item.y)).unwrap();
-
-                //check range to prevent draing something outside while resizing
-                if item.x < image.width() as i32 && item.y < image.height() as i32
-                {
-                    image.put_pixel(item.x as u32, item.y as u32, Rgb([item.r, item.g, item.b]));
-                    pps += 1;
-                }
-            }
-        }
-
-        texture = texture_creator.create_texture_from_surface(render_canvas.surface()).unwrap();
-        canvas.clear();
-        canvas.copy(&texture, None, None).unwrap();
-        canvas.present();
-
-        //calc fps
-        current_time = timer.elapsed().as_millis();
-        let fps = 1000.0f64 / (current_time - last_time) as f64;
-        last_time = current_time;
-
-        //update window title
-        if current_time - fps_display_update >= 1000
-        {
-            let pixels = rendering.get_rendered_pixels();
-            let is_done = rendering.is_done();
-            let elapsed = rendering.check_and_get_elapsed_time() as f64 / 1000.0;
-            let percentage = (pixels as f32 / (width * height) as f32) * 100.0;
-
-            let window = canvas.window_mut();
-
-            let title = format!("Raytracer (FPS: {:.2}, PPS: {} Frame: {}, Res: {}x{}, Complete: {:.2}%, Pixels: {}, Time: {:.2}s, Done: {})",fps, pps, frame, width, height, percentage, pixels, elapsed, is_done);
-
-            window.set_title(&title).unwrap();
-
-            fps_display_update = current_time;
-
-            if is_done && !completed
-            {
-                println!("rendering time: {}", elapsed);
-                completed = true;
-
-                //save
-                let filename = format!("{}/output_{}-{}-{} {}-{}-{}_{:0>8}.png", out_dir, output_time.year(), output_time.month(), output_time.day(), output_time.hour(), output_time.minute(), output_time.second(), frame);
-                image.save(filename).unwrap();
-            }
-
-            if !completed
-            {
-                pps = 0;
-            }
-        }
-
-        //frame
-        let has_next_frame;
-        {
-            has_next_frame = scene.read().unwrap().frame_exists(frame + 1);
-        }
-
-        if completed && has_next_frame
-        {
-            rendering.stop();
-            thread::sleep(Duration::from_millis(100));
-
-            {
-                let mut scene = scene.write().unwrap();
-
-                frame += 1;
-                scene.apply_frame(frame);
-            }
-
-            render_canvas = sdl2::surface::Surface::new(width as u32, height as u32, PixelFormatEnum::RGBA32).unwrap().into_canvas().unwrap();
-            render_canvas.set_draw_color(Color::RGB(255, 255, 255));
-            render_canvas.clear();
-
-            rendering.restart(width, height);
-            println!("frame: {}", frame);
-
-            image = ImageBuffer::new(width as u32, height as u32);
-
-            completed = false;
-        }
-    }
-
-    rendering.stop();
-}
-*/
