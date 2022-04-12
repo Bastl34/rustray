@@ -2,16 +2,15 @@ use std::f32::consts::PI;
 use std::sync::{RwLock, Arc};
 
 use crate::shape::{Shape, TextureType};
-use crate::pixel_color::PixelColor;
 
 use crate::scene::{Scene, LightType};
+use crate::helper::approx_equal;
 
 use nalgebra::{Point3, Vector3, Matrix3, Vector4, Point2};
 use parry3d::query::{Ray};
 
 use rand::Rng;
 use rand::seq::SliceRandom;
-use serde_json::Value;
 
 const SHADOW_BIAS: f32 = 0.001;
 const APERTURE_BASE_RESOLUTION: f32 = 800.0;
@@ -52,12 +51,27 @@ pbr shading
 https://gist.github.com/galek/53557375251e1a942dfa
 */
 
+// ******************** PixelColor ********************
+pub struct PixelColor
+{
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
+
+    pub x: i32,
+    pub y: i32
+}
+
+
+// ******************** HitResult ********************
 pub struct HitResult<'a>
 {
     item: &'a dyn Shape,
     dist: f32,
 }
 
+
+// ******************** LightningColorType ********************
 pub enum LightningColorType
 {
     Ambient,
@@ -65,38 +79,37 @@ pub enum LightningColorType
     Specular
 }
 
-pub struct Raytracing
+// ******************** RaytracingConfig ********************
+
+#[derive(Debug, Copy, Clone)]
+pub struct RaytracingConfig
 {
-    scene: Arc<RwLock<Scene>>,
+    pub monte_carlo: bool,
 
-    monte_carlo: bool,
+    pub samples: u16, //this includes anti aliasing
 
-    samples: u16,
+    pub focal_length: f32, //8.0
+    pub aperture_size: f32, //64.0 (1 means off)
 
-    focal_length: f32,
-    aperture_size: f32,
+    pub fog_density: f32,
+    pub fog_color: Vector3<f32>,
 
-    fog_density: f32,
-    fog_color: Vector3<f32>,
-
-    max_recursion: u16,
-    gamma_correction: bool
+    pub max_recursion: u16,
+    pub gamma_correction: bool
 }
 
-impl Raytracing
+impl RaytracingConfig
 {
-    pub fn new(scene: Arc<RwLock<Scene>>) -> Raytracing
+    pub fn new() -> RaytracingConfig
     {
-        Raytracing
+        RaytracingConfig
         {
-            scene: scene,
+            monte_carlo: false,
 
-            monte_carlo: true,
+            samples: 1,
 
-            samples: 8, //this includes anti aliasing
-
-            focal_length: 8.0,
-            aperture_size: 64.0, //64.0 (1 means off)
+            focal_length: 1.0,
+            aperture_size: 1.0,
 
             fog_density: 0.0,
             fog_color: Vector3::<f32>::new(0.4, 0.4, 0.4),
@@ -106,47 +119,65 @@ impl Raytracing
         }
     }
 
-    pub fn load_settings(&mut self, path: &str)
+    pub fn apply(&mut self, new_config: RaytracingConfig)
     {
-        let data = std::fs::read_to_string(path);
+        let default_config = RaytracingConfig::new();
 
-        if data.is_ok()
+        // monte_carlo
+        if default_config.monte_carlo != new_config.monte_carlo
         {
-            let str = data.unwrap();
-            let data = serde_json::from_str::<Value>(&str);
-            if data.is_ok()
-            {
-                let data = data.unwrap();
-
-                if !&data["monte_carlo"].is_null() { self.monte_carlo = data["monte_carlo"].as_bool().unwrap(); }
-                if !&data["samples"].is_null() { self.samples = data["samples"].as_u64().unwrap() as u16; }
-
-                if !&data["focal_length"].is_null() { self.focal_length = data["focal_length"].as_f64().unwrap() as f32; }
-                if !&data["aperture_size"].is_null() { self.aperture_size = data["aperture_size"].as_f64().unwrap() as f32; }
-
-                if !&data["fog_density"].is_null() { self.fog_density = data["fog_density"].as_f64().unwrap() as f32; }
-                if !&data["fog_color"].is_null()
-                {
-                    self.fog_color.x = data["fog_color"]["r"].as_f64().unwrap() as f32;
-                    self.fog_color.y = data["fog_color"]["g"].as_f64().unwrap() as f32;
-                    self.fog_color.z = data["fog_color"]["b"].as_f64().unwrap() as f32;
-                }
-
-                if !&data["max_recursion"].is_null() { self.max_recursion = data["max_recursion"].as_u64().unwrap() as u16; }
-                if !&data["gamma_correction"].is_null() { self.gamma_correction = data["gamma_correction"].as_bool().unwrap(); }
-            }
-            else
-            {
-                println!("error can not parse settings file: {}", path);
-            }
+            self.monte_carlo = new_config.monte_carlo.clone();
         }
-        else
+
+        // samples
+        if default_config.samples != new_config.samples
         {
-            println!("error can not load settings file: {}", path);
+            self.samples = new_config.samples.clone();
+        }
+
+        // focal_length
+        if !approx_equal(default_config.focal_length, new_config.focal_length)
+        {
+            self.focal_length = new_config.focal_length.clone();
+        }
+
+        // aperture_size
+        if !approx_equal(default_config.aperture_size, new_config.aperture_size)
+        {
+            self.aperture_size = new_config.aperture_size.clone();
+        }
+
+        // fog_density
+        if !approx_equal(default_config.fog_density, new_config.fog_density)
+        {
+            self.fog_density = new_config.fog_density.clone();
+        }
+
+        // fog_color
+        if
+            !approx_equal(default_config.fog_color.x, new_config.fog_color.x)
+            ||
+            !approx_equal(default_config.fog_color.y, new_config.fog_color.y)
+            ||
+            !approx_equal(default_config.fog_color.z, new_config.fog_color.z)
+        {
+            self.fog_color = new_config.fog_color;
+        }
+
+        // max_recursion
+        if default_config.max_recursion != new_config.max_recursion
+        {
+            self.max_recursion = new_config.max_recursion.clone();
+        }
+
+        // gamma_correction
+        if default_config.gamma_correction != new_config.gamma_correction
+        {
+            self.gamma_correction = new_config.gamma_correction.clone();
         }
     }
 
-    pub fn print_settings(&self)
+    pub fn print(&self)
     {
         println!("monte_carlo: {:?}", self.monte_carlo);
         println!("samples: {:?}", self.samples);
@@ -159,6 +190,32 @@ impl Raytracing
 
         println!("max_recursion: {:?}", self.max_recursion);
         println!("gamma_correction: {:?}", self.gamma_correction);
+    }
+}
+
+// ******************** Raytracing ********************
+
+pub struct Raytracing
+{
+    scene: Arc<RwLock<Scene>>,
+    pub config: RaytracingConfig
+}
+
+impl Raytracing
+{
+    pub fn new(scene: Arc<RwLock<Scene>>) -> Raytracing
+    {
+        Raytracing
+        {
+            scene: scene,
+
+            config: RaytracingConfig::new()
+        }
+    }
+
+    pub fn print_config(&self)
+    {
+        self.config.print();
     }
 
     pub fn gamma_encode(&self, linear: f32) -> f32
@@ -226,11 +283,11 @@ impl Raytracing
         let mut samples = vec![];
 
         let mut cell_size = 1;
-        if self.samples > 1
+        if self.config.samples > 1
         {
             //increase samples value to not exactly match power of two with sampling steps
             //otherweise this would result in crappy visual effects for DOF blur
-            cell_size = (self.samples + 2).next_power_of_two() / 2;
+            cell_size = (self.config.samples + 2).next_power_of_two() / 2;
         }
 
         for x_i in 0..cell_size
@@ -245,7 +302,7 @@ impl Raytracing
         samples.shuffle(&mut rand::thread_rng());
 
         //truncate by samples-amout
-        samples.truncate(self.samples as usize);
+        samples.truncate(self.config.samples as usize);
 
         for sample in &samples
         {
@@ -257,7 +314,7 @@ impl Raytracing
             let mut y_trans = y_step * y_i as f32 * (1.0 / cell_size as f32);
 
             //move translation to center if needed
-            if self.aperture_size > 1.0 && self.focal_length > 1.0 && self.samples > 1
+            if self.config.aperture_size > 1.0 && self.config.focal_length > 1.0 && self.config.samples > 1
             {
                 x_trans -= x_step / 2.0;
                 y_trans -= y_step / 2.0;
@@ -266,11 +323,11 @@ impl Raytracing
             let ray;
 
             //DOF (depth of field)
-            if self.aperture_size > 1.0 && self.focal_length > 1.0
+            if self.config.aperture_size > 1.0 && self.config.focal_length > 1.0
             {
                 let aperture_scale = scene.cam.width as f32 / APERTURE_BASE_RESOLUTION;
-                x_trans *= self.aperture_size * aperture_scale;
-                y_trans *= self.aperture_size * aperture_scale;
+                x_trans *= self.config.aperture_size * aperture_scale;
+                y_trans *= self.config.aperture_size * aperture_scale;
 
                 // ***** calculate the center pixel pos
                 let center_x = ((x_f + 0.5) / w) * 2.0 - 1.0;
@@ -290,7 +347,7 @@ impl Raytracing
 
                 // ***** calculate the focal point
                 let dist_perpendicular = CAM_CLIPPING_PLANE_DIST;
-                let p = origin + ((dist_perpendicular/(dist/(dist + self.focal_length)))*dir);
+                let p = origin + ((dist_perpendicular/(dist/(dist + self.config.focal_length)))*dir);
 
                 // ***** calculate ray
                 let ray_sensor_x = (((x_f + 0.5) / w) * 2.0 - 1.0) + x_trans;
@@ -332,11 +389,11 @@ impl Raytracing
         color /= samples.len() as f32;
 
         //clamp
-        color.x.min(1.0);
-        color.y.min(1.0);
-        color.z.min(1.0);
+        color.x = color.x.min(1.0);
+        color.y = color.y.min(1.0);
+        color.z = color.z.min(1.0);
 
-        if self.gamma_correction
+        if self.config.gamma_correction
         {
             let r = (self.gamma_encode(color.x) * 255.0) as u8;
             let g = (self.gamma_encode(color.y) * 255.0) as u8;
@@ -693,7 +750,7 @@ impl Raytracing
 
             //roughness map (overwrites roughness material setting)
             let roughness_tex_color = self.get_tex_color(item, &uv, TextureType::Roughness);
-            if self.monte_carlo && (item.get_material().roughness > 0.0 || roughness_tex_color.is_some())
+            if self.config.monte_carlo && (item.get_material().roughness > 0.0 || roughness_tex_color.is_some())
             {
                 let mut roughness = item.get_material().roughness;
 
@@ -777,7 +834,7 @@ impl Raytracing
                     let shadow_ray_start = hit_point + (surface_normal * SHADOW_BIAS);
                     let mut shadow_ray_dir = direction_to_light;
 
-                    if self.monte_carlo
+                    if self.config.monte_carlo
                     {
                         shadow_ray_dir = self.jitter(shadow_ray_dir, item.get_material().shadow_softness);
                     }
@@ -836,7 +893,7 @@ impl Raytracing
 
             color = color * (1.0 - reflectivity);
 
-            if item.get_material().reflectivity > 0.0 && depth <= self.max_recursion
+            if item.get_material().reflectivity > 0.0 && depth <= self.config.max_recursion
             {
                 let reflection_ray = self.create_reflection(surface_normal, r.dir, hit_point);
                 let reflection_color = self.get_color(reflection_ray, depth + 1 );
@@ -846,7 +903,7 @@ impl Raytracing
             }
 
             //refraction
-            if alpha < 1.0 && depth <= self.max_recursion
+            if alpha < 1.0 && depth <= self.config.max_recursion
             {
                 let transmission_ray = self.create_transmission(surface_normal, r.dir, hit_point, refraction_index);
 
@@ -871,9 +928,9 @@ impl Raytracing
 
             //fog
             {
-                let fog_amount = (self.fog_density * hit_dist).min(1.0);
+                let fog_amount = (self.config.fog_density * hit_dist).min(1.0);
 
-                color = ((1.0 - fog_amount) * color) + (self.fog_color * fog_amount);
+                color = ((1.0 - fog_amount) * color) + (self.config.fog_color * fog_amount);
             }
 
             //ambient occlusion

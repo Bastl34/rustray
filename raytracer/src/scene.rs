@@ -8,6 +8,7 @@ use easy_gltf::Light::{Directional, Point, Spot};
 use image::{DynamicImage, Rgba, RgbaImage, ImageBuffer};
 
 use crate::helper::download;
+use crate::raytracing::RaytracingConfig;
 use crate::shape::{Shape, TextureType, Material};
 
 use crate::shape::sphere::Sphere;
@@ -17,6 +18,10 @@ use crate::animation::{Animation, Frame, Keyframe};
 
 use std::path::Path;
 
+pub type ScemeItem = Box<dyn Shape + Send + Sync>;
+
+// ******************** LightType ********************
+
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub enum LightType
 {
@@ -24,6 +29,8 @@ pub enum LightType
     Point,
     Spot
 }
+
+// ******************** Light ********************
 
 pub struct Light
 {
@@ -35,7 +42,8 @@ pub struct Light
     pub light_type: LightType
 }
 
-pub type ScemeItem = Box<dyn Shape + Send + Sync>;
+
+// ******************** Scene ********************
 
 pub struct Scene
 {
@@ -45,6 +53,8 @@ pub struct Scene
     pub items: Vec<ScemeItem>,
     pub lights: Vec<Box<Light>>,
     pub animation: Animation,
+
+    pub raytracing_config: RaytracingConfig,
 
     bvh: bvh::bvh::BVH
 }
@@ -61,6 +71,8 @@ impl Scene
             items: vec![],
             lights: vec![],
             animation: Animation::new(),
+
+            raytracing_config: RaytracingConfig::new(),
 
             bvh: bvh::bvh::BVH { nodes: vec![] }
         }
@@ -135,6 +147,28 @@ impl Scene
                 let lights = data["lights"].as_array();
                 let objects = data["objects"].as_array();
                 let animation = &data["animation"];
+                let config = &data["config"];
+
+                // ********** config **********
+                if !config.is_null()
+                {
+                    if !&config["monte_carlo"].is_null() { self.raytracing_config.monte_carlo = config["monte_carlo"].as_bool().unwrap(); }
+                    if !&config["samples"].is_null() { self.raytracing_config.samples = config["samples"].as_u64().unwrap() as u16; }
+
+                    if !&config["focal_length"].is_null() { self.raytracing_config.focal_length = config["focal_length"].as_f64().unwrap() as f32; }
+                    if !&config["aperture_size"].is_null() { self.raytracing_config.aperture_size = config["aperture_size"].as_f64().unwrap() as f32; }
+
+                    if !&config["fog_density"].is_null() { self.raytracing_config.fog_density = config["fog_density"].as_f64().unwrap() as f32; }
+                    if !&config["fog_color"].is_null()
+                    {
+                        self.raytracing_config.fog_color.x = config["fog_color"]["r"].as_f64().unwrap() as f32;
+                        self.raytracing_config.fog_color.y = config["fog_color"]["g"].as_f64().unwrap() as f32;
+                        self.raytracing_config.fog_color.z = config["fog_color"]["b"].as_f64().unwrap() as f32;
+                    }
+
+                    if !&config["max_recursion"].is_null() { self.raytracing_config.max_recursion = config["max_recursion"].as_u64().unwrap() as u16; }
+                    if !&config["gamma_correction"].is_null() { self.raytracing_config.gamma_correction = config["gamma_correction"].as_bool().unwrap(); }
+                }
 
                 // ********** camera **********
                 if !camera.is_null()
@@ -1290,7 +1324,5 @@ impl Scene
         println!("fps: {}", self.animation.fps);
         println!("frames_to_render: {}", self.animation.get_frames_amount_to_render());
         //dbg!(&self.animation);
-
-        println!("");
     }
 }

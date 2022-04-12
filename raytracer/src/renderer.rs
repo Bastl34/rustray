@@ -11,13 +11,12 @@ extern crate num_cpus;
 
 use rand::seq::SliceRandom;
 
-
-use crate::raytracing::Raytracing;
-use crate::pixel_color::PixelColor;
+use crate::raytracing::{Raytracing, PixelColor};
 
 //const BLOCK_SIZE: i32 = 32;
 const BLOCK_SIZE: i32 = 2;
 
+// ******************** CellRange ********************
 struct CellRange
 {
     x0: i32,
@@ -34,6 +33,8 @@ impl CellRange
     }
 }
 
+
+// ******************** RendererManager ********************
 pub struct RendererManager
 {
     width: i32,
@@ -91,12 +92,11 @@ impl RendererManager
 
     pub fn start(&mut self)
     {
-        println!("");
         println!("starting (w={}, h={})...", self.width, self.height);
         println!("block size: {}", BLOCK_SIZE);
 
         let cores = num_cpus::get();
-        println!("cores found: {}", cores);
+        println!("rendering threads: {}", cores);
 
         //start time
         self.start_time = Instant::now();
@@ -167,7 +167,6 @@ impl RendererManager
 
             if *(running_ref) == false
             {
-                println!("not running");
                 return;
             }
 

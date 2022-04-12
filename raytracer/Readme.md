@@ -4,7 +4,7 @@
 * Shadow (it can be controled via `cast_shadow` and `receive_shadow`)
 * Reflection
 * Refraction
-* Phong shading
+* Phong shading (sort of)
 * Alpha/Opacity/Transparency via material setting or alpha map
 * Supported shapes
   * Sphere
@@ -15,12 +15,10 @@
 * Anti-Aliasing
 * DOF (Depth of field)
 * Different light types (directional, point, spot)
-* Monte Carlo raytracing
+* Monte Carlo raytracing (sort of)
 * Fog
 * Matrix based transformations
 * Json based scenes
 * GLTF based scenes
 * PBR (sort of)
-
-## TODO
-* animation
+* Basic animation support
