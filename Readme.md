@@ -1,5 +1,23 @@
 # Raytracer build with Rust
 
+## Screenshots
+
+<sub>`cargo run --release -- scene/helmet.json cmd no-animation samples=64 1280x720 monte_carlo=1`</sub>
+<img src="data/renderings/output_2022-5-16_14-48-33_00000000.png" width="720">
+<br>
+
+<sub>`cargo run --release -- scene/room.json scene/kbert.json cmd no-animation samples=64 1280x720 monte_carlo=1`</sub>
+<img src="data/renderings/todo.png" width="720">
+<br>
+
+<sub>`cargo run --release -- scene/latern.json cmd no-animation samples=64 1280x720 monte_carlo=1`</sub>
+<img src="data/renderings/todo.png" width="720">
+<br>
+
+<sub>`cargo run --release -- scene/corset.json cmd no-animation samples=64 1280x720 monte_carlo=1`</sub>
+<img src="data/renderings/todo.png" width="720">
+<br>
+
 ## Features
 * Shadow (it can be controled via `cast_shadow` and `receive_shadow`)
 * Reflection
@@ -50,7 +68,7 @@ cargo run --release -- scene/helmet.json
 ```bash
 #example
 cargo run --release -- scene/helmet.json no-animation samples=32 800x600 monte_carlo=1
-``` 
+```
 
 
 ## Linux (Ubuntu) requirements

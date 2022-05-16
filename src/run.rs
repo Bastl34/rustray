@@ -363,8 +363,8 @@ impl<'a> Run<'a>
         //print out some stuff to create an animation file out of the rendered frames
         if self.stats.completed && !has_next_frame && !self.help_printed
         {
-            let filename = format!("{}/output_{}-{}-{} {}-{}-{}_%08d.png", ANIMATION_PATH, self.stats.output_time.year(), self.stats.output_time.month(), self.stats.output_time.day(), self.stats.output_time.hour(), self.stats.output_time.minute(), self.stats.output_time.second());
-            let filename_animation = format!("{}/output_{}-{}-{} {}-{}-{}", ANIMATION_PATH, self.stats.output_time.year(), self.stats.output_time.month(), self.stats.output_time.day(), self.stats.output_time.hour(), self.stats.output_time.minute(), self.stats.output_time.second());
+            let filename = format!("{}/output_{}-{}-{}_{}-{}-{}_%08d.png", ANIMATION_PATH, self.stats.output_time.year(), self.stats.output_time.month(), self.stats.output_time.day(), self.stats.output_time.hour(), self.stats.output_time.minute(), self.stats.output_time.second());
+            let filename_animation = format!("{}/output_{}-{}-{}_{}-{}-{}", ANIMATION_PATH, self.stats.output_time.year(), self.stats.output_time.month(), self.stats.output_time.day(), self.stats.output_time.hour(), self.stats.output_time.minute(), self.stats.output_time.second());
             let fps = self.scene.read().unwrap().animation.fps;
 
             println!("");
@@ -442,7 +442,7 @@ impl<'a> Run<'a>
             out_dir = ANIMATION_PATH;
         }
 
-        let filename = format!("{}/output_{}-{}-{} {}-{}-{}_{:0>8}.png", out_dir, self.stats.output_time.year(), self.stats.output_time.month(), self.stats.output_time.day(), self.stats.output_time.hour(), self.stats.output_time.minute(), self.stats.output_time.second(), self.stats.frame);
+        let filename = format!("{}/output_{}-{}-{}_{}-{}-{}_{:0>8}.png", out_dir, self.stats.output_time.year(), self.stats.output_time.month(), self.stats.output_time.day(), self.stats.output_time.hour(), self.stats.output_time.minute(), self.stats.output_time.second(), self.stats.frame);
         self.image.save(filename).unwrap();
     }
 
