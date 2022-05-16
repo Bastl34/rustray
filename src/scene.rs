@@ -1283,10 +1283,12 @@ impl Scene
 
     pub fn print(&self)
     {
+        println!("");
         println!("cam:");
         println!("==========");
         self.cam.print();
 
+        println!("");
         println!("lights:");
         println!("==========");
         for light in &self.lights
@@ -1301,6 +1303,7 @@ impl Scene
             println!(" - {:?}: pos: {:?}, dir: {:?}, color: {:?}, intensity: {}, max_angle: {}", light_type, pos, dir, color, intensity, max_angle);
         }
 
+        println!("");
         println!("scene:");
         println!("==========");
         for item in &self.items
@@ -1318,6 +1321,7 @@ impl Scene
             println!(" - {}: {} (visible: {}, bTex: {}, amTex: {}, sTex: {}, nTex: {}, aTex: {})", id, name, visible, b_tex, am_tex, s_tex, n_tex, a_tex);
         }
 
+        println!("");
         println!("animation:");
         println!("==========");
         println!("activated: {}", self.animation.has_animation());

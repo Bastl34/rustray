@@ -61,7 +61,7 @@ pub struct Stats
     timer: Instant,
     output_time: DateTime<Utc>,
 
-    fps_display_update: u128,
+    screen_update_time: u128,
     fps: f64,
     pps: u64,
 
@@ -80,7 +80,7 @@ impl Stats
             timer: Instant::now(),
             output_time: Utc::now(),
 
-            fps_display_update: 0,
+            screen_update_time: 0,
             fps: 0.0,
             pps: 0,
 
@@ -97,7 +97,7 @@ impl Stats
         //self.output_time = Utc::now();
 
         self.timer = Instant::now();
-        self.fps_display_update = 0;
+        self.screen_update_time = 0;
         self.pps = 0;
 
         self.completed = false;
@@ -193,23 +193,6 @@ impl<'a> Run<'a>
 
         let mut raytracing = Raytracing::new(scene.clone());
         raytracing.config.apply(rt_config);
-
-        /*
-        {
-            scene.write().unwrap().cam.init(self.width as u32, self.height as u32);
-            scene.read().unwrap().print();
-        }
-
-        {
-            scene.write().unwrap().apply_frame(self.stats.frame);
-        }
-         */
-
-         /*
-        {
-            raytracing.config.apply(scene.read().unwrap().raytracing_config);
-        }
-         */
 
         let raytracing_arc = std::sync::Arc::new(std::sync::RwLock::new(raytracing));
 
@@ -480,7 +463,7 @@ impl<'a> Run<'a>
         self.calc_fps();
 
         //check if complete
-        if self.stats.current_time - self.stats.fps_display_update >= 1000
+        if self.stats.current_time - self.stats.screen_update_time >= 1000
         {
             let is_done = self.rendering.is_done();
             let elapsed = self.rendering.check_and_get_elapsed_time() as f64 / 1000.0;
@@ -488,7 +471,7 @@ impl<'a> Run<'a>
             //update window title
             self.sdl_set_new_window_title(elapsed, is_done);
 
-            self.stats.fps_display_update = self.stats.current_time;
+            self.stats.screen_update_time = self.stats.current_time;
 
             if is_done && !self.stats.completed
             {
