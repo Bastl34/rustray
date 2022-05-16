@@ -6,16 +6,16 @@
 <img src="data/renderings/output_2022-5-16_14-48-33_00000000.png" width="720">
 <br>
 
-<sub>`cargo run --release -- scene/room.json scene/kbert.json cmd no-animation samples=64 1280x720 monte_carlo=1`</sub>
-<img src="data/renderings/todo.png" width="720">
+<sub>`cargo run --release -- scene/room.json scene/kbert.json cmd samples=64 1280x720 monte_carlo=1`</sub>
+<img src="data/renderings/output_2022-5-16_15-41-8_00000000.png" width="720">
 <br>
 
-<sub>`cargo run --release -- scene/latern.json cmd no-animation samples=64 1280x720 monte_carlo=1`</sub>
-<img src="data/renderings/todo.png" width="720">
+<sub>`cargo run --release -- scene/latern.json cmd samples=64 1280x720 monte_carlo=1`</sub>
+<img src="data/renderings/output_2022-5-16_15-50-6_00000000.png" width="720">
 <br>
 
-<sub>`cargo run --release -- scene/corset.json cmd no-animation samples=64 1280x720 monte_carlo=1`</sub>
-<img src="data/renderings/todo.png" width="720">
+<sub>`cargo run --release -- scene/corset.json samples=256 1280x720 monte_carlo=1`</sub>
+<img src="data/renderings/output_2022-5-16_15-52-24_00000000.png" width="720">
 <br>
 
 ## Features
