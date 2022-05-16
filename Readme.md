@@ -2,15 +2,15 @@
 
 ## Screenshots
 
-<sub>`cargo run --release -- scene/helmet.json cmd no-animation samples=64 1280x720 monte_carlo=1`</sub>
-<img src="data/renderings/output_2022-5-16_14-48-33_00000000.png" width="720">
+<sub>`cargo run --release -- scene/helmet.json samples=64 1280x720 monte_carlo=1`</sub>
+<img src="data/renderings/output_2022-5-16_16-50-21.webp" width="720">
 <br>
 
-<sub>`cargo run --release -- scene/room.json scene/kbert.json cmd samples=64 1280x720 monte_carlo=1`</sub>
+<sub>`cargo run --release -- scene/room.json scene/kbert.json samples=64 1280x720 monte_carlo=1`</sub>
 <img src="data/renderings/output_2022-5-16_15-41-8_00000000.png" width="720">
 <br>
 
-<sub>`cargo run --release -- scene/latern.json cmd samples=64 1280x720 monte_carlo=1`</sub>
+<sub>`cargo run --release -- scene/latern.json samples=64 1280x720 monte_carlo=1`</sub>
 <img src="data/renderings/output_2022-5-16_15-50-6_00000000.png" width="720">
 <br>
 
@@ -51,7 +51,7 @@ cargo install cargo-watch
 cargo watch -s "cargo run --release -- scene/helmet.json" -w src/
 
 #run without watch
-cargo run --release SCENE_NAME
+cargo run --release -- SCENE_NAME
 cargo run --release -- scene/helmet.json
 ```
 
