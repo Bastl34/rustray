@@ -1,3 +1,7 @@
+target/
+Cargo.lock
+.DS_Store
+
 pos.data
 
 *.blend1
