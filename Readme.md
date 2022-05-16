@@ -1,4 +1,4 @@
-# Raytracer build with Rust
+# Rustray - a raytracer build with Rust
 
 ## Screenshots
 

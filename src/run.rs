@@ -313,7 +313,13 @@ impl<'a> Run<'a>
 
     pub fn render_next_frame_if_possible(&mut self)
     {
-        if !self.animate
+        let has_animation;
+        {
+            let scene = self.scene.read().unwrap();
+            has_animation = scene.animation.has_animation();
+        }
+
+        if !self.animate || !has_animation
         {
             return;
         }
@@ -437,7 +443,14 @@ impl<'a> Run<'a>
     pub fn save_image(&mut self)
     {
         let mut out_dir = IMAGE_PATH;
-        if self.animate
+
+        let has_animation;
+        {
+            let scene = self.scene.read().unwrap();
+            has_animation = scene.animation.has_animation();
+        }
+
+        if self.animate && has_animation
         {
             out_dir = ANIMATION_PATH;
         }
