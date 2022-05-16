@@ -22,3 +22,21 @@
 * GLTF based scenes
 * PBR (sort of)
 * Basic animation support
+
+## usage
+use cargo watch to run release version:
+```bash
+#install:
+cargo install cargo-watch
+
+#run with watch:
+cargo watch -s "cargo run --release" -w src/
+
+#run without watch
+cargo run --release
+```
+
+## Linux (Ubuntu) requirements
+```
+sudo apt install cmake pkg-config libssl-dev build-essential cmake xorg-dev
+```
