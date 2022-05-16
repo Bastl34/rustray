@@ -30,13 +30,30 @@ use cargo watch to run release version:
 cargo install cargo-watch
 
 #run with watch:
-cargo watch -s "cargo run --release" -w src/
+cargo watch -s "cargo run --release -- scene/helmet.json" -w src/
 
 #run without watch
-cargo run --release
+cargo run --release SCENE_NAME
+cargo run --release -- scene/helmet.json
 ```
 
+## command line args
+
+* `PATH_TO_SCENE.json` -- set the path to a scene.json file (you can set multiple scene files)
+* `no-animation` -- disable animation
+* `cmd` -- cmd version without window
+* `samples=1234` -- set samples amount
+* `800x600` -- set render resolution
+* `monte_carlo=1` -- enable monte carlo rendering
+
+
+```bash
+#example
+cargo run --release -- scene/helmet.json no-animation samples=32 800x600 monte_carlo=1
+``` 
+
+
 ## Linux (Ubuntu) requirements
-```
+```bash
 sudo apt install cmake pkg-config libssl-dev build-essential cmake xorg-dev
 ```

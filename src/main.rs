@@ -17,7 +17,7 @@ fn main()
 
     let mut window = true;
     let mut scenes = vec![];
-    let mut animation = false;
+    let mut animation = true;
     let mut width = 0;
     let mut height = 0;
     let mut monte_carlo = None;
@@ -31,7 +31,7 @@ fn main()
         {
             window = false;
         }
-        else if arg == "animate" || arg == "animation"
+        else if arg == "no-animation"
         {
             animation = false;
         }
@@ -62,14 +62,6 @@ fn main()
             samples = Some(splits_arr[1].parse().unwrap());
         }
     }
-
-    window = true;
-    animation = true;
-
-
-    //debug
-    //scenes.push("scene/room.json".to_string());
-    //scenes.push("scene/helmet.json".to_string());
 
     let mut runner = Run::new(width, height, window, scenes, animation);
 
