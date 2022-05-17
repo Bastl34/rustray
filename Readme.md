@@ -26,7 +26,7 @@
 <img src="data/renderings/output_2022-5-16_20-47-31_00000000.png" width="720">
 <br>
 
-<sub>`cargo run --release -- scene/room-no-textures.json scene/spheres.json samples=128 1280x720`</sub>
+<sub>`cargo run --release -- scene/room-no-textures.json scene/spheres.json samples=128 1280x720 monte_carlo=1`</sub>
 <img src="data/renderings/output_2022-5-16_21-24-33_00000000.png" width="720">
 <br>
 
