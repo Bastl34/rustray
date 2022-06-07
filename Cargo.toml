@@ -15,7 +15,7 @@ panic = "abort"
 #codegen-units = 1
 
 [dependencies]
-sdl2 = { version = "0.35.2", features = ["bundled", "static-link"] }
+sdl2 = { version = "0.35.2", features = ["bundled"] }
 rand = "*"
 num_cpus = "*"
 nalgebra = "0.31.0"
