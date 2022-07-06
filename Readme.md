@@ -60,7 +60,7 @@ use cargo watch to run release version:
 cargo install cargo-watch
 
 #run with watch:
-cargo watch -s "cargo run --release -- scene/helmet.json" -w src/
+cargo watch -s "cargo run --release -- scene/helmet.json no-animation" -w src/
 
 #run without watch
 cargo run --release -- SCENE_NAME
