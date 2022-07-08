@@ -95,6 +95,8 @@ pub struct Run//<'a>
 
     stats: Stats,
 
+    stopped: bool,
+
     help_printed: bool
 }
 
@@ -127,6 +129,8 @@ impl Run
             image: ImageBuffer::new(0, 0),
 
             stats: Stats::new(),
+
+            stopped: false,
 
             help_printed: false,
         }
@@ -431,7 +435,17 @@ impl Run
         }
 
         //animation
-        change = self.render_next_frame_if_possible() || change;
+        if !self.stopped
+        {
+            let has_next = self.render_next_frame_if_possible();
+
+            if self.stats.completed && !has_next
+            {
+                self.stopped = true;
+            }
+
+            change = has_next || change;
+        }
 
         change
     }
@@ -448,8 +462,6 @@ impl Run
 
     pub fn get_egui_options(&self) -> eframe::NativeOptions
     {
-        dbg!(self.window_x, self.window_y, self.width, self.height);
-
         eframe::NativeOptions
         {
             initial_window_size: Some(egui::vec2(self.width as f32, self.height as f32)),
@@ -482,12 +494,10 @@ impl eframe::App for Run
 
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame)
     {
-        let some_change = self.loop_update();
+        self.loop_update();
 
-        if some_change
-        {
-            ctx.request_repaint();
-        }
+        //force update (otherwise animation is somehow not working)
+        ctx.request_repaint();
 
         self.update_gui(ctx, frame);
         self.update_states(ctx, frame);
@@ -552,6 +562,7 @@ impl Run
                 if ui.button("Stop Rendering").clicked()
                 {
                     self.rendering.stop();
+                    self.stopped = true;
                 }
             }
             else
@@ -559,6 +570,7 @@ impl Run
                 if ui.button("Start Rendering").clicked()
                 {
                     self.restart_rendering();
+                    self.stopped = false;
                 }
             }
         });
