@@ -229,13 +229,7 @@ impl Run
         self.rendering.start();
 
         //loop
-        if self.window
-        {
-            //self.start_sdl();
-            //self.sdl_loop();
-            //self.start_egui();
-        }
-        else
+        if !self.window
         {
             self.cmd_loop();
         }
@@ -409,6 +403,10 @@ impl Run
         //apply pixels from raytracing to the buffer
         let mut change = self.apply_pixels();
 
+        //stats
+        self.stats.current_time = self.stats.timer.elapsed().as_millis();
+        self.stats.last_time = self.stats.current_time;
+
         //check if complete
         if self.stats.current_time - self.stats.screen_update_time >= 1000
         {
@@ -450,6 +448,8 @@ impl Run
 
     pub fn get_egui_options(&self) -> eframe::NativeOptions
     {
+        dbg!(self.window_x, self.window_y, self.width, self.height);
+
         eframe::NativeOptions
         {
             initial_window_size: Some(egui::vec2(self.width as f32, self.height as f32)),
@@ -498,7 +498,7 @@ impl Run
 {
     fn update_gui(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame)
     {
-        //main
+        // ********** main **********
         let main_frame = egui::containers::Frame
         {
             ..egui::containers::Frame::default()
@@ -512,7 +512,60 @@ impl Run
             image.show(ui);
         });
 
-        let bottom_frame = egui::containers::Frame {
+        // ********** settings **********
+        egui::Window::new("Settings").show(ctx, |ui|
+        {
+            let running = self.rendering.is_running();
+            let is_done = self.rendering.is_done();
+
+            let settings_updates_allowed = !(running && !is_done);
+
+            let samples;
+            let mut samples_new;
+
+            let monte_carlo;
+            let mut monte_carlo_new;
+
+            {
+                let rt = self.raytracing.read().unwrap();
+                monte_carlo = rt.config.monte_carlo;
+                monte_carlo_new = rt.config.monte_carlo;
+
+                samples = rt.config.samples;
+                samples_new = rt.config.samples;
+            }
+
+            ui.heading("Settings");
+
+            ui.add_enabled_ui(settings_updates_allowed, |ui|
+            {
+                ui.add(egui::Slider::new(&mut samples_new, 1..=1024).text("samples"));
+                ui.checkbox(&mut self.animate, "Animation");
+                ui.checkbox(&mut monte_carlo_new, "Monte Carlo");
+            });
+
+            if samples != samples_new { self.raytracing.write().unwrap().config.samples = samples_new; }
+            if monte_carlo != monte_carlo_new { self.raytracing.write().unwrap().config.monte_carlo = monte_carlo_new; }
+
+            if running && !is_done
+            {
+                if ui.button("Stop Rendering").clicked()
+                {
+                    self.rendering.stop();
+                }
+            }
+            else
+            {
+                if ui.button("Start Rendering").clicked()
+                {
+                    self.restart_rendering();
+                }
+            }
+        });
+
+        // ********** status **********
+        let bottom_frame = egui::containers::Frame
+        {
             inner_margin: egui::style::Margin { left: 4., right: 4., top: 4., bottom: 2. },
             fill: egui::Color32::from_rgba_premultiplied(215, 215, 215, 215),
             ..egui::containers::Frame::default()
@@ -584,7 +637,14 @@ impl Run
                 self.width = w;
                 self.height = h;
 
-                self.restart_rendering();
+                let running = self.rendering.is_running();
+                let is_done = self.rendering.is_done();
+                let is_running = running && !is_done;
+
+                if is_running
+                {
+                    self.restart_rendering();
+                }
 
                 //save resolution to file
                 let mut file = File::create(POS_PATH).unwrap();
