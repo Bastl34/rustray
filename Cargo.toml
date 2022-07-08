@@ -15,7 +15,16 @@ panic = "abort"
 #codegen-units = 1
 
 [dependencies]
-sdl2 = { version = "0.35.2", features = ["bundled"] }
+
+#egui = "0.18.1"
+#eframe = "0.18.0"
+#egui_extras = "0.18.0"
+
+#https://github.com/emilk/egui/discussions/1708
+egui = { git = "https://github.com/emilk/egui"}
+eframe = { git = "https://github.com/emilk/egui"}
+egui_extras = { git = "https://github.com/emilk/egui"}
+
 rand = "*"
 num_cpus = "*"
 nalgebra = "0.31.0"

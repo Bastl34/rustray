@@ -1,28 +1,16 @@
-extern crate sdl2;
 extern crate rand;
 extern crate image;
 
 use chrono::{Datelike, Timelike, Utc, DateTime};
-use sdl2::{Sdl, EventPump};
-use sdl2::mouse::MouseButton;
-use sdl2::render::{Canvas, TextureCreator};
-use sdl2::surface::Surface;
-use sdl2::video::{Window, WindowContext};
 
 use std::sync::{RwLock, Arc};
 use std::{io::Write, thread};
 use std::time::{Instant, Duration};
 
-use sdl2::rect::Point;
-use sdl2::pixels::Color;
+use eframe::egui;
+use egui_extras::RetainedImage;
 
-use sdl2::keyboard::Keycode;
-use sdl2::event::WindowEvent;
-use sdl2::pixels::PixelFormatEnum;
-
-use sdl2::video::WindowPos::Positioned;
-
-use image::{ImageBuffer, RgbImage, Rgb};
+use image::{ImageBuffer, RgbaImage, Rgba};
 
 use std::fs::File;
 
@@ -30,25 +18,11 @@ use crate::renderer::RendererManager;
 use crate::raytracing::Raytracing;
 use crate::scene::Scene;
 
-const WINDOW_TITLE: &str = "Raytracer";
-
 const IMAGE_PATH: &str = "data/output";
 const ANIMATION_PATH: &str = "data/output/animation";
 const POS_PATH: &str = "data/pos.data";
 
 const DEFAULT_RES: (i32, i32) = (800, 600);
-
-// ******************** SDLData ********************
-pub struct SDLData<'a>
-{
-    pub context: Sdl,
-    pub canvas: Canvas<Window>,
-    pub render_canvas: Canvas<Surface<'a>>,
-
-    pub texture_creator: TextureCreator<WindowContext>,
-
-    pub event_pump: EventPump
-}
 
 // ******************** Stats ********************
 pub struct Stats
@@ -62,7 +36,6 @@ pub struct Stats
     output_time: DateTime<Utc>,
 
     screen_update_time: u128,
-    fps: f64,
     pps: u64,
 
     completed: bool
@@ -81,7 +54,6 @@ impl Stats
             output_time: Utc::now(),
 
             screen_update_time: 0,
-            fps: 0.0,
             pps: 0,
 
             completed: false
@@ -94,8 +66,6 @@ impl Stats
         self.current_time = 0;
         self.frame = 0;
 
-        //self.output_time = Utc::now();
-
         self.timer = Instant::now();
         self.screen_update_time = 0;
         self.pps = 0;
@@ -105,7 +75,7 @@ impl Stats
 }
 
 // ******************** Run ********************
-pub struct Run<'a>
+pub struct Run//<'a>
 {
     width: i32,
     height: i32,
@@ -118,20 +88,21 @@ pub struct Run<'a>
 
     scenes_list: Vec<String>,
 
-    image: RgbImage,
+    image: RgbaImage,
     scene: Arc<RwLock<Scene>>,
     pub raytracing: Arc<RwLock<Raytracing>>,
     rendering: RendererManager,
 
     stats: Stats,
-    sdl: Option<SDLData<'a>>,
+
+    stopped: bool,
 
     help_printed: bool
 }
 
-impl<'a> Run<'a>
+impl Run
 {
-    pub fn new(width: i32, height: i32, window: bool, scenes_list: Vec<String>, animate: bool) -> Run<'a>
+    pub fn new(width: i32, height: i32, window: bool, scenes_list: Vec<String>, animate: bool) -> Run
     {
         let scene = Arc::new(RwLock::new(Scene::new()));
         let rt = Arc::new(RwLock::new(Raytracing::new(scene.clone())));
@@ -146,6 +117,7 @@ impl<'a> Run<'a>
             window_y: 0,
 
             window: window,
+
             animate: animate,
 
             scenes_list: scenes_list,
@@ -157,7 +129,8 @@ impl<'a> Run<'a>
             image: ImageBuffer::new(0, 0),
 
             stats: Stats::new(),
-            sdl: None,
+
+            stopped: false,
 
             help_printed: false,
         }
@@ -178,14 +151,16 @@ impl<'a> Run<'a>
         let mut scene = Scene::new();
         scene.clear();
 
-        for scene_item in &self.scenes_list
         {
-            scene.load(&scene_item);
-        }
+            for scene_item in &self.scenes_list
+            {
+                scene.load(&scene_item);
+            }
 
-        scene.cam.init(self.width as u32, self.height as u32);
-        scene.apply_frame(self.stats.frame);
-        scene.print();
+            scene.cam.init(self.width as u32, self.height as u32);
+            scene.apply_frame(self.stats.frame);
+            scene.print();
+        }
 
         let rt_config = scene.raytracing_config;
 
@@ -258,12 +233,7 @@ impl<'a> Run<'a>
         self.rendering.start();
 
         //loop
-        if self.window
-        {
-            self.start_sdl();
-            self.sdl_loop();
-        }
-        else
+        if !self.window
         {
             self.cmd_loop();
         }
@@ -279,18 +249,6 @@ impl<'a> Run<'a>
         //stop
         self.rendering.stop();
         thread::sleep(Duration::from_millis(100));
-
-        //clear rendering surfaces
-        if let Some(sdl) = &mut self.sdl
-        {
-            sdl.canvas.set_draw_color(Color::RGB(255, 255, 255));
-            sdl.canvas.clear();
-            sdl.canvas.present();
-
-            sdl.render_canvas = sdl2::surface::Surface::new(self.width as u32, self.height as u32, PixelFormatEnum::RGBA32).unwrap().into_canvas().unwrap();
-            sdl.render_canvas.set_draw_color(Color::RGB(255, 255, 255));
-            sdl.render_canvas.clear();
-        }
 
         //reinit scene with resolution
         {
@@ -311,8 +269,10 @@ impl<'a> Run<'a>
         self.rendering.restart(self.width, self.height);
     }
 
-    pub fn render_next_frame_if_possible(&mut self)
+    pub fn render_next_frame_if_possible(&mut self) -> bool
     {
+        let mut render_next_frame = false;
+
         let has_animation;
         {
             let scene = self.scene.read().unwrap();
@@ -321,7 +281,7 @@ impl<'a> Run<'a>
 
         if !self.animate || !has_animation
         {
-            return;
+            return render_next_frame;
         }
 
         //check for next frame
@@ -331,28 +291,16 @@ impl<'a> Run<'a>
             has_next_frame = scene.frame_exists(self.stats.frame + 1);
         }
 
-        //stop end get next frame
+        //stop end get next frame;
         if self.stats.completed && has_next_frame
         {
             self.rendering.stop();
             thread::sleep(Duration::from_millis(100));
 
             {
-                let mut scene = self.scene.write().unwrap();
-
                 self.stats.frame += 1;
-                scene.apply_frame(self.stats.frame);
-            }
-
-            if let Some(sdl) = &mut self.sdl
-            {
-                //sdl.canvas.set_draw_color(Color::RGB(255, 255, 255));
-                //sdl.canvas.clear();
-                //sdl.canvas.present();
-
-                sdl.render_canvas = sdl2::surface::Surface::new(self.width as u32, self.height as u32, PixelFormatEnum::RGBA32).unwrap().into_canvas().unwrap();
-                sdl.render_canvas.set_draw_color(Color::RGB(255, 255, 255));
-                sdl.render_canvas.clear();
+                self.scene.write().unwrap().apply_frame(self.stats.frame);
+                render_next_frame = true
             }
 
             //reset stats
@@ -382,6 +330,8 @@ impl<'a> Run<'a>
 
             self.help_printed = true;
         }
+
+        render_next_frame
     }
 
     pub fn print_frame_info(&self)
@@ -395,16 +345,18 @@ impl<'a> Run<'a>
             }
         }
         println!("");
-        let print_str = format!("frame: {}/{}", self.stats.frame + 1, frames);
+        let print_str;
+        { print_str = format!("frame: {}/{}", self.stats.frame + 1, frames); }
 
         println!("{}", print_str);
         for _ in 0..print_str.len() { print!("="); }
         println!("");
     }
 
-    pub fn apply_pixels(&mut self)
+    pub fn apply_pixels(&mut self) -> bool
     {
         let receiver = self.rendering.get_message_receiver();
+        let mut change = false;
 
         loop
         {
@@ -416,28 +368,17 @@ impl<'a> Run<'a>
             {
                 let item = res.unwrap();
 
-                if let Some(sdl) = &mut self.sdl
-                {
-                    sdl.render_canvas.set_draw_color(Color::RGB(item.r, item.g, item.b));
-                    sdl.render_canvas.draw_point(Point::new(item.x, item.y)).unwrap();
-                }
-
                 //check range to prevent draing something outside while resizing
                 if item.x < self.image.width() as i32 && item.y < self.image.height() as i32
                 {
-                    self.image.put_pixel(item.x as u32, item.y as u32, Rgb([item.r, item.g, item.b]));
+                    self.image.put_pixel(item.x as u32, item.y as u32, Rgba([item.r, item.g, item.b, 255]));
                     self.stats.pps += 1;
+                    change = true;
                 }
             }
         }
 
-        if let Some(sdl) = &mut self.sdl
-        {
-            let texture = sdl.texture_creator.create_texture_from_surface(sdl.render_canvas.surface()).unwrap();
-            sdl.canvas.clear();
-            sdl.canvas.copy(&texture, None, None).unwrap();
-            sdl.canvas.present();
-        }
+        change
     }
 
     pub fn save_image(&mut self)
@@ -450,39 +391,31 @@ impl<'a> Run<'a>
             has_animation = scene.animation.has_animation();
         }
 
-        if self.animate && has_animation
         {
-            out_dir = ANIMATION_PATH;
+            if self.animate && has_animation
+            {
+                out_dir = ANIMATION_PATH;
+            }
         }
 
         let filename = format!("{}/output_{}-{}-{}_{}-{}-{}_{:0>8}.png", out_dir, self.stats.output_time.year(), self.stats.output_time.month(), self.stats.output_time.day(), self.stats.output_time.hour(), self.stats.output_time.minute(), self.stats.output_time.second(), self.stats.frame);
         self.image.save(filename).unwrap();
     }
 
-    pub fn calc_fps(&mut self)
-    {
-        //calc fps
-        self.stats.current_time = self.stats.timer.elapsed().as_millis();
-        self.stats.fps = 1000.0f64 / (self.stats.current_time - self.stats.last_time) as f64;
-        self.stats.last_time = self.stats.current_time;
-    }
-
-    pub fn update(&mut self)
+    pub fn loop_update(&mut self) -> bool
     {
         //apply pixels from raytracing to the buffer
-        self.apply_pixels();
+        let mut change = self.apply_pixels();
 
-        //calc stats
-        self.calc_fps();
+        //stats
+        self.stats.current_time = self.stats.timer.elapsed().as_millis();
+        self.stats.last_time = self.stats.current_time;
 
         //check if complete
         if self.stats.current_time - self.stats.screen_update_time >= 1000
         {
             let is_done = self.rendering.is_done();
             let elapsed = self.rendering.check_and_get_elapsed_time() as f64 / 1000.0;
-
-            //update window title
-            self.sdl_set_new_window_title(elapsed, is_done);
 
             self.stats.screen_update_time = self.stats.current_time;
 
@@ -502,142 +435,233 @@ impl<'a> Run<'a>
         }
 
         //animation
-        self.render_next_frame_if_possible();
+        if !self.stopped
+        {
+            let has_next = self.render_next_frame_if_possible();
+
+            if self.stats.completed && !has_next
+            {
+                self.stopped = true;
+            }
+
+            change = has_next || change;
+        }
+
+        change
     }
 
     pub fn cmd_loop(&mut self)
     {
         while !self.stats.completed
         {
-            self.update();
+            self.loop_update();
         }
 
         println!("done");
     }
 
-    pub fn start_sdl(&mut self)
+    pub fn get_egui_options(&self) -> eframe::NativeOptions
     {
-        let sdl = sdl2::init().unwrap();
-
-        sdl2::hint::set("SDL_HINT_VIDEO_ALLOW_SCREENSAVER", "1");
-
-        let video_subsystem = sdl.video().unwrap();
-
-        let mut window = video_subsystem.window(WINDOW_TITLE, self.width as u32, self.height as u32).resizable().allow_highdpi().build().unwrap();
-
-        if self.window_x != 0 && self.window_y != 0
+        eframe::NativeOptions
         {
-            window.set_position(Positioned(self.window_x), Positioned(self.window_y));
+            initial_window_size: Some(egui::vec2(self.width as f32, self.height as f32)),
+            initial_window_pos: Some(egui::pos2(self.window_x as f32, self.window_y as f32)),
+            ..Default::default()
         }
+    }
+}
 
-        let mut canvas = window.into_canvas().present_vsync().build().unwrap();
+// ******************** GUI ********************
 
-        canvas.set_draw_color(Color::RGB(255, 255, 255));
-        canvas.clear();
-        canvas.present();
+fn image_to_retained_image(image: RgbaImage) -> RetainedImage
+{
+    let pixels = image.as_flat_samples();
 
-        let mut render_canvas = sdl2::surface::Surface::new(self.width as u32, self.height as u32, PixelFormatEnum::RGBA32).unwrap().into_canvas().unwrap();
-        render_canvas.set_draw_color(Color::RGB(255, 255, 255));
-        render_canvas.clear();
+    let color_image = egui::ColorImage::from_rgba_unmultiplied(
+        [image.width() as usize, image.height() as usize],
+        pixels.as_slice(),
+    );
 
-        let texture_creator = canvas.texture_creator();
+    RetainedImage::from_color_image("test", color_image)
+}
 
-        let event_pump = sdl.event_pump().unwrap();
+impl eframe::App for Run
+{
+    fn clear_color(&self, _visuals: &egui::Visuals) -> egui::Rgba
+    {
+        egui::Rgba::WHITE
+    }
 
-        self.sdl = Some(SDLData
+    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame)
+    {
+        self.loop_update();
+
+        //force update (otherwise animation is somehow not working)
+        ctx.request_repaint();
+
+        self.update_gui(ctx, frame);
+        self.update_states(ctx, frame);
+    }
+}
+
+impl Run
+{
+    fn update_gui(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame)
+    {
+        // ********** main **********
+        let main_frame = egui::containers::Frame
         {
-            context: sdl,
-            canvas: canvas,
-            render_canvas: render_canvas,
-            texture_creator: texture_creator,
-            event_pump: event_pump
+            ..egui::containers::Frame::default()
+        };
+
+        egui::CentralPanel::default().frame(main_frame).show(ctx, |ui|
+        {
+            let image = self.image.clone();
+            let image = image_to_retained_image(image);
+
+            image.show(ui);
+        });
+
+        // ********** settings **********
+        egui::Window::new("Settings").show(ctx, |ui|
+        {
+            let running = self.rendering.is_running();
+            let is_done = self.rendering.is_done();
+
+            let settings_updates_allowed = !(running && !is_done);
+
+            let samples;
+            let mut samples_new;
+
+            let monte_carlo;
+            let mut monte_carlo_new;
+
+            {
+                let rt = self.raytracing.read().unwrap();
+                monte_carlo = rt.config.monte_carlo;
+                monte_carlo_new = rt.config.monte_carlo;
+
+                samples = rt.config.samples;
+                samples_new = rt.config.samples;
+            }
+
+            ui.heading("Settings");
+
+            ui.add_enabled_ui(settings_updates_allowed, |ui|
+            {
+                ui.add(egui::Slider::new(&mut samples_new, 1..=1024).text("samples"));
+                ui.checkbox(&mut self.animate, "Animation");
+                ui.checkbox(&mut monte_carlo_new, "Monte Carlo");
+            });
+
+            if samples != samples_new { self.raytracing.write().unwrap().config.samples = samples_new; }
+            if monte_carlo != monte_carlo_new { self.raytracing.write().unwrap().config.monte_carlo = monte_carlo_new; }
+
+            if running && !is_done
+            {
+                if ui.button("Stop Rendering").clicked()
+                {
+                    self.rendering.stop();
+                    self.stopped = true;
+                }
+            }
+            else
+            {
+                if ui.button("Start Rendering").clicked()
+                {
+                    self.restart_rendering();
+                    self.stopped = false;
+                }
+            }
+        });
+
+        // ********** status **********
+        let bottom_frame = egui::containers::Frame
+        {
+            inner_margin: egui::style::Margin { left: 4., right: 4., top: 4., bottom: 2. },
+            fill: egui::Color32::from_rgba_premultiplied(215, 215, 215, 215),
+            ..egui::containers::Frame::default()
+        };
+
+        egui::TopBottomPanel::bottom("bottom_panel").frame(bottom_frame).show(ctx, |ui|
+        {
+            ui.vertical(|ui|
+            {
+                let is_done = self.rendering.is_done();
+                let elapsed = self.rendering.check_and_get_elapsed_time() as f64 / 1000.0;
+
+                let pixels = self.rendering.get_rendered_pixels();
+                let progress = pixels as f32 / (self.width * self.height) as f32;
+
+                let status = format!("PPS: {}, Frame: {}, Res: {}x{}, Pixels: {}, Time: {:.2}s, Done: {}", self.stats.pps, self.stats.frame, self.width, self.height, pixels, elapsed, is_done);
+                ui.label(status);
+
+                let progress_bar = egui::ProgressBar::new(progress)
+                    .show_percentage();
+                    //.animate(self.rendering);
+                ui.add(progress_bar);
+            });
         });
     }
 
-    pub fn sdl_loop(&mut self)
+    fn update_states(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame)
     {
-        'main: loop
+        let window_info = frame.info.window_info.clone();
+
+        if ctx.input_mut().pointer.primary_clicked()
         {
-            let mut events = vec![];
+            let x = ctx.input_mut().pointer.interact_pos().unwrap().x as i32;
+            let y = ctx.input_mut().pointer.interact_pos().unwrap().y as i32;
 
-            //dumplicate events to new array to prevent referenceing issues with "self"
+            let rt = self.raytracing.read().unwrap();
+            let pick_res = rt.pick(x, y);
+
+            if let Some(pick_res) = pick_res
             {
-                let sdl = self.sdl.as_mut().unwrap();
-                for event in sdl.event_pump.poll_iter()
-                {
-                    events.push(event);
-                }
+                dbg!(pick_res);
             }
-
-            for event in events
-            {
-                match event
-                {
-                    sdl2::event::Event::Quit { .. } =>
-                        break 'main,
-                    sdl2::event::Event::KeyDown { keycode: Some(Keycode::Escape), .. } =>
-                        break 'main,
-                    sdl2::event::Event::KeyDown { keycode: Some(Keycode::Space), .. } =>
-                    {
-                        self.restart_rendering();
-                    },
-                    //get object at mous position
-                    sdl2::event::Event::MouseButtonDown { mouse_btn: MouseButton::Left, x, y, .. } =>
-                    {
-                        let rt = self.raytracing.read().unwrap();
-                        let pick_res = rt.pick(x, y);
-
-                        if let Some(pick_res) = pick_res
-                        {
-                            dbg!(pick_res);
-                        }
-                    },
-                    //restart rendering on resize
-                    sdl2::event::Event::Window { win_event: WindowEvent::Resized(w, h), ..} =>
-                    {
-                        //apply
-                        self.width = w;
-                        self.height = h;
-
-                        self.restart_rendering();
-
-                        //save resolution to file
-                        let mut file = File::create(POS_PATH).unwrap();
-                        let _ = file.write(format!("{}x{}x{}x{}", self.window_x, self.window_y, self.width, self.height).as_bytes());
-                    },
-                    //save the window position
-                    sdl2::event::Event::Window { win_event: WindowEvent::Moved(x, y), ..} =>
-                    {
-                        //apply changes
-                        self.window_x = x;
-                        self.window_y = y;
-
-                        //save to file
-                        let mut file = File::create(POS_PATH).unwrap();
-                        let _ = file.write(format!("{}x{}x{}x{}", self.window_x, self.window_y, self.width, self.height).as_bytes());
-                    },
-                    _ => {},
-                }
-            }
-
-            self.update();
         }
 
-        println!("done");
-    }
-
-    pub fn sdl_set_new_window_title(&mut self, elapsed: f64, is_done: bool)
-    {
-        if let Some(sdl) = &mut self.sdl
+        if let Some(window_info) = window_info
         {
-            let pixels = self.rendering.get_rendered_pixels();
-            let percentage = (pixels as f32 / (self.width * self.height) as f32) * 100.0;
+            let x = window_info.position.x as i32;
+            let y = window_info.position.y as i32;
 
-            let window = sdl.canvas.window_mut();
+            let w = window_info.size.x as i32;
+            let h = window_info.size.y as i32;
 
-            let title = format!("Raytracer (FPS: {:.2}, PPS: {}, Frame: {}, Res: {}x{}, Complete: {:.2}%, Pixels: {}, Time: {:.2}s, Done: {})", self.stats.fps, self.stats.pps, self.stats.frame, self.width, self.height, percentage, pixels, elapsed, is_done);
+            //save the window position
+            if x != self.window_x || y != self.window_y
+            {
+                //apply changes
+                self.window_x = x;
+                self.window_y = y;
 
-            window.set_title(&title).unwrap();
+                //save to file
+                let mut file = File::create(POS_PATH).unwrap();
+                let _ = file.write(format!("{}x{}x{}x{}", self.window_x, self.window_y, self.width, self.height).as_bytes());
+            }
+
+            //restart rendering on resize
+            if w != self.width || h != self.height
+            {
+                //apply
+                self.width = w;
+                self.height = h;
+
+                let running = self.rendering.is_running();
+                let is_done = self.rendering.is_done();
+                let is_running = running && !is_done;
+
+                if is_running
+                {
+                    self.restart_rendering();
+                }
+
+                //save resolution to file
+                let mut file = File::create(POS_PATH).unwrap();
+                let _ = file.write(format!("{}x{}x{}x{}", self.window_x, self.window_y, self.width, self.height).as_bytes());
+            }
         }
     }
 }

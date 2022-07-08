@@ -206,6 +206,14 @@ impl RendererManager
         *(self.pixels_rendered.lock().unwrap())
     }
 
+    pub fn is_running(&self) -> bool
+    {
+        let is_running;
+        { is_running = *(self.running.lock().unwrap()); }
+
+        is_running
+    }
+
     pub fn is_done(&self) -> bool
     {
         (*(self.pixels_rendered.lock().unwrap())) == self.width as u64 * self.height as u64

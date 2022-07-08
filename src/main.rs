@@ -75,4 +75,17 @@ fn main()
     }
 
     runner.start();
+
+    //create window if needed
+    if window
+    {
+        let egui_options = runner.get_egui_options();
+
+        eframe::run_native
+        (
+            "Rustray",
+            egui_options,
+            Box::new(|_cc| Box::new(runner)),
+        );
+    }
 }
