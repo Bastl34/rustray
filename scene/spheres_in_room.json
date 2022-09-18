@@ -1,0 +1,14 @@
+{
+    "name": "Spheres in Roomm",
+    "objects":
+    [
+        {
+            "type": "json",
+            "path": "scene/room.json"
+        },
+        {
+            "type": "json",
+            "path": "scene/spheres.json"
+        }
+    ]
+}

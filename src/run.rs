@@ -2,7 +2,10 @@ extern crate rand;
 extern crate image;
 
 use chrono::{Datelike, Timelike, Utc, DateTime};
+use egui::Color32;
+use nalgebra::Vector3;
 
+use std::{string, fs};
 use std::sync::{RwLock, Arc};
 use std::{io::Write, thread};
 use std::time::{Instant, Duration};
@@ -21,6 +24,7 @@ use crate::scene::Scene;
 const IMAGE_PATH: &str = "data/output";
 const ANIMATION_PATH: &str = "data/output/animation";
 const POS_PATH: &str = "data/pos.data";
+const SCENE_PATH: &str = "scene/";
 
 const DEFAULT_RES: (i32, i32) = (800, 600);
 
@@ -86,7 +90,8 @@ pub struct Run//<'a>
     window: bool,
     animate: bool,
 
-    scenes_list: Vec<String>,
+    dir_scenes_list: Vec<String>,
+    rendering_scenes_list: Vec<String>,
 
     image: RgbaImage,
     scene: Arc<RwLock<Scene>>,
@@ -97,7 +102,8 @@ pub struct Run//<'a>
 
     stopped: bool,
 
-    help_printed: bool
+    help_printed: bool,
+    selected_scene_id: usize
 }
 
 impl Run
@@ -120,7 +126,8 @@ impl Run
 
             animate: animate,
 
-            scenes_list: scenes_list,
+            dir_scenes_list: vec![],
+            rendering_scenes_list: scenes_list,
 
             scene: scene,
             raytracing: rt,
@@ -133,6 +140,7 @@ impl Run
             stopped: false,
 
             help_printed: false,
+            selected_scene_id: 0
         }
     }
 
@@ -152,7 +160,7 @@ impl Run
         scene.clear();
 
         {
-            for scene_item in &self.scenes_list
+            for scene_item in &self.rendering_scenes_list
             {
                 scene.load(&scene_item);
             }
@@ -219,6 +227,28 @@ impl Run
         self.init_image();
         self.init_stats();
         self.init_raytracing();
+
+        self.read_scenes_from_dir();
+    }
+
+    pub fn read_scenes_from_dir(&mut self)
+    {
+        self.dir_scenes_list.clear();
+
+        let paths = fs::read_dir(SCENE_PATH).unwrap();
+
+        for path in paths
+        {
+            if path.is_ok()
+            {
+                let path = path.unwrap();
+
+                if path.file_type().is_ok() && path.file_type().unwrap().is_file()
+                {
+                    self.dir_scenes_list.push(path.file_name().to_str().unwrap().to_string());
+                }
+            }
+        }
     }
 
     pub fn start(&mut self)
@@ -539,6 +569,24 @@ impl Run
             let threads;
             let mut threads_new;
 
+            let focal_length;
+            let mut focal_length_new;
+
+            let aperture_size;
+            let mut aperture_size_new;
+
+            let fog_density;
+            let mut fog_density_new;
+
+            let fog_color;
+            let mut fog_color_new;
+
+            let max_recursion;
+            let mut max_recursion_new;
+
+            let gamma_correction;
+            let mut gamma_correction_new;
+
             {
                 let rt = self.raytracing.read().unwrap();
                 monte_carlo = rt.config.monte_carlo;
@@ -549,23 +597,105 @@ impl Run
 
                 threads = self.rendering.thread_amount;
                 threads_new = self.rendering.thread_amount;
-            }
 
-            ui.heading("Settings");
+                focal_length = rt.config.focal_length;
+                focal_length_new = rt.config.focal_length;
+
+                aperture_size = rt.config.aperture_size;
+                aperture_size_new = rt.config.aperture_size;
+
+                fog_density = rt.config.fog_density;
+                fog_density_new = rt.config.fog_density;
+
+                let r = (rt.config.fog_color.x * 255.0) as u8;
+                let g = (rt.config.fog_color.y * 255.0) as u8;
+                let b = (rt.config.fog_color.z * 255.0) as u8;
+                fog_color = Color32::from_rgb(r, g, b);
+                fog_color_new = fog_color;
+
+                max_recursion = rt.config.max_recursion;
+                max_recursion_new = rt.config.max_recursion;
+
+                gamma_correction = rt.config.gamma_correction;
+                gamma_correction_new = rt.config.gamma_correction;
+            }
 
             ui.add_enabled_ui(settings_updates_allowed, |ui|
             {
+                // ********** Scene **********
+                ui.heading("Scene");
+
+                let mut selected_scene_id_new = self.selected_scene_id;
+
+                let mut list_copy = self.dir_scenes_list.clone();
+                list_copy.insert(0, " ~~~ select scene ~~~ ".to_string());
+                let items = list_copy.as_slice();
+
+                egui::ComboBox::from_label("").width(200.0).show_index(
+                    ui,
+                    &mut selected_scene_id_new,
+                    items.len(),
+                    |i| items[i].to_owned()
+                );
+                if selected_scene_id_new != self.selected_scene_id
+                {
+                    self.selected_scene_id = selected_scene_id_new;
+
+                    let new_scene = SCENE_PATH.to_string() + self.dir_scenes_list[self.selected_scene_id - 1].clone().as_str();
+
+                    self.rendering_scenes_list.clear();
+                    self.rendering_scenes_list.push(new_scene);
+                    self.init_raytracing();
+                }
+                ui.separator();
+
+                // ********** rendering settings **********
+                ui.heading("Rendering Settings");
+
                 ui.add(egui::Slider::new(&mut samples_new, 1..=1024).text("samples"));
                 ui.checkbox(&mut self.animate, "Animation");
                 ui.checkbox(&mut monte_carlo_new, "Monte Carlo");
 
                 let max_threads = num_cpus::get() as u32;
                 ui.add(egui::Slider::new(&mut threads_new, 1..=max_threads).text("CPU threads"));
+                ui.separator();
+
+                // ********** scene settings **********
+                ui.heading("Scene Settings");
+
+                ui.add(egui::Slider::new(&mut focal_length_new, 1.0..=128.0).text("focal length (unit)"));
+                ui.add(egui::Slider::new(&mut aperture_size_new, 1.0..=128.0).text("aperture size (in px)"));
+
+                ui.add(egui::Slider::new(&mut fog_density_new, 0.0..=1.0).text("fog density (amount)"));
+
+                ui.horizontal(|ui| {
+                    ui.label("fog color:");
+                    ui.color_edit_button_srgba(&mut fog_color_new);
+                });
+
+                ui.add(egui::Slider::new(&mut max_recursion_new, 1..=64).text("max recursion"));
+                ui.checkbox(&mut gamma_correction_new, "gamma correction");
+
+
+                ui.separator();
             });
 
             if samples != samples_new { self.raytracing.write().unwrap().config.samples = samples_new; }
             if monte_carlo != monte_carlo_new { self.raytracing.write().unwrap().config.monte_carlo = monte_carlo_new; }
             if threads != threads_new { self.rendering.thread_amount = threads_new; }
+
+            if focal_length != focal_length_new { self.raytracing.write().unwrap().config.focal_length = focal_length_new; }
+            if aperture_size != aperture_size_new { self.raytracing.write().unwrap().config.aperture_size = aperture_size_new; }
+            if fog_density != fog_density_new { self.raytracing.write().unwrap().config.fog_density = fog_density_new; }
+            if fog_color != fog_color_new
+            {
+                let r = ((fog_color_new.r() as f32) / 255.0).clamp(0.0, 1.0);
+                let g = ((fog_color_new.g() as f32) / 255.0).clamp(0.0, 1.0);
+                let b = ((fog_color_new.b() as f32) / 255.0).clamp(0.0, 1.0);
+                self.raytracing.write().unwrap().config.fog_color = Vector3::<f32>::new(r, g, b);
+            }
+            if max_recursion != max_recursion_new { self.raytracing.write().unwrap().config.max_recursion = max_recursion_new; }
+            if gamma_correction != gamma_correction_new { self.raytracing.write().unwrap().config.gamma_correction = gamma_correction_new; }
 
             if running && !is_done
             {

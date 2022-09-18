@@ -64,12 +64,18 @@ impl RendererManager
     {
         let (tx, rx) = mpsc::channel();
 
+        let mut thread_amount = num_cpus::get();
+        if thread_amount > 1
+        {
+            thread_amount -=1;
+        }
+
         RendererManager
         {
             width: width,
             height: height,
 
-            thread_amount: num_cpus::get() as u32,
+            thread_amount: thread_amount as u32,
 
             running: std::sync::Arc::new(std::sync::Mutex::new(false)),
 
