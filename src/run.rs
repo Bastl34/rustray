@@ -536,6 +536,9 @@ impl Run
             let monte_carlo;
             let mut monte_carlo_new;
 
+            let threads;
+            let mut threads_new;
+
             {
                 let rt = self.raytracing.read().unwrap();
                 monte_carlo = rt.config.monte_carlo;
@@ -543,6 +546,9 @@ impl Run
 
                 samples = rt.config.samples;
                 samples_new = rt.config.samples;
+
+                threads = self.rendering.thread_amount;
+                threads_new = self.rendering.thread_amount;
             }
 
             ui.heading("Settings");
@@ -552,10 +558,14 @@ impl Run
                 ui.add(egui::Slider::new(&mut samples_new, 1..=1024).text("samples"));
                 ui.checkbox(&mut self.animate, "Animation");
                 ui.checkbox(&mut monte_carlo_new, "Monte Carlo");
+
+                let max_threads = num_cpus::get() as u32;
+                ui.add(egui::Slider::new(&mut threads_new, 1..=max_threads).text("CPU threads"));
             });
 
             if samples != samples_new { self.raytracing.write().unwrap().config.samples = samples_new; }
             if monte_carlo != monte_carlo_new { self.raytracing.write().unwrap().config.monte_carlo = monte_carlo_new; }
+            if threads != threads_new { self.rendering.thread_amount = threads_new; }
 
             if running && !is_done
             {
@@ -588,7 +598,16 @@ impl Run
             ui.vertical(|ui|
             {
                 let is_done = self.rendering.is_done();
-                let elapsed = self.rendering.check_and_get_elapsed_time() as f64 / 1000.0;
+
+                let elapsed;
+                if !self.stopped || is_done
+                {
+                    elapsed = self.rendering.check_and_get_elapsed_time() as f64 / 1000.0;
+                }
+                else
+                {
+                    elapsed = 0.0;
+                }
 
                 let pixels = self.rendering.get_rendered_pixels();
                 let progress = pixels as f32 / (self.width * self.height) as f32;

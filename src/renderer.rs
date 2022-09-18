@@ -40,6 +40,8 @@ pub struct RendererManager
     width: i32,
     height: i32,
 
+    pub thread_amount: u32,
+
     running: Arc<Mutex<bool>>,
 
     cell_list: Arc<Mutex<VecDeque<CellRange>>>,
@@ -66,6 +68,8 @@ impl RendererManager
         {
             width: width,
             height: height,
+
+            thread_amount: num_cpus::get() as u32,
 
             running: std::sync::Arc::new(std::sync::Mutex::new(false)),
 
@@ -95,8 +99,7 @@ impl RendererManager
         println!("starting (w={}, h={})...", self.width, self.height);
         println!("block size: {}", BLOCK_SIZE);
 
-        let cores = num_cpus::get();
-        println!("rendering threads: {}", cores);
+        println!("rendering threads: {}", self.thread_amount);
 
         //start time
         self.start_time = Instant::now();
@@ -153,7 +156,7 @@ impl RendererManager
             deque.make_contiguous().shuffle(&mut rand::thread_rng());
         }
 
-        for _ in 0..cores
+        for _ in 0..self.thread_amount
         {
             let handle = self.start_thread();
             self.threads.push(handle);
