@@ -606,7 +606,7 @@ impl Run
 
     fn update_states(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame)
     {
-        let window_info = frame.info.window_info.clone();
+        let window_info = frame.info().window_info.clone();
 
         if ctx.input_mut().pointer.primary_clicked()
         {
@@ -622,13 +622,11 @@ impl Run
             }
         }
 
-        if let Some(window_info) = window_info
-        {
-            let x = window_info.position.x as i32;
-            let y = window_info.position.y as i32;
 
-            let w = window_info.size.x as i32;
-            let h = window_info.size.y as i32;
+        if let Some(position) = window_info.position
+        {
+            let x = position.x as i32;
+            let y = position.y as i32;
 
             //save the window position
             if x != self.window_x || y != self.window_y
@@ -641,27 +639,31 @@ impl Run
                 let mut file = File::create(POS_PATH).unwrap();
                 let _ = file.write(format!("{}x{}x{}x{}", self.window_x, self.window_y, self.width, self.height).as_bytes());
             }
-
-            //restart rendering on resize
-            if w != self.width || h != self.height
-            {
-                //apply
-                self.width = w;
-                self.height = h;
-
-                let running = self.rendering.is_running();
-                let is_done = self.rendering.is_done();
-                let is_running = running && !is_done;
-
-                if is_running
-                {
-                    self.restart_rendering();
-                }
-
-                //save resolution to file
-                let mut file = File::create(POS_PATH).unwrap();
-                let _ = file.write(format!("{}x{}x{}x{}", self.window_x, self.window_y, self.width, self.height).as_bytes());
-            }
         }
+
+        let w = window_info.size.x as i32;
+        let h = window_info.size.y as i32;
+
+        //restart rendering on resize
+        if w != self.width || h != self.height
+        {
+            //apply
+            self.width = w;
+            self.height = h;
+
+            let running = self.rendering.is_running();
+            let is_done = self.rendering.is_done();
+            let is_running = running && !is_done;
+
+            if is_running
+            {
+                self.restart_rendering();
+            }
+
+            //save resolution to file
+            let mut file = File::create(POS_PATH).unwrap();
+            let _ = file.write(format!("{}x{}x{}x{}", self.window_x, self.window_y, self.width, self.height).as_bytes());
+        }
+
     }
 }

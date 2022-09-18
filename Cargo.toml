@@ -16,14 +16,9 @@ panic = "abort"
 
 [dependencies]
 
-#egui = "0.18.1"
-#eframe = "0.18.0"
-#egui_extras = "0.18.0"
-
-#https://github.com/emilk/egui/discussions/1708
-egui = { git = "https://github.com/emilk/egui"}
-eframe = { git = "https://github.com/emilk/egui"}
-egui_extras = { git = "https://github.com/emilk/egui"}
+egui = "0.19.0"
+eframe = "0.19.0"
+egui_extras = "0.19.0"
 
 rand = "*"
 num_cpus = "*"
@@ -35,6 +30,6 @@ chrono = "0.4"
 tobj = "3.2.0"
 serde_json = "1.0"
 easy-gltf = "0.1.4"
-attohttpc = "0.19.1"
+attohttpc = "0.22.0"
 bvh = "0.6.0"
 regex = "1"
