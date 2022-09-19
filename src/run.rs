@@ -5,7 +5,7 @@ use chrono::{Datelike, Timelike, Utc, DateTime};
 use egui::Color32;
 use nalgebra::Vector3;
 
-use std::{string, fs};
+use std::{fs};
 use std::sync::{RwLock, Arc};
 use std::{io::Write, thread};
 use std::time::{Instant, Duration};
@@ -40,6 +40,7 @@ pub struct Stats
     output_time: DateTime<Utc>,
 
     screen_update_time: u128,
+    pps_current: u64,
     pps: u64,
 
     completed: bool
@@ -58,6 +59,7 @@ impl Stats
             output_time: Utc::now(),
 
             screen_update_time: 0,
+            pps_current: 0,
             pps: 0,
 
             completed: false
@@ -72,6 +74,7 @@ impl Stats
 
         self.timer = Instant::now();
         self.screen_update_time = 0;
+        self.pps_current = 0;
         self.pps = 0;
 
         self.completed = false;
@@ -202,14 +205,17 @@ impl Run
             let splits: Vec<&str> = res.split("x").collect();
             let splits_arr = splits.as_slice();
 
-            self.window_x = splits_arr[0].parse().unwrap();
-            self.window_y = splits_arr[1].parse().unwrap();
-
-            //do only load resolution when there was no set explicitly
-            if self.width == 0 && self.height == 0
+            if splits_arr.len() == 4
             {
-                self.width = splits_arr[2].parse().unwrap();
-                self.height = splits_arr[3].parse().unwrap();
+                self.window_x = splits_arr[0].parse().unwrap();
+                self.window_y = splits_arr[1].parse().unwrap();
+
+                //do only load resolution when there was no set explicitly
+                if self.width == 0 && self.height == 0
+                {
+                    self.width = splits_arr[2].parse().unwrap();
+                    self.height = splits_arr[3].parse().unwrap();
+                }
             }
         }
     }
@@ -402,7 +408,7 @@ impl Run
                 if item.x < self.image.width() as i32 && item.y < self.image.height() as i32
                 {
                     self.image.put_pixel(item.x as u32, item.y as u32, Rgba([item.r, item.g, item.b, 255]));
-                    self.stats.pps += 1;
+                    self.stats.pps_current += 1;
                     change = true;
                 }
             }
@@ -460,7 +466,8 @@ impl Run
 
             if !self.stats.completed
             {
-                self.stats.pps = 0;
+                self.stats.pps = self.stats.pps_current;
+                self.stats.pps_current = 0;
             }
         }
 
@@ -742,7 +749,16 @@ impl Run
                 let pixels = self.rendering.get_rendered_pixels();
                 let progress = pixels as f32 / (self.width * self.height) as f32;
 
-                let status = format!("PPS: {}, Frame: {}, Res: {}x{}, Pixels: {}, Time: {:.2}s, Done: {}", self.stats.pps, self.stats.frame, self.width, self.height, pixels, elapsed, is_done);
+                let mut frames = 1;
+                {
+                    let scene = self.scene.read().unwrap();
+                    if scene.animation.has_animation()
+                    {
+                        frames = scene.animation.get_frames_amount_to_render();
+                    }
+                }
+
+                let status = format!("PPS: {}, Frame: {}/{}, Res: {}x{}, Pixels: {}, Time: {:.2}s, Done: {}", self.stats.pps, self.stats.frame + 1, frames, self.width, self.height, pixels, elapsed, is_done);
                 ui.label(status);
 
                 let progress_bar = egui::ProgressBar::new(progress)
