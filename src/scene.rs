@@ -16,9 +16,11 @@ use crate::shape::mesh::Mesh;
 use crate::camera::Camera;
 use crate::animation::{Animation, Frame, Keyframe};
 
+use std::f32::consts::PI;
 use std::path::Path;
 
 pub type ScemeItem = Box<dyn Shape + Send + Sync>;
+pub type LightItem = Box<Light>;
 
 // ******************** LightType ********************
 
@@ -34,6 +36,8 @@ pub enum LightType
 
 pub struct Light
 {
+    pub enabled: bool,
+    pub id: u32,
     pub pos: Point3<f32>,
     pub dir: Vector3<f32>,
     pub color: Vector3<f32>,
@@ -42,16 +46,29 @@ pub struct Light
     pub light_type: LightType
 }
 
+impl Light
+{
+    pub fn name(&self) -> String
+    {
+        match self.light_type
+        {
+            LightType::Point => return "Point".to_string(),
+            LightType::Directional => return "Directional".to_string(),
+            LightType::Spot => return "Spot".to_string()
+        }
+    }
+}
+
 
 // ******************** Scene ********************
 
 pub struct Scene
 {
-    pub item_id: u32,
+    pub item_id: u32, //for scene and light items
 
     pub cam: Camera,
     pub items: Vec<ScemeItem>,
-    pub lights: Vec<Box<Light>>,
+    pub lights: Vec<LightItem>,
     pub animation: Animation,
 
     pub raytracing_config: RaytracingConfig,
@@ -212,7 +229,7 @@ impl Scene
                         let pos = self.get_point_from_json_object("pos", &light, Point3::<f32>::new(0.0, 0.0, 0.0));
 
                         // dir
-                        let dir = self.get_vec_from_json_object("dir", &light, Vector3::<f32>::new(0.0, 0.0, 0.0));
+                        let dir = self.get_vec_from_json_object("dir", &light, Vector3::<f32>::new(0.0, -1.0, 0.0));
 
                         // color
                         let color = self.get_color_from_json_object("color", &light, Vector3::<f32>::new(0.0, 0.0, 0.0));
@@ -221,7 +238,7 @@ impl Scene
                         let intensity =  light["intensity"].as_f64().unwrap() as f32;
 
                         // max_angle
-                        let mut max_angle = 0.0f32;
+                        let mut max_angle = PI / 2.0; // just a default value - if type is chaning
                         if !light["max_angle"].is_null()
                         {
                             max_angle =  (light["max_angle"].as_f64().unwrap() as f32).to_radians();
@@ -239,8 +256,11 @@ impl Scene
                             _ => {}
                         }
 
+                        let id = self.get_next_id();
                         self.lights.push(Box::new(Light
                         {
+                            enabled: true,
+                            id: id,
                             pos: pos,
                             dir: dir,
                             color: color,
@@ -681,25 +701,31 @@ impl Scene
                 {
                     Point { position, color, intensity } =>
                     {
+                        let id = self.get_next_id();
                         self.lights.push(Box::new(Light
                         {
+                            enabled: true,
+                            id: id,
                             pos: Point3::<f32>::new(position.x, position.y, position.z),
-                            dir: Vector3::<f32>::new(0.0, 0.0, 0.0),
+                            dir: Vector3::<f32>::new(0.0, -1.0, 0.0),
                             color: Vector3::<f32>::new(color.x, color.y, color.z),
                             intensity: intensity / 10.0,
-                            max_angle: 0.0,
+                            max_angle: PI / 2.0, // just some default value - if type is changing
                             light_type: LightType::Point
                         }));
                     },
                     Directional { direction, color, intensity } =>
                     {
+                        let id = self.get_next_id();
                         self.lights.push(Box::new(Light
                         {
+                            enabled: true,
+                            id: id,
                             pos: Point3::<f32>::new(0.0, 0.0, 0.0),
                             dir: Vector3::<f32>::new(direction.x, direction.y, direction.z),
                             color: Vector3::<f32>::new(color.x, color.y, color.z),
                             intensity: intensity,
-                            max_angle: 0.0,
+                            max_angle: PI / 2.0, // just some default value - if type is changing
                             light_type: LightType::Directional
                         }));
                     },
@@ -707,8 +733,11 @@ impl Scene
                     {
                         println!("TODO: use inner_cone_angle: {}", inner_cone_angle);
 
+                        let id = self.get_next_id();
                         self.lights.push(Box::new(Light
                         {
+                            enabled: true,
+                            id: id,
                             pos: Point3::<f32>::new(position.x, position.y, position.z),
                             dir: Vector3::<f32>::new(direction.x, direction.y, direction.z),
                             color: Vector3::<f32>::new(color.x, color.y, color.z),
@@ -1267,7 +1296,7 @@ impl Scene
         None
     }
 
-    pub fn get_by_id(&self, id: u32) -> Option<&ScemeItem>
+    pub fn get_obj_by_id(&self, id: u32) -> Option<&ScemeItem>
     {
         for item in & self.items
         {
@@ -1280,11 +1309,37 @@ impl Scene
         None
     }
 
-    pub fn get_by_id_mut(&mut self, id: u32) -> Option<&mut ScemeItem>
+    pub fn get_obj_by_id_mut(&mut self, id: u32) -> Option<&mut ScemeItem>
     {
         for item in & mut self.items
         {
             if item.get_basic().id == id
+            {
+                return Some(item);
+            }
+        }
+
+        None
+    }
+
+    pub fn get_light_by_id(&self, id: u32) -> Option<&LightItem>
+    {
+        for item in & self.lights
+        {
+            if item.id == id
+            {
+                return Some(item);
+            }
+        }
+
+        None
+    }
+
+    pub fn get_light_by_id_mut(&mut self, id: u32) -> Option<&mut LightItem>
+    {
+        for item in & mut self.lights
+        {
+            if item.id == id
             {
                 return Some(item);
             }

@@ -224,7 +224,7 @@ impl Raytracing
         linear.powf(1.0 / GAMMA)
     }
 
-    pub fn pick(&self, x: i32, y: i32) -> Option<(String, f32)>
+    pub fn pick(&self, x: i32, y: i32) -> Option<(u32, String, f32)>
     {
         let scene = self.scene.read().unwrap();
 
@@ -259,7 +259,7 @@ impl Raytracing
 
         if let Some(intersection) = intersection
         {
-            return Some((intersection.2.get_basic().name.clone(), intersection.0));
+            return Some((intersection.2.get_basic().id, intersection.2.get_basic().name.clone(), intersection.0));
         }
 
         None
@@ -778,6 +778,11 @@ impl Raytracing
             //diffuse/specular color
             for light in &scene.lights
             {
+                if !light.enabled
+                {
+                    continue;
+                }
+
                 //get direction to light based on light type
                 let direction_to_light;
 

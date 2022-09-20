@@ -1,0 +1,14 @@
+{
+    "name": "Kbert in Roomm",
+    "objects":
+    [
+        {
+            "type": "json",
+            "path": "scene/room-no-textures.json"
+        },
+        {
+            "type": "json",
+            "path": "scene/monkey.json"
+        }
+    ]
+}
