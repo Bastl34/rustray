@@ -7,7 +7,7 @@
             "path": "scene/environment.json"
         },
         {
-            "object_name": "sponza",
+            "name": "sponza",
             "type": "gltf",
             "url": "https://github.com/Bastl34/sponza-gltf-sample/raw/main/glTF/Sponza_fixed.glb",
             "path": "data/temp/Sponza_fixed.glb",

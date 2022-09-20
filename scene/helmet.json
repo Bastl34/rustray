@@ -40,7 +40,7 @@
             "path": "scene/environment.json"
         },
         {
-            "object_name": "helmet",
+            "name": "helmet",
             "type": "gltf",
             "url": "https://github.com/KhronosGroup/glTF-Sample-Models/raw/master/2.0/DamagedHelmet/glTF-Binary/DamagedHelmet.glb",
             "path": "data/temp/DamagedHelmet.glb",

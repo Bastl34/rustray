@@ -264,9 +264,9 @@ impl Scene
 
                         // name
                         let mut name = "unknown";
-                        if !object["object_name"].is_null()
+                        if !object["name"].is_null()
                         {
-                            name = object["object_name"].as_str().unwrap();
+                            name = object["name"].as_str().unwrap();
                         }
 
                         // ***** colors
@@ -465,7 +465,7 @@ impl Scene
                                 {
                                     if *item_id == item.get_basic().id
                                     {
-                                        if !object["object_name"].is_null()
+                                        if !object["name"].is_null()
                                         {
                                             item.get_basic_mut().name = name.to_string();
                                         }
@@ -1254,11 +1254,37 @@ impl Scene
         self.bvh.traverse(&ray, &self.items)
     }
 
-    pub fn get_by_name(&mut self, name: &str) -> Option<&mut ScemeItem>
+    pub fn get_by_name_mut(&mut self, name: &str) -> Option<&mut ScemeItem>
     {
         for item in & mut self.items
         {
             if item.get_basic().name == name
+            {
+                return Some(item);
+            }
+        }
+
+        None
+    }
+
+    pub fn get_by_id(&self, id: u32) -> Option<&ScemeItem>
+    {
+        for item in & self.items
+        {
+            if item.get_basic().id == id
+            {
+                return Some(item);
+            }
+        }
+
+        None
+    }
+
+    pub fn get_by_id_mut(&mut self, id: u32) -> Option<&mut ScemeItem>
+    {
+        for item in & mut self.items
+        {
+            if item.get_basic().id == id
             {
                 return Some(item);
             }

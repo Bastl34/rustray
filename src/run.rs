@@ -2,7 +2,7 @@ extern crate rand;
 extern crate image;
 
 use chrono::{Datelike, Timelike, Utc, DateTime};
-use egui::Color32;
+use egui::{Color32, ScrollArea};
 use nalgebra::Vector3;
 
 use std::{fs};
@@ -683,6 +683,63 @@ impl Run
                 ui.add(egui::Slider::new(&mut max_recursion_new, 1..=64).text("max recursion"));
                 ui.checkbox(&mut gamma_correction_new, "gamma correction");
 
+                ui.separator();
+
+                // ********** scene items **********
+                ui.heading("Scene Items");
+
+                let scene_items;
+                {
+                    scene_items = self.scene.read().unwrap().items.len();
+                }
+
+                let mut height = 10.0;
+                if scene_items > 0
+                {
+                    height = 200.0;
+                }
+
+                let scroll_area = ScrollArea::vertical().max_height(height).auto_shrink([false; 2]);
+
+                scroll_area.show(ui, |ui|
+                {
+                    ui.vertical(|ui|
+                    {
+                        let mut scene_items = vec![];
+                        {
+                            let scene = self.scene.read().unwrap();
+                            for item in & scene.items
+                            {
+                                scene_items.push((item.get_basic().id, item.get_basic().name.clone()));
+                            }
+                        }
+
+                        for item in & scene_items
+                        {
+                            ui.collapsing(format!("{}: {}", item.0, item.1), |ui|
+                            {
+                                ui.horizontal_wrapped(|ui|
+                                {
+                                    let mut visible;
+                                    {
+                                        let scene = self.scene.read().unwrap();
+                                        let item = scene.get_by_id(item.0).unwrap();
+                                        visible = item.get_basic().visible;
+                                    }
+
+                                    if ui.checkbox(&mut visible, "Visible").changed()
+                                    {
+                                        let mut scene = self.scene.write().unwrap();
+                                        let item = scene.get_by_id_mut(item.0).unwrap();
+                                        item.get_basic_mut().visible = visible;
+                                    };
+                                });
+                            });
+                            ui.end_row();
+                        }
+                    });
+                })
+                .inner;
 
                 ui.separator();
             });
