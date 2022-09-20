@@ -896,7 +896,7 @@ impl Raytracing
                 reflectivity = tex_reflexivity.x;
             }
 
-            color = color * (1.0 - reflectivity);
+            //color = color * (1.0 - reflectivity);
 
             if item.get_material().reflectivity > 0.0 && depth <= self.config.max_recursion
             {

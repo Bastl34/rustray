@@ -833,8 +833,9 @@ impl Scene
 
                 let base_color = material.pbr.base_color_factor;
                 item.get_basic_mut().material.base_color = Vector3::<f32>::new(base_color.x, base_color.y, base_color.z);
-                item.get_basic_mut().material.specular_color = item.get_basic_mut().material.base_color * 0.8;
+                item.get_basic_mut().material.specular_color = item.get_basic_mut().material.base_color * 0.8; // TODO 🤔
 
+                item.get_basic_mut().material.alpha = base_color.w;
                 item.get_basic_mut().material.reflectivity = material.pbr.metallic_factor;
                 item.get_basic_mut().material.roughness = material.pbr.roughness_factor;
 
