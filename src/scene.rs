@@ -836,8 +836,10 @@ impl Scene
                 item.get_basic_mut().material.specular_color = item.get_basic_mut().material.base_color * 0.8; // TODO 🤔
 
                 item.get_basic_mut().material.alpha = base_color.w;
-                item.get_basic_mut().material.reflectivity = material.pbr.metallic_factor;
-                item.get_basic_mut().material.roughness = material.pbr.roughness_factor;
+                item.get_basic_mut().material.reflectivity = material.pbr.metallic_factor * 0.5; // do not use full metallic_factor as reflectivity --> otherwise the object will be just complete mirror if metallic is set to 1.0
+                item.get_basic_mut().material.roughness = (1.0 / PI / 2.0) * material.pbr.roughness_factor;
+                //item.get_basic_mut().material.roughness = material.pbr.roughness_factor;
+                //item.get_basic_mut().material.reflectivity = material.pbr.metallic_factor * (1.0 - item.get_basic_mut().material.roughness);
 
                 // base map
                 if material.pbr.base_color_texture.is_some()

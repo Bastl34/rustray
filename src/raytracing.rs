@@ -896,9 +896,10 @@ impl Raytracing
                 reflectivity = tex_reflexivity.x;
             }
 
-            //color = color * (1.0 - reflectivity);
+            color = color * (1.0 - reflectivity);
 
-            if item.get_material().reflectivity > 0.0 && depth <= self.config.max_recursion
+            //if item.get_material().reflectivity > 0.0 && depth <= self.config.max_recursion
+            if reflectivity > 0.0 && depth <= self.config.max_recursion
             {
                 let reflection_ray = self.create_reflection(surface_normal, r.dir, hit_point);
                 let reflection_color = self.get_color(reflection_ray, depth + 1 );
@@ -906,7 +907,6 @@ impl Raytracing
                 //color = color + (reflection_color * reflectivity * kr);
                 color = color + (reflection_color * reflectivity);
             }
-
             //refraction
             if alpha < 1.0 && depth <= self.config.max_recursion
             {
