@@ -2,12 +2,12 @@ extern crate rand;
 extern crate image;
 
 use chrono::{Datelike, Timelike, Utc, DateTime};
-use egui::{Color32, ScrollArea, Pos2, lerp, vec2, Shape, Stroke, Rect, pos2, Sense};
+use egui::{Color32, ScrollArea};
 use nalgebra::Vector3;
 
 use std::f32::consts::PI;
 use std::{fs};
-use std::sync::{RwLock, Arc};
+use std::sync::{RwLock, Arc, Mutex};
 use std::{io::Write, thread};
 use std::time::{Instant, Duration};
 
@@ -28,6 +28,14 @@ const POS_PATH: &str = "data/pos.data";
 const SCENE_PATH: &str = "scene/";
 
 const DEFAULT_RES: (i32, i32) = (800, 600);
+
+#[derive(PartialEq)]
+pub enum SceneLoadType
+{
+    Loading,
+    RaytracingInitNeeded,
+    Complete,
+}
 
 // ******************** Stats ********************
 pub struct Stats
@@ -94,6 +102,8 @@ pub struct Run//<'a>
     window: bool,
     animate: bool,
 
+    loading_scene: Arc<Mutex<SceneLoadType>>,
+
     dir_scenes_list: Vec<String>,
     rendering_scenes_list: Vec<String>,
 
@@ -130,6 +140,8 @@ impl Run
 
             animate: animate,
 
+            loading_scene: std::sync::Arc::new(std::sync::Mutex::new(SceneLoadType::RaytracingInitNeeded)),
+
             dir_scenes_list: vec![],
             rendering_scenes_list: scenes_list,
 
@@ -158,8 +170,43 @@ impl Run
         self.stats.reset();
     }
 
-    pub fn init_raytracing(&mut self)
+    pub fn init_scene(&mut self)
     {
+        { *(self.loading_scene.lock().unwrap()) = SceneLoadType::Loading; }
+
+        let width = self.width;
+        let height = self.height;
+        let frame = self.stats.frame;
+
+        let rendering_scenes_list = self.rendering_scenes_list.clone();
+
+        let loading_scene_mutex = Arc::clone(&self.loading_scene);
+
+        let scene_arc = self.scene.clone();
+
+
+        //std::thread::spawn(move ||
+        std::thread::spawn(move ||
+        {
+            let mut scene = Scene::new();
+            scene.clear();
+
+            {
+                for scene_item in &rendering_scenes_list
+                {
+                    scene.load(&scene_item);
+                }
+
+                scene.cam.init(width as u32, height as u32);
+                scene.apply_frame(frame);
+                scene.print();
+            }
+
+            *scene_arc.write().unwrap() = scene;
+
+            { *(loading_scene_mutex.lock().unwrap()) = SceneLoadType::RaytracingInitNeeded; }
+        });
+        /*
         let mut scene = Scene::new();
         scene.clear();
 
@@ -188,6 +235,35 @@ impl Run
         self.scene = scene;
         self.raytracing = raytracing_arc;
         self.rendering = rendering;
+        */
+    }
+
+    pub fn init_raytracing_if_needed(&mut self)
+    {
+        let rt_init_needed;
+        { rt_init_needed = *(self.loading_scene.lock().unwrap()) == SceneLoadType::RaytracingInitNeeded; }
+
+        if rt_init_needed
+        {
+            let scene = self.scene.clone();
+
+            let rt_config = scene.read().unwrap().raytracing_config;
+
+            //let scene = std::sync::Arc::new(std::sync::RwLock::new(scene));
+
+            let mut raytracing = Raytracing::new(scene.clone());
+            raytracing.config.apply(rt_config);
+
+            let raytracing_arc = std::sync::Arc::new(std::sync::RwLock::new(raytracing));
+
+            let rendering = RendererManager::new(self.width, self.height, raytracing_arc.clone());
+
+            self.scene = scene;
+            self.raytracing = raytracing_arc;
+            self.rendering = rendering;
+
+            { *(self.loading_scene.lock().unwrap()) = SceneLoadType::Complete; }
+        }
     }
 
     pub fn load_window_pos_and_res(&mut self)
@@ -233,7 +309,8 @@ impl Run
 
         self.init_image();
         self.init_stats();
-        self.init_raytracing();
+        self.init_scene();
+        self.init_raytracing_if_needed();
 
         self.read_scenes_from_dir();
     }
@@ -454,6 +531,9 @@ impl Run
 
     pub fn loop_update(&mut self) -> bool
     {
+        //init raytracing if needed
+        self.init_raytracing_if_needed();
+
         //apply pixels from raytracing to the buffer
         let mut change = self.apply_pixels();
 
@@ -586,7 +666,10 @@ impl Run
                 light_items = self.scene.read().unwrap().lights.len();
             }
 
-            let settings_updates_allowed = !(running && !is_done);
+            let is_loading_scene;
+            { is_loading_scene = *(self.loading_scene.lock().unwrap()) != SceneLoadType::Complete; }
+
+            let settings_updates_allowed = !(running && !is_done) && !is_loading_scene;
 
             let samples;
             let mut samples_new;
@@ -669,7 +752,12 @@ impl Run
                         items.len(),
                         |i| items[i].to_owned()
                     );
+
                     reload_scene = ui.button("⟳").clicked();
+
+                    if is_loading_scene {
+                        ui.spinner();
+                    }
                 });
                 if selected_scene_id_new != self.selected_scene_id || reload_scene
                 {
@@ -683,7 +771,7 @@ impl Run
                         self.rendering_scenes_list.push(new_scene);
                     }
 
-                    self.init_raytracing();
+                    self.init_scene();
                 }
                 ui.separator();
 
