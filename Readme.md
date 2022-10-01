@@ -14,6 +14,10 @@
 <img src="data/renderings/output_2022-5-16_15-41-8_00000000.png" width="720">
 <br>
 
+<sub>`cargo run --release -- scene/lotus.json samples=256 1280x720 monte_carlo=1`</sub>
+<img src="data/renderings/output_2022-5-16_15-41-8_00000000.png" width="720">
+<br>
+
 <sub>`cargo run --release -- scene/latern.json samples=64 1280x720 monte_carlo=1`</sub>
 <img src="data/renderings/output_2022-5-16_15-50-6_00000000.png" width="720">
 <br>

@@ -750,7 +750,7 @@ impl Raytracing
 
             //roughness map (overwrites roughness material setting)
             let roughness_tex_color = self.get_tex_color(item, &uv, TextureType::Roughness);
-            if self.config.monte_carlo && (item.get_material().roughness > 0.0 || roughness_tex_color.is_some())
+            if self.config.monte_carlo && item.get_material().monte_carlo && (item.get_material().roughness > 0.0 || roughness_tex_color.is_some())
             {
                 let mut roughness = item.get_material().roughness;
 
@@ -839,7 +839,7 @@ impl Raytracing
                     let shadow_ray_start = hit_point + (surface_normal * SHADOW_BIAS);
                     let mut shadow_ray_dir = direction_to_light;
 
-                    if self.config.monte_carlo
+                    if self.config.monte_carlo && item.get_material().monte_carlo
                     {
                         shadow_ray_dir = self.jitter(shadow_ray_dir, item.get_material().shadow_softness);
                     }

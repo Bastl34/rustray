@@ -184,9 +184,7 @@ impl Run
 
         let scene_arc = self.scene.clone();
 
-
-        //std::thread::spawn(move ||
-        std::thread::spawn(move ||
+        let thread_func = move ||
         {
             let mut scene = Scene::new();
             scene.clear();
@@ -205,37 +203,16 @@ impl Run
             *scene_arc.write().unwrap() = scene;
 
             { *(loading_scene_mutex.lock().unwrap()) = SceneLoadType::RaytracingInitNeeded; }
-        });
-        /*
-        let mut scene = Scene::new();
-        scene.clear();
+        };
 
+        if self.window
         {
-            for scene_item in &self.rendering_scenes_list
-            {
-                scene.load(&scene_item);
-            }
-
-            scene.cam.init(self.width as u32, self.height as u32);
-            scene.apply_frame(self.stats.frame);
-            scene.print();
+            std::thread::spawn(thread_func);
         }
-
-        let rt_config = scene.raytracing_config;
-
-        let scene = std::sync::Arc::new(std::sync::RwLock::new(scene));
-
-        let mut raytracing = Raytracing::new(scene.clone());
-        raytracing.config.apply(rt_config);
-
-        let raytracing_arc = std::sync::Arc::new(std::sync::RwLock::new(raytracing));
-
-        let rendering = RendererManager::new(self.width, self.height, raytracing_arc.clone());
-
-        self.scene = scene;
-        self.raytracing = raytracing_arc;
-        self.rendering = rendering;
-        */
+        else
+        {
+            thread_func();
+        }
     }
 
     pub fn init_raytracing_if_needed(&mut self)
@@ -630,6 +607,7 @@ impl eframe::App for Run
         //force update (otherwise animation is somehow not working)
         ctx.request_repaint();
 
+        self.handle_file_drop(ctx);
         self.update_gui(ctx, frame);
         self.update_states(ctx, frame);
     }
@@ -637,6 +615,24 @@ impl eframe::App for Run
 
 impl Run
 {
+    fn handle_file_drop(&mut self, ctx: &egui::Context)
+    {
+        if !ctx.input().raw.dropped_files.is_empty()
+        {
+            let dropped_files = ctx.input().raw.dropped_files.clone();
+
+
+            self.rendering_scenes_list.clear();
+
+            for file in dropped_files
+            {
+                self.rendering_scenes_list.push(file.path.unwrap().to_str().unwrap().to_string());
+            }
+
+            self.init_scene();
+        }
+    }
+
     fn update_gui(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame)
     {
         // ********** main **********
@@ -791,10 +787,10 @@ impl Run
                     // ********** scene settings **********
                     ui.heading("Scene Settings");
 
-                    ui.add(egui::Slider::new(&mut focal_length_new, 1.0..=128.0).text("focal length (unit)"));
-                    ui.add(egui::Slider::new(&mut aperture_size_new, 1.0..=128.0).text("aperture size (in px)"));
+                    ui.add(egui::Slider::new(&mut focal_length_new, 1.0..=128.0).suffix(" unit").text("focal length"));
+                    ui.add(egui::Slider::new(&mut aperture_size_new, 1.0..=128.0).suffix(" px").text("aperture size"));
 
-                    ui.add(egui::Slider::new(&mut fog_density_new, 0.0..=1.0).text("fog density (amount)"));
+                    ui.add(egui::Slider::new(&mut fog_density_new, 0.0..=1.0).text("fog density (distance based amount)"));
 
                     ui.horizontal(|ui|
                     {
@@ -818,6 +814,90 @@ impl Run
 
                     scroll_area.show(ui, |ui|
                     {
+                        // ********** camera **********
+                        ui.heading("Camera");
+                        ui.vertical(|ui|
+                        {
+                            ui.collapsing("Camera settings", |ui|
+                            {
+                                ui.horizontal_wrapped(|ui|
+                                {
+                                    let mut fov;
+
+                                    let mut eye_pos;
+                                    let mut up;
+                                    let mut dir;
+
+                                    let mut clipping_near;
+                                    let mut clipping_far;
+
+                                    {
+                                        let scene = self.scene.read().unwrap();
+                                        let cam = &scene.cam;
+
+                                        fov = cam.fov.to_degrees();
+
+                                        eye_pos = cam.eye_pos;
+                                        up = cam.up;
+                                        dir = cam.dir;
+
+                                        clipping_near = cam.clipping_near;
+                                        clipping_far = cam.clipping_far;
+                                    }
+
+                                    let mut apply_settings = false;
+
+                                    ui.vertical(|ui|
+                                    {
+                                        apply_settings = ui.add(egui::Slider::new(&mut fov, 0.001..=360.0).suffix(" °").text("field of view (fov)")).changed() || apply_settings;
+
+                                        ui.horizontal(|ui|
+                                        {
+                                            ui.label("eye pos:");
+                                            apply_settings = ui.add(egui::DragValue::new(&mut eye_pos.x).speed(0.1).prefix("x: ")).changed() || apply_settings;
+                                            apply_settings = ui.add(egui::DragValue::new(&mut eye_pos.y).speed(0.1).prefix("y: ")).changed() || apply_settings;
+                                            apply_settings = ui.add(egui::DragValue::new(&mut eye_pos.z).speed(0.1).prefix("z: ")).changed() || apply_settings;
+                                        });
+
+                                        ui.horizontal(|ui|
+                                        {
+                                            ui.label("up vector:");
+                                            apply_settings = ui.add(egui::DragValue::new(&mut up.x).speed(0.1).prefix("x: ")).changed() || apply_settings;
+                                            apply_settings = ui.add(egui::DragValue::new(&mut up.y).speed(0.1).prefix("y: ")).changed() || apply_settings;
+                                            apply_settings = ui.add(egui::DragValue::new(&mut up.z).speed(0.1).prefix("z: ")).changed() || apply_settings;
+                                        });
+
+                                        ui.horizontal(|ui|
+                                        {
+                                            ui.label("dir vector:");
+                                            apply_settings = ui.add(egui::DragValue::new(&mut dir.x).speed(0.1).prefix("x: ")).changed() || apply_settings;
+                                            apply_settings = ui.add(egui::DragValue::new(&mut dir.y).speed(0.1).prefix("y: ")).changed() || apply_settings;
+                                            apply_settings = ui.add(egui::DragValue::new(&mut dir.z).speed(0.1).prefix("z: ")).changed() || apply_settings;
+                                        });
+
+                                        apply_settings = ui.add(egui::Slider::new(&mut clipping_near, 0.0..=10.0).text("near clipping plane")).changed() || apply_settings;
+                                        apply_settings = ui.add(egui::Slider::new(&mut clipping_far, 1.0..=100000.0).text("far clipping plane")).changed() || apply_settings;
+                                    });
+
+                                    if apply_settings
+                                    {
+                                        let mut scene = self.scene.write().unwrap();
+                                        let cam = & mut scene.cam;
+
+                                        cam.fov = fov.to_radians();
+
+                                        cam.eye_pos = eye_pos;
+                                        cam.up = up;
+                                        cam.dir = dir;
+
+                                        cam.clipping_near = clipping_near;
+                                        cam.clipping_far = clipping_far;
+                                    }
+                                });
+                            });
+                            ui.end_row();
+                        });
+
                         // ********** light **********
                         ui.heading("Lights");
                         ui.vertical(|ui|
@@ -959,6 +1039,7 @@ impl Run
                                         let mut receive_shadow;
                                         let mut shadow_softness;
                                         let mut roughness;
+                                        let mut monte_carlo;
                                         let mut smooth_shading;
                                         let mut reflection_only;
                                         let mut backface_cullig;
@@ -983,6 +1064,7 @@ impl Run
                                             receive_shadow = mat.receive_shadow;
                                             shadow_softness = mat.shadow_softness;
                                             roughness = mat.roughness;
+                                            monte_carlo = mat.monte_carlo;
                                             smooth_shading = mat.smooth_shading;
                                             reflection_only = mat.reflection_only;
                                             backface_cullig = mat.backface_cullig;
@@ -1018,6 +1100,7 @@ impl Run
                                             apply_settings = ui.checkbox(&mut receive_shadow, "receive shadow").changed() || apply_settings;
                                             apply_settings = ui.add(egui::Slider::new(&mut shadow_softness, 0.0..=100.0).text("shadow softness")).changed() || apply_settings;
                                             apply_settings = ui.add(egui::Slider::new(&mut roughness, 0.0..=PI/2.0).text("roughness")).changed() || apply_settings;
+                                            apply_settings = ui.checkbox(&mut monte_carlo, "monte carlo").changed() || apply_settings;
                                             apply_settings = ui.checkbox(&mut smooth_shading, "smooth shading").changed() || apply_settings;
                                             apply_settings = ui.checkbox(&mut reflection_only, "reflection only").changed() || apply_settings;
                                             apply_settings = ui.checkbox(&mut backface_cullig, "backface cullig").changed() || apply_settings;

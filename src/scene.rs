@@ -322,6 +322,7 @@ impl Scene
                         if !&object["receive_shadow"].is_null() { material.receive_shadow = object["receive_shadow"].as_bool().unwrap(); }
                         if !&object["shadow_softness"].is_null() { material.shadow_softness = object["shadow_softness"].as_f64().unwrap() as f32; }
                         if !&object["roughness"].is_null() { material.roughness = object["roughness"].as_f64().unwrap() as f32; }
+                        if !&object["monte_carlo"].is_null() { material.monte_carlo = object["monte_carlo"].as_bool().unwrap(); }
                         if !&object["smooth_shading"].is_null() { material.smooth_shading = object["smooth_shading"].as_bool().unwrap(); }
                         if !&object["reflection_only"].is_null() { material.reflection_only = object["reflection_only"].as_bool().unwrap(); }
                         if !&object["backface_cullig"].is_null() { material.backface_cullig = object["backface_cullig"].as_bool().unwrap(); }

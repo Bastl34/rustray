@@ -112,6 +112,8 @@ pub struct Material
     pub receive_shadow: bool,
     pub shadow_softness: f32,
 
+    pub monte_carlo: bool,
+
     pub roughness: f32, //degree in rad (max PI/2)
 
     pub smooth_shading: bool,
@@ -151,6 +153,8 @@ impl Material
             shadow_softness: 0.01,
 
             roughness: 0.0,
+
+            monte_carlo: true,
 
             smooth_shading: true,
 
@@ -263,6 +267,8 @@ impl Material
 
         if !approx_equal(default_material.roughness, new_mat.roughness) { self.roughness = new_mat.roughness; }
 
+        if default_material.monte_carlo != new_mat.monte_carlo { self.monte_carlo = new_mat.monte_carlo; }
+
         if default_material.smooth_shading != new_mat.smooth_shading { self.smooth_shading = new_mat.smooth_shading; }
 
         if default_material.reflection_only != new_mat.reflection_only { self.reflection_only = new_mat.reflection_only; }
@@ -296,6 +302,8 @@ impl Material
         println!("shadow_softness: {:?}", self.shadow_softness);
 
         println!("roughness: {:?}", self.roughness);
+
+        println!("monte_carlo: {:?}", self.monte_carlo);
 
         println!("smooth_shading: {:?}", self.smooth_shading);
 
