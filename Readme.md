@@ -10,11 +10,11 @@
 <img src="data/renderings/output_2022-5-16_19-46-27_00000000.png" width="720">
 <br>
 
-<sub>`cargo run --release -- scene/room.json scene/kbert.json samples=64 1280x720 monte_carlo=1`</sub>
-<img src="data/renderings/output_2022-5-16_15-41-8_00000000.png" width="720">
+<sub>`cargo run --release -- scene/lotus.json samples=512 1280x720 monte_carlo=1`</sub>
+<img src="data/renderings/output_2022-10-1_22-9-43_00000000.png" width="720">
 <br>
 
-<sub>`cargo run --release -- scene/lotus.json samples=256 1280x720 monte_carlo=1`</sub>
+<sub>`cargo run --release -- scene/room.json scene/kbert.json samples=64 1280x720 monte_carlo=1`</sub>
 <img src="data/renderings/output_2022-5-16_15-41-8_00000000.png" width="720">
 <br>
 
@@ -52,10 +52,11 @@
 * Monte Carlo raytracing (sort of)
 * Fog
 * Matrix based transformations
-* Json based scenes
+* JSON based scenes
 * GLTF based scenes
 * PBR (sort of)
 * Basic animation support
+* UI for property changes
 
 ## usage
 use cargo watch to run release version:
@@ -64,11 +65,10 @@ use cargo watch to run release version:
 cargo install cargo-watch
 
 #run with watch:
-cargo watch -s "cargo run --release -- scene/helmet.json no-animation" -w src/
+cargo watch -s "cargo run --release" -w src/
 
 #run without watch
-cargo run --release -- SCENE_NAME
-cargo run --release -- scene/helmet.json
+cargo run --release
 ```
 
 ## command line args
