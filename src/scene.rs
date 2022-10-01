@@ -1213,6 +1213,82 @@ impl Scene
         loaded_ids
     }
 
+    pub fn add_light(&mut self, pos: Point3::<f32>, dir: Vector3::<f32>, color: Vector3::<f32>, intensity: f32, max_angle: f32, light_type: LightType)
+    {
+        let id = self.get_next_id();
+        self.lights.push(Box::new(Light
+        {
+            enabled: true,
+            id: id,
+            pos: pos,
+            dir: dir,
+            color: color,
+            intensity: intensity,
+            max_angle: max_angle,
+            light_type: light_type
+        }));
+    }
+
+    pub fn add_default_light(&mut self)
+    {
+        let id = self.get_next_id();
+        self.lights.push(Box::new(Light
+        {
+            enabled: true,
+            id: id,
+            pos: Point3::<f32>::new(2.0, 10.0, 5.0),
+            dir: Vector3::<f32>::new(0.0, -1.0, 0.0),
+            color: Vector3::<f32>::new(1.0, 1.0, 1.0),
+            intensity: 500.0,
+            max_angle: PI / 2.0,
+            light_type: LightType::Point
+        }));
+    }
+
+    pub fn delete_light_by_id(&mut self, id: u32)
+    {
+        let mut index: Option<usize> = None;
+
+        let mut i: usize = 0;
+        for light in &self.lights
+        {
+            if light.id == id
+            {
+                index = Some(i);
+            }
+
+            i += 1;
+        }
+
+
+        if let Some(index) = index
+        {
+            self.lights.remove(index);
+        }
+    }
+
+    pub fn delete_object_by_id(&mut self, id: u32)
+    {
+        let mut index: Option<usize> = None;
+
+        let mut i: usize = 0;
+        for item in &self.items
+        {
+            if item.get_basic().id == id
+            {
+                index = Some(i);
+            }
+
+            i += 1;
+        }
+
+
+        if let Some(index) = index
+        {
+            self.items.remove(index);
+        }
+    }
+
     pub fn get_texture_path(&self, tex_path: &String, mtl_path: &str) -> String
     {
         let mut tex_path = tex_path.clone();

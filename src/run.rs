@@ -2,7 +2,7 @@ extern crate rand;
 extern crate image;
 
 use chrono::{Datelike, Timelike, Utc, DateTime};
-use egui::{Color32, ScrollArea};
+use egui::{Color32, ScrollArea, RichText};
 use nalgebra::Vector3;
 
 use std::f32::consts::PI;
@@ -899,7 +899,17 @@ impl Run
                         });
 
                         // ********** light **********
-                        ui.heading("Lights");
+                        ui.horizontal(|ui|
+                        {
+                            ui.heading("Lights");
+
+                            if ui.button("+").clicked()
+                            {
+                                let mut scene = self.scene.write().unwrap();
+                                scene.add_default_light();
+                            }
+                        });
+
                         ui.vertical(|ui|
                         {
                             let mut light_items = vec![];
@@ -1004,6 +1014,12 @@ impl Run
                                             item.light_type = light_type;
                                         }
                                     });
+
+                                    if ui.button(RichText::new("delete").color(ui.visuals().error_fg_color)).clicked()
+                                    {
+                                        let mut scene = self.scene.write().unwrap();
+                                        scene.delete_light_by_id(item.0);
+                                    }
                                 });
                                 ui.end_row();
                             }
@@ -1162,6 +1178,12 @@ impl Run
                                             mat.specular_color = Vector3::<f32>::new(r, g, b);
                                         }
                                     });
+
+                                    if ui.button(RichText::new("delete").color(ui.visuals().error_fg_color)).clicked()
+                                    {
+                                        let mut scene = self.scene.write().unwrap();
+                                        scene.delete_object_by_id(item.0);
+                                    }
                                 });
                                 ui.end_row();
                             }
