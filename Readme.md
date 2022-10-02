@@ -2,35 +2,35 @@
 
 ## Screenshots
 
-<sub>`cargo run --release -- scene/helmet.json samples=64 1280x720 monte_carlo=1`</sub>
+<sub>`cargo run --release`</sub><br>
+<img src="data/images/ui.png" width="720">
+<br>
+
+<sub>`cargo run --release -- scene/helmet.json samples=64 1280x720 monte_carlo=1`</sub><br>
 <img src="data/renderings/output_2022-5-16_16-50-21.webp" width="720">
 <br>
 
-<sub>`cargo run --release -- scene/sponza.json samples=128 1280x720 monte_carlo=1`</sub>
+<sub>`cargo run --release -- scene/sponza.json samples=128 1280x720 monte_carlo=1`</sub><br>
 <img src="data/renderings/output_2022-5-16_19-46-27_00000000.png" width="720">
 <br>
 
-<sub>`cargo run --release -- scene/lotus.json samples=512 1280x720 monte_carlo=1`</sub>
+<sub>`cargo run --release -- scene/lotus.json samples=512 1280x720 monte_carlo=1`</sub><br>
 <img src="data/renderings/output_2022-10-1_22-9-43_00000000.png" width="720">
 <br>
 
-<sub>`cargo run --release -- scene/room.json scene/kbert.json samples=64 1280x720 monte_carlo=1`</sub>
+<sub>`cargo run --release -- scene/room.json scene/kbert.json samples=64 1280x720 monte_carlo=1`</sub><br>
 <img src="data/renderings/output_2022-5-16_15-41-8_00000000.png" width="720">
 <br>
 
-<sub>`cargo run --release -- scene/latern.json samples=64 1280x720 monte_carlo=1`</sub>
-<img src="data/renderings/output_2022-5-16_15-50-6_00000000.png" width="720">
-<br>
-
-<sub>`cargo run --release -- scene/corset.json samples=256 1280x720 monte_carlo=1`</sub>
+<sub>`cargo run --release -- scene/corset.json samples=256 1280x720 monte_carlo=1`</sub><br>
 <img src="data/renderings/output_2022-5-16_15-52-24_00000000.png" width="720">
 <br>
 
-<sub>`cargo run --release -- scene/floor.json scene/monkey.json samples=32 1280x720 monte_carlo=1`</sub>
+<sub>`cargo run --release -- scene/floor.json scene/monkey.json samples=32 1280x720 monte_carlo=1`</sub><br>
 <img src="data/renderings/output_2022-5-16_20-47-31_00000000.png" width="720">
 <br>
 
-<sub>`cargo run --release -- scene/room-no-textures.json scene/spheres.json samples=128 1280x720 monte_carlo=1`</sub>
+<sub>`cargo run --release -- scene/room-no-textures.json scene/spheres.json samples=128 1280x720 monte_carlo=1`</sub><br>
 <img src="data/renderings/output_2022-5-16_21-24-33_00000000.png" width="720">
 <br>
 
