@@ -1,3 +1,4 @@
+use nalgebra::Vector3;
 use rand::Rng;
 
 use std::fs::File;
@@ -34,4 +35,16 @@ pub fn download(url: &str, local_path: &str) -> attohttpc::Result
 pub fn interpolate(a: f32, b: f32, f: f32) -> f32
 {
     return a + f * (b - a);
+}
+
+// https://stackoverflow.com/a/16544330
+pub fn plane_based_vector_angle(a1: Vector3<f32>, a2: Vector3<f32>) -> f32
+{
+    // get the normal of the plane
+    let n = a1.cross(&a2);
+
+    let dot = a1.x*a2.x + a1.y*a2.y + a1.z*a2.z;
+    let det = a1.x*a2.y*n.z + a2.x*n.y*a1.z + n.x*a1.y*a2.z - a1.z*a2.y*n.x - a2.z*n.y*a1.x - n.z*a1.y*a2.x;
+
+    det.atan2(dot)
 }

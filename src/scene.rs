@@ -170,7 +170,7 @@ impl Scene
                 if !config.is_null()
                 {
                     if !&config["monte_carlo"].is_null() { self.raytracing_config.monte_carlo = config["monte_carlo"].as_bool().unwrap(); }
-                    if !&config["samples"].is_null() { self.raytracing_config.samples = config["samples"].as_u64().unwrap() as u16; }
+                    if !&config["samples"].is_null() { self.raytracing_config.samples = config["samples"].as_u64().unwrap() as u16;}
 
                     if !&config["focal_length"].is_null() { self.raytracing_config.focal_length = config["focal_length"].as_f64().unwrap() as f32; }
                     if !&config["aperture_size"].is_null() { self.raytracing_config.aperture_size = config["aperture_size"].as_f64().unwrap() as f32; }
@@ -1444,6 +1444,11 @@ impl Scene
 
     pub fn print(&self)
     {
+        println!("");
+        println!("config:");
+        println!("======");
+        self.raytracing_config.print();
+
         println!("");
         println!("cam:");
         println!("==========");

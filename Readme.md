@@ -79,6 +79,7 @@ cargo run --release
 * `samples=1234` -- set samples amount
 * `800x600` -- set render resolution
 * `monte_carlo=1` -- enable monte carlo rendering
+* `start=1` -- start rendering right away
 
 
 ```bash

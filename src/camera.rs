@@ -1,6 +1,6 @@
 use nalgebra::{Matrix4, Perspective3, Point3, Isometry3, Vector3};
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Camera
 {
     pub width: u32,

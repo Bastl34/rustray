@@ -1,6 +1,7 @@
 use std::f32::consts::PI;
 use std::sync::{RwLock, Arc};
 
+use crate::post_processing::PostProcessingConfig;
 use crate::shape::{Shape, TextureType};
 
 use crate::scene::{Scene, LightType};
@@ -51,12 +52,17 @@ pbr shading
 https://gist.github.com/galek/53557375251e1a942dfa
 */
 
-// ******************** PixelColor ********************
-pub struct PixelColor
+// ******************** PixelData ********************
+pub struct PixelData
 {
     pub r: u8,
     pub g: u8,
     pub b: u8,
+
+    pub normal: Vector3<f32>,
+    pub depth: f32,
+
+    pub object_id: u32,
 
     pub x: i32,
     pub y: i32
@@ -197,8 +203,9 @@ impl RaytracingConfig
 
 pub struct Raytracing
 {
-    scene: Arc<RwLock<Scene>>,
-    pub config: RaytracingConfig
+    pub scene: Arc<RwLock<Scene>>,
+    pub config: RaytracingConfig,
+    pub post_processing: PostProcessingConfig
 }
 
 impl Raytracing
@@ -209,7 +216,9 @@ impl Raytracing
         {
             scene: scene,
 
-            config: RaytracingConfig::new()
+            config: RaytracingConfig::new(),
+
+            post_processing: PostProcessingConfig::new()
         }
     }
 
@@ -265,7 +274,7 @@ impl Raytracing
         None
     }
 
-    pub fn render(&self, x: i32, y: i32) -> PixelColor
+    pub fn render(&self, x: i32, y: i32) -> PixelData
     {
         let scene = self.scene.read().unwrap();
 
@@ -303,6 +312,10 @@ impl Raytracing
 
         //truncate by samples-amout
         samples.truncate(self.config.samples as usize);
+
+        let mut depth = 0.0;
+        let mut normal = Vector3::<f32>::zeros();
+        let mut object_id = 0;
 
         for sample in &samples
         {
@@ -383,32 +396,35 @@ impl Raytracing
                 ray = Ray::new(Point3::<f32>::from(origin.xyz()), Vector3::<f32>::from(dir.xyz()));
             }
 
-            color += self.get_color(ray, 1);
+            let res = self.get_color_depth_normal_id(ray, 1);
+
+            color += res.0;
+            depth += res.1;
+            normal += res.2;
+            object_id = res.3;
         }
 
         color /= samples.len() as f32;
+        depth /= samples.len() as f32;
+        normal /= samples.len() as f32;
 
         //clamp
         color.x = color.x.min(1.0);
         color.y = color.y.min(1.0);
         color.z = color.z.min(1.0);
 
+        let mut r = (color.x * 255.0) as u8;
+        let mut g = (color.y * 255.0) as u8;
+        let mut b = (color.z * 255.0) as u8;
+
         if self.config.gamma_correction
         {
-            let r = (self.gamma_encode(color.x) * 255.0) as u8;
-            let g = (self.gamma_encode(color.y) * 255.0) as u8;
-            let b = (self.gamma_encode(color.z) * 255.0) as u8;
-
-            PixelColor { r: r, g: g, b: b, x: x, y: y }
+            r = (self.gamma_encode(color.x) * 255.0) as u8;
+            g = (self.gamma_encode(color.y) * 255.0) as u8;
+            b = (self.gamma_encode(color.z) * 255.0) as u8;
         }
-        else
-        {
-            let r = (color.x * 255.0) as u8;
-            let g = (color.y * 255.0) as u8;
-            let b = (color.z * 255.0) as u8;
 
-            PixelColor { r: r, g: g, b: b, x: x, y: y }
-        }
+        PixelData { r: r, g: g, b: b, x: x, y: y, depth: depth, object_id: object_id, normal: normal.normalize() }
     }
 
     pub fn trace<'a>(&self, scene: &'a Scene, ray: &Ray, stop_on_first_hit: bool, for_shadow: bool, depth: u16) -> Option<(f32, Vector3<f32>, &'a dyn Shape, u32)>
@@ -689,7 +705,7 @@ impl Raytracing
         i - 2.0 * n.dot(&i) * n
     }
 
-    pub fn get_color(&self, ray: Ray, depth: u16) -> Vector3<f32>
+    pub fn get_color_depth_normal_id(&self, ray: Ray, depth: u16) -> (Vector3<f32>, f32, Vector3<f32>, u32)
     {
         let scene = self.scene.read().unwrap();
 
@@ -699,6 +715,10 @@ impl Raytracing
         //intersect
         let intersection = self.trace(&scene, &r, false, false, depth);
 
+        let mut out_depth: f32 = 0.0;
+        let mut out_normal = Vector3::zeros();
+        let mut out_id: u32 = 0;
+
         let mut color = Vector3::new(0.0, 0.0, 0.0);
 
         if let Some(intersection) = intersection
@@ -707,6 +727,10 @@ impl Raytracing
             let normal = intersection.1;
             let item = intersection.2;
             let face_id = intersection.3;
+
+            out_depth = hit_dist;
+            out_normal = normal;
+            out_id = intersection.2.get_basic().id;
 
             let mut surface_normal = normal;
             let hit_point = r.origin + (r.dir * hit_dist);
@@ -902,7 +926,7 @@ impl Raytracing
             if reflectivity > 0.0 && depth <= self.config.max_recursion
             {
                 let reflection_ray = self.create_reflection(surface_normal, r.dir, hit_point);
-                let reflection_color = self.get_color(reflection_ray, depth + 1 );
+                let reflection_color = self.get_color_depth_normal_id(reflection_ray, depth + 1).0;
 
                 //color = color + (reflection_color * reflectivity * kr);
                 color = color + (reflection_color * reflectivity);
@@ -914,7 +938,7 @@ impl Raytracing
 
                 if let Some(transmission_ray) = transmission_ray
                 {
-                    let refraction_color = self.get_color(transmission_ray, depth + 1);
+                    let refraction_color = self.get_color_depth_normal_id(transmission_ray, depth + 1).0;
 
                     if kr < 1.0
                     {
@@ -951,6 +975,6 @@ impl Raytracing
             color += ambient_color.xyz();
         }
 
-        color
+        (color, out_depth, out_normal, out_id)
     }
 }

@@ -3,7 +3,8 @@ extern crate image;
 
 use chrono::{Datelike, Timelike, Utc, DateTime};
 use egui::{Color32, ScrollArea, RichText};
-use nalgebra::Vector3;
+use nalgebra::{Vector3};
+
 
 use std::f32::consts::PI;
 use std::{fs};
@@ -18,6 +19,8 @@ use image::{ImageBuffer, RgbaImage, Rgba};
 
 use std::fs::File;
 
+use crate::camera::Camera;
+use crate::post_processing::run_post_processing;
 use crate::renderer::RendererManager;
 use crate::raytracing::Raytracing;
 use crate::scene::{Scene, LightType};
@@ -103,11 +106,16 @@ pub struct Run//<'a>
     animate: bool,
 
     loading_scene: Arc<Mutex<SceneLoadType>>,
+    start_after_init: bool,
 
     dir_scenes_list: Vec<String>,
     rendering_scenes_list: Vec<String>,
 
     image: RgbaImage,
+    normals: Vec<Vector3<f32>>, // access data via: y * w + x
+    depth: Vec<f32>,
+    objects: Vec<u32>,
+
     scene: Arc<RwLock<Scene>>,
     pub raytracing: Arc<RwLock<Raytracing>>,
     rendering: RendererManager,
@@ -122,7 +130,7 @@ pub struct Run//<'a>
 
 impl Run
 {
-    pub fn new(width: i32, height: i32, window: bool, scenes_list: Vec<String>, animate: bool) -> Run
+    pub fn new(width: i32, height: i32, window: bool, scenes_list: Vec<String>, animate: bool, start_after_init: bool) -> Run
     {
         let scene = Arc::new(RwLock::new(Scene::new()));
         let rt = Arc::new(RwLock::new(Raytracing::new(scene.clone())));
@@ -144,12 +152,16 @@ impl Run
 
             dir_scenes_list: vec![],
             rendering_scenes_list: scenes_list,
+            start_after_init: start_after_init,
 
             scene: scene,
             raytracing: rt,
             rendering: rendering,
 
             image: ImageBuffer::new(0, 0),
+            normals: vec![],
+            depth: vec![],
+            objects: vec![],
 
             stats: Stats::new(),
 
@@ -162,7 +174,13 @@ impl Run
 
     pub fn init_image(&mut self)
     {
-        self.image = ImageBuffer::new(self.width as u32, self.height as u32);
+        let w = self.width as usize;
+        let h = self.height as usize;
+
+        self.image = ImageBuffer::new(w as u32, h as u32);
+        self.normals = vec![Vector3::<f32>::zeros(); w * h];
+        self.depth = vec![0.0; w * h];
+        self.objects = vec![0; w * h];
     }
 
     pub fn init_stats(&mut self)
@@ -188,6 +206,10 @@ impl Run
         {
             let mut scene = Scene::new();
             scene.clear();
+
+            {
+                scene.raytracing_config.apply(scene_arc.read().unwrap().raytracing_config);
+            }
 
             {
                 for scene_item in &rendering_scenes_list
@@ -240,6 +262,17 @@ impl Run
             self.rendering = rendering;
 
             { *(self.loading_scene.lock().unwrap()) = SceneLoadType::Complete; }
+
+            let scene_len;
+            {
+                scene_len = self.scene.read().unwrap().items.len();
+            }
+
+            if self.start_after_init == true && scene_len > 0
+            {
+                self.start_after_init = false;
+                self.restart_rendering();
+            }
         }
     }
 
@@ -369,7 +402,7 @@ impl Run
         self.print_frame_info();
 
         //restart
-        self.image = ImageBuffer::new(self.width as u32, self.height as u32);
+        self.init_image();
         self.rendering.restart(self.width, self.height);
     }
 
@@ -414,7 +447,7 @@ impl Run
             self.print_frame_info();
 
             //restart
-            self.image = ImageBuffer::new(self.width as u32, self.height as u32);
+            self.init_image();
             self.rendering.restart(self.width, self.height);
         }
 
@@ -475,7 +508,20 @@ impl Run
                 //check range to prevent draing something outside while resizing
                 if item.x < self.image.width() as i32 && item.y < self.image.height() as i32
                 {
-                    self.image.put_pixel(item.x as u32, item.y as u32, Rgba([item.r, item.g, item.b, 255]));
+                    let x = item.x as usize;
+                    let y = item.y as usize;
+                    let w = self.image.width() as usize;
+                    let color = Rgba([item.r, item.g, item.b, 255]);
+                    let normal = item.normal;
+                    let depth = item.depth;
+                    let object = item.object_id;
+
+                    //let color = Rgba([(item.normal.x * 255.0) as u8, (item.normal.y * 255.0) as u8, (item.normal.z * 255.0) as u8, 255]);
+                    self.image.put_pixel(x as u32, y as u32, color);
+                    self.normals[y * w + x] = normal;
+                    self.depth[y * w + x] = depth;
+                    self.objects[y * w + x] = object;
+
                     self.stats.pps_current += 1;
                     change = true;
                 }
@@ -485,7 +531,7 @@ impl Run
         change
     }
 
-    pub fn save_image(&mut self)
+    pub fn save_image(&mut self, postfix: Option<&str>)
     {
         let mut out_dir = IMAGE_PATH;
 
@@ -502,8 +548,42 @@ impl Run
             }
         }
 
-        let filename = format!("{}/output_{}-{}-{}_{}-{}-{}_{:0>8}.png", out_dir, self.stats.output_time.year(), self.stats.output_time.month(), self.stats.output_time.day(), self.stats.output_time.hour(), self.stats.output_time.minute(), self.stats.output_time.second(), self.stats.frame);
-        self.image.save(filename).unwrap();
+        //let filename = format!("{}/output_{}-{}-{}_{}-{}-{}_{:0>8}.png", out_dir, self.stats.output_time.year(), self.stats.output_time.month(), self.stats.output_time.day(), self.stats.output_time.hour(), self.stats.output_time.minute(), self.stats.output_time.second(), self.stats.frame);
+        let mut filename = format!("{}/output_{}-{}-{}_{}-{}-{}_{:0>8}", out_dir, self.stats.output_time.year(), self.stats.output_time.month(), self.stats.output_time.day(), self.stats.output_time.hour(), self.stats.output_time.minute(), self.stats.output_time.second(), self.stats.frame);
+        if postfix.is_some()
+        {
+            filename = format!("{}_{}.png", filename, postfix.unwrap());
+        }
+        else
+        {
+            filename = format!("{}.png", filename);
+        }
+
+
+        let res = self.image.save(&filename);
+
+        if res.is_err()
+        {
+            println!("error on saving image to {}", &filename);
+        }
+        else
+        {
+            println!("image saved to {}", &filename);
+        }
+    }
+
+    pub fn post_processing(&mut self)
+    {
+        let config;
+        let cam: Camera;
+        {
+            config = self.raytracing.read().unwrap().post_processing.clone();
+            cam = self.raytracing.read().unwrap().scene.read().unwrap().cam.clone();
+        }
+
+        let processed_image = run_post_processing(config, &self.image, &self.normals, &self.depth, &self.objects, &cam);
+        self.image = processed_image.clone();
+        self.save_image(Some("post"));
     }
 
     pub fn loop_update(&mut self) -> bool
@@ -532,7 +612,7 @@ impl Run
                 self.stats.completed = true;
 
                 //save
-                self.save_image()
+                self.save_image(None)
             }
 
             if !self.stats.completed
@@ -800,6 +880,52 @@ impl Run
 
                     ui.add(egui::Slider::new(&mut max_recursion_new, 1..=64).text("max recursion"));
                     ui.checkbox(&mut gamma_correction_new, "gamma correction");
+
+                    ui.separator();
+
+                    {
+                        if samples != samples_new { self.raytracing.write().unwrap().config.samples = samples_new; }
+                        if monte_carlo != monte_carlo_new { self.raytracing.write().unwrap().config.monte_carlo = monte_carlo_new; }
+                        if threads != threads_new { self.rendering.thread_amount = threads_new; }
+
+                        if focal_length != focal_length_new { self.raytracing.write().unwrap().config.focal_length = focal_length_new; }
+                        if aperture_size != aperture_size_new { self.raytracing.write().unwrap().config.aperture_size = aperture_size_new; }
+                        if fog_density != fog_density_new { self.raytracing.write().unwrap().config.fog_density = fog_density_new; }
+                        if fog_color != fog_color_new
+                        {
+                            let r = ((fog_color_new.r() as f32) / 255.0).clamp(0.0, 1.0);
+                            let g = ((fog_color_new.g() as f32) / 255.0).clamp(0.0, 1.0);
+                            let b = ((fog_color_new.b() as f32) / 255.0).clamp(0.0, 1.0);
+                            self.raytracing.write().unwrap().config.fog_color = Vector3::<f32>::new(r, g, b);
+                        }
+                        if max_recursion != max_recursion_new { self.raytracing.write().unwrap().config.max_recursion = max_recursion_new; }
+                        if gamma_correction != gamma_correction_new { self.raytracing.write().unwrap().config.gamma_correction = gamma_correction_new; }
+                    }
+
+                    // ********** Post Processing **********
+                    ui.heading("Post Processing");
+
+                    let mut cavaty;
+                    let mut outline;
+                    {
+                        let rt = self.raytracing.read().unwrap();
+                        cavaty = rt.post_processing.cavity;
+                        outline = rt.post_processing.outline;
+                    }
+
+                    {
+                        let mut apply_settings = false;
+
+                        apply_settings = ui.checkbox(&mut cavaty, "Cavity").changed() || apply_settings;
+                        apply_settings = ui.checkbox(&mut outline, "Outline").changed() || apply_settings;
+
+                        if apply_settings
+                        {
+                            let mut rt = self.raytracing.write().unwrap();
+                            rt.post_processing.cavity = cavaty;
+                            rt.post_processing.outline = outline;
+                        }
+                    }
 
                     ui.separator();
 
@@ -1196,23 +1322,8 @@ impl Run
                 }
             });
 
-            if samples != samples_new { self.raytracing.write().unwrap().config.samples = samples_new; }
-            if monte_carlo != monte_carlo_new { self.raytracing.write().unwrap().config.monte_carlo = monte_carlo_new; }
-            if threads != threads_new { self.rendering.thread_amount = threads_new; }
 
-            if focal_length != focal_length_new { self.raytracing.write().unwrap().config.focal_length = focal_length_new; }
-            if aperture_size != aperture_size_new { self.raytracing.write().unwrap().config.aperture_size = aperture_size_new; }
-            if fog_density != fog_density_new { self.raytracing.write().unwrap().config.fog_density = fog_density_new; }
-            if fog_color != fog_color_new
-            {
-                let r = ((fog_color_new.r() as f32) / 255.0).clamp(0.0, 1.0);
-                let g = ((fog_color_new.g() as f32) / 255.0).clamp(0.0, 1.0);
-                let b = ((fog_color_new.b() as f32) / 255.0).clamp(0.0, 1.0);
-                self.raytracing.write().unwrap().config.fog_color = Vector3::<f32>::new(r, g, b);
-            }
-            if max_recursion != max_recursion_new { self.raytracing.write().unwrap().config.max_recursion = max_recursion_new; }
-            if gamma_correction != gamma_correction_new { self.raytracing.write().unwrap().config.gamma_correction = gamma_correction_new; }
-
+            // ********** start rendering **********
             if scene_items > 0
             {
                 if running && !is_done
@@ -1225,11 +1336,19 @@ impl Run
                 }
                 else
                 {
-                    if ui.button("Start Rendering").clicked()
+                    ui.horizontal(|ui|
                     {
-                        self.restart_rendering();
-                        self.stopped = false;
-                    }
+                        if ui.button("Start Rendering").clicked()
+                        {
+                            self.restart_rendering();
+                            self.stopped = false;
+                        }
+
+                        if ui.button("Start Post Processing").clicked()
+                        {
+                            self.post_processing();
+                        }
+                    });
                 }
             }
         });
@@ -1341,6 +1460,5 @@ impl Run
             let mut file = File::create(POS_PATH).unwrap();
             let _ = file.write(format!("{}x{}x{}x{}", self.window_x, self.window_y, self.width, self.height).as_bytes());
         }
-
     }
 }

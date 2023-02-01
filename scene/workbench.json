@@ -1,0 +1,11 @@
+{
+    "name": "Workbench",
+    "objects":
+    [
+        {
+            "type": "gltf",
+            "url": "https://github.com/Bastl34/gltf-samples/raw/main/workbench/workbench.glb",
+            "path": "data/temp/Workbench.glb"
+        }
+    ]
+}
