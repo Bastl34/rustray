@@ -3,7 +3,7 @@ use bvh::bounding_hierarchy::BHShape;
 use nalgebra::{Matrix4, Vector3, Point2, Point3, Rotation3, Vector4};
 use parry3d::query::{Ray};
 
-use parry3d::bounding_volume::AABB;
+use parry3d::bounding_volume::Aabb;
 
 use image::{DynamicImage, GenericImageView, Pixel};
 
@@ -513,7 +513,7 @@ pub struct ShapeBasics
     pub trans: Matrix4<f32>,
     tran_inverse: Matrix4<f32>,
 
-    pub b_box: AABB,
+    pub b_box: Aabb,
 
     pub material: Material,
 
@@ -533,7 +533,7 @@ impl ShapeBasics
             visible: true,
             trans: Matrix4::<f32>::identity(),
             tran_inverse: Matrix4::<f32>::identity(),
-            b_box: AABB::new_invalid(),
+            b_box: Aabb::new_invalid(),
             material: Material::new(),
             animation_data: AnimationData::new(),
 
