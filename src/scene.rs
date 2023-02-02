@@ -8,6 +8,7 @@ use easy_gltf::Light::{Directional, Point, Spot};
 use image::{DynamicImage, Rgba, RgbaImage, ImageBuffer};
 
 use crate::helper::download;
+use crate::post_processing::PostProcessingConfig;
 use crate::raytracing::RaytracingConfig;
 use crate::shape::{Shape, TextureType, Material};
 
@@ -72,6 +73,7 @@ pub struct Scene
     pub animation: Animation,
 
     pub raytracing_config: RaytracingConfig,
+    pub post_processing: PostProcessingConfig,
 
     bvh: bvh::bvh::BVH
 }
@@ -90,6 +92,7 @@ impl Scene
             animation: Animation::new(),
 
             raytracing_config: RaytracingConfig::new(),
+            post_processing: PostProcessingConfig::new(),
 
             bvh: bvh::bvh::BVH { nodes: vec![] }
         }
@@ -165,6 +168,7 @@ impl Scene
                 let objects = data["objects"].as_array();
                 let animation = &data["animation"];
                 let config = &data["config"];
+                let post = &data["post"];
 
                 // ********** config **********
                 if !config.is_null()
@@ -185,6 +189,13 @@ impl Scene
 
                     if !&config["max_recursion"].is_null() { self.raytracing_config.max_recursion = config["max_recursion"].as_u64().unwrap() as u16; }
                     if !&config["gamma_correction"].is_null() { self.raytracing_config.gamma_correction = config["gamma_correction"].as_bool().unwrap(); }
+                }
+
+                // ********** post processing **********
+                if !post.is_null()
+                {
+                    if !&post["cavity"].is_null() { self.post_processing.cavity = post["cavity"].as_bool().unwrap(); }
+                    if !&post["outline"].is_null() { self.post_processing.outline = post["outline"].as_bool().unwrap(); }
                 }
 
                 // ********** camera **********

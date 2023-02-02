@@ -209,6 +209,7 @@ impl Run
 
             {
                 scene.raytracing_config.apply(scene_arc.read().unwrap().raytracing_config);
+                scene.post_processing = scene_arc.read().unwrap().post_processing.clone();
             }
 
             {
@@ -247,11 +248,13 @@ impl Run
             let scene = self.scene.clone();
 
             let rt_config = scene.read().unwrap().raytracing_config;
+            let post_processing = scene.read().unwrap().post_processing.clone();
 
             //let scene = std::sync::Arc::new(std::sync::RwLock::new(scene));
 
             let mut raytracing = Raytracing::new(scene.clone());
             raytracing.config.apply(rt_config);
+            raytracing.post_processing = post_processing;
 
             let raytracing_arc = std::sync::Arc::new(std::sync::RwLock::new(raytracing));
 
