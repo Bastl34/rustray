@@ -1414,10 +1414,24 @@ impl Run
 
             if let Some(pick_res) = pick_res
             {
-                dbg!(pick_res);
+                let w = self.image.width() as usize;
+                let x = x as usize;
+                let y = y as usize;
+
+                let pixel = self.image.get_pixel(x as u32, y as u32);
+                let normal = self.normals[y * w + x];
+                let depth = self.depth[y * w + x];
+                let object_id = self.objects[y * w + x];
+
+                println!("==== pixel info ===");
+                println!("pick_res: id={}, name={}, depth={}", pick_res.0, pick_res.1, pick_res.2);
+                println!("color: {:?}", pixel);
+                println!("normal: {:?}",normal);
+                println!("depth: {}",depth);
+                println!("object_id: {}",object_id);
+                println!();
             }
         }
-
 
         if let Some(position) = window_info.position
         {

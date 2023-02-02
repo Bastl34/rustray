@@ -931,6 +931,7 @@ impl Raytracing
                 //color = color + (reflection_color * reflectivity * kr);
                 color = color + (reflection_color * reflectivity);
             }
+
             //refraction
             if alpha < 1.0 && depth <= self.config.max_recursion
             {
@@ -938,7 +939,8 @@ impl Raytracing
 
                 if let Some(transmission_ray) = transmission_ray
                 {
-                    let refraction_color = self.get_color_depth_normal_id(transmission_ray, depth + 1).0;
+                    let transmission_ray_res = self.get_color_depth_normal_id(transmission_ray, depth + 1);
+                    let refraction_color = transmission_ray_res.0;
 
                     if kr < 1.0
                     {
@@ -947,6 +949,11 @@ impl Raytracing
                     else
                     {
                         color = (color * alpha) + (refraction_color * (1.0 - alpha));
+                    }
+
+                    if approx_equal(alpha, 0.0)
+                    {
+                        out_id = transmission_ray_res.3;
                     }
                 }
             }

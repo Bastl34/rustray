@@ -154,9 +154,9 @@ pub fn run_post_processing(config: PostProcessingConfig, image: &RgbaImage, norm
 
                 if outline > 0.0
                 {
-                    r *= outline * outline_color.x;
-                    g *= outline * outline_color.y;
-                    b *= outline * outline_color.z;
+                    r = outline * outline_color.x;
+                    g = outline * outline_color.y;
+                    b = outline * outline_color.z;
                 }
             }
 
