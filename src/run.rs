@@ -346,6 +346,8 @@ impl Run
                 }
             }
         }
+
+        self.dir_scenes_list.sort();
     }
 
     pub fn start(&mut self)
