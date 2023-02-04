@@ -10,6 +10,7 @@ pub mod scene;
 pub mod camera;
 pub mod animation;
 pub mod run;
+pub mod post_processing;
 
 fn main()
 {
@@ -22,6 +23,7 @@ fn main()
     let mut height = 0;
     let mut monte_carlo = None;
     let mut samples = None;
+    let mut start = false;
 
     let res_regex = Regex::new(r"^\d+x\d+$").unwrap(); // example: 800x600
 
@@ -61,19 +63,25 @@ fn main()
 
             samples = Some(splits_arr[1].parse().unwrap());
         }
+        else if arg.starts_with("start=")
+        {
+            let splits: Vec<&str> = arg.split("=").collect();
+            let splits_arr = splits.as_slice();
+
+            start = splits_arr[1] == "1" || splits_arr[1] == "true";
+        }
     }
 
-    let mut runner = Run::new(width, height, window, scenes, animation);
-
-    runner.init();
+    let mut runner = Run::new(width, height, window, scenes, animation, start);
 
     //apply cmd settings
     {
-        let mut rt = runner.raytracing.write().unwrap();
-        if let Some(monte_carlo) = monte_carlo { rt.config.monte_carlo = monte_carlo }
-        if let Some(samples) = samples { rt.config.samples = samples }
+        let rt = runner.raytracing.write().unwrap();
+        if let Some(monte_carlo) = monte_carlo { rt.scene.write().unwrap().raytracing_config.monte_carlo = monte_carlo; }
+        if let Some(samples) = samples { rt.scene.write().unwrap().raytracing_config.samples = samples; }
     }
 
+    runner.init();
     runner.start();
 
     //create window if needed

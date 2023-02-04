@@ -11,7 +11,7 @@ extern crate num_cpus;
 
 use rand::seq::SliceRandom;
 
-use crate::raytracing::{Raytracing, PixelColor};
+use crate::raytracing::{Raytracing, PixelData};
 
 //const BLOCK_SIZE: i32 = 32;
 const BLOCK_SIZE: i32 = 2;
@@ -47,8 +47,8 @@ pub struct RendererManager
     cell_list: Arc<Mutex<VecDeque<CellRange>>>,
 
     threads: Vec<JoinHandle<()>>,
-    message_sender: Sender<PixelColor>,
-    message_receiver: Receiver<PixelColor>,
+    message_sender: Sender<PixelData>,
+    message_receiver: Receiver<PixelData>,
 
     pixels_rendered: Arc<Mutex<u64>>,
 
@@ -243,7 +243,7 @@ impl RendererManager
         self.start_time.elapsed().as_millis()
     }
 
-    pub fn get_message_receiver(&self) -> &Receiver<PixelColor>
+    pub fn get_message_receiver(&self) -> &Receiver<PixelData>
     {
         &self.message_receiver
     }
