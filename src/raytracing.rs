@@ -10,7 +10,8 @@ use crate::helper::approx_equal;
 use nalgebra::{Point3, Vector3, Matrix3, Vector4, Point2};
 use parry3d::query::{Ray};
 
-use rand::Rng;
+use rand::{Rng, SeedableRng};
+use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
 
 const SHADOW_BIAS: f32 = 0.001;
@@ -308,7 +309,8 @@ impl Raytracing
         }
 
         //randomize
-        samples.shuffle(&mut rand::thread_rng());
+        let mut rng = StdRng::seed_from_u64(0);
+        samples.shuffle(&mut rng);
 
         //truncate by samples-amout
         samples.truncate(self.config.samples as usize);
