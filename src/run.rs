@@ -219,6 +219,7 @@ impl Run
                 }
 
                 scene.cam.init(width as u32, height as u32);
+                scene.find_and_set_default_env_if_needed();
                 scene.apply_frame(frame);
                 scene.print();
             }

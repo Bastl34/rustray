@@ -1,5 +1,19 @@
 use nalgebra::{Matrix4, Perspective3, Point3, Isometry3, Vector3};
 
+use crate::helper::approx_equal;
+
+const DEFAULT_CAM_POS: Point3::<f32> = Point3::<f32>::new(0.0, 0.0, 0.0);
+const DEFAULT_CAM_UP: Vector3::<f32> = Vector3::<f32>::new(0.0, 1.0, 0.0);
+const DEFAULT_CAM_DIR: Vector3::<f32> = Vector3::<f32>::new(0.0, 0.0, -1.0);
+
+//pub const OBLIQUE_CAM_POS: Vector3::<f32> = Vector3::<f32>::new(1.0, 0.0, 2.0);
+pub const OBLIQUE_CAM_POS: Vector3::<f32> = Vector3::<f32>::new(1.0, 0.5, 1.0);
+
+pub const DEFAULT_FOV: f32 = 90.0f32;
+
+const DEFAULT_CLIPPING_NEAR: f32 = 0.001;
+const DEFAULT_CLIPPING_FAR: f32 = 1000.0;
+
 #[derive(Debug, Copy, Clone)]
 pub struct Camera
 {
@@ -34,17 +48,17 @@ impl Camera
             height: 0,
             aspect_ratio: 0.0,
 
-            fov: 90.0f32.to_radians(),
+            fov: DEFAULT_FOV.to_radians(),
 
-            eye_pos: Point3::new(0.0, 0.0, 0.0),
+            eye_pos: DEFAULT_CAM_POS,
 
-            up: Vector3::y(),
-            dir: Vector3::new(0.0, 0.0, -1.0),
+            up: DEFAULT_CAM_UP,
+            dir: DEFAULT_CAM_DIR,
 
-            clipping_near: 0.001,
-            clipping_far: 1000.0,
+            clipping_near: DEFAULT_CLIPPING_NEAR,
+            clipping_far: DEFAULT_CLIPPING_FAR,
 
-            projection: Perspective3::<f32>::new(1.0f32, 0.0f32, 0.001, 1000.0),
+            projection: Perspective3::<f32>::new(1.0f32, 0.0f32, DEFAULT_CLIPPING_NEAR, DEFAULT_CLIPPING_FAR),
             view: Matrix4::<f32>::identity(),
 
             projection_inverse: Matrix4::<f32>::identity(),
@@ -73,6 +87,56 @@ impl Camera
 
         self.projection_inverse = self.projection.inverse();
         self.view_inverse = self.view.try_inverse().unwrap();
+    }
+
+    pub fn is_default_cam(&self) -> bool
+    {
+        (
+            approx_equal(self.eye_pos.x, DEFAULT_CAM_POS.x)
+            &&
+            approx_equal(self.eye_pos.y, DEFAULT_CAM_POS.y)
+            &&
+            approx_equal(self.eye_pos.z, DEFAULT_CAM_POS.z)
+        )
+        &&
+        (
+            approx_equal(self.dir.x, DEFAULT_CAM_DIR.x)
+            &&
+            approx_equal(self.dir.y, DEFAULT_CAM_DIR.y)
+            &&
+            approx_equal(self.dir.z, DEFAULT_CAM_DIR.z)
+        )
+        &&
+        (
+            approx_equal(self.up.x, DEFAULT_CAM_UP.x)
+            &&
+            approx_equal(self.up.y, DEFAULT_CAM_UP.y)
+            &&
+            approx_equal(self.up.z, DEFAULT_CAM_UP.z)
+        )
+        &&
+        approx_equal(self.fov, DEFAULT_FOV.to_radians())
+        &&
+        approx_equal(self.clipping_near, DEFAULT_CLIPPING_NEAR)
+        &&
+        approx_equal(self.clipping_far, DEFAULT_CLIPPING_FAR)
+    }
+
+    pub fn set_cam_position(&mut self, eye_pos: Point3::<f32>, dir: Vector3::<f32>)
+    {
+        self.eye_pos = eye_pos;
+        self.dir = dir;
+
+        self.init_matrices();
+    }
+
+    pub fn is_point_in_frustum(&self, point: &Point3<f32>) -> bool
+    {
+        let pv = self.projection.to_homogeneous() * self.view;
+        let point_clip = pv * point.to_homogeneous();
+
+        // Check if point is inside NDC space (Normalized Device Coordinates Space)
+        point_clip.x.abs() <= point_clip.w && point_clip.y.abs() <= point_clip.w && point_clip.z.abs() <= point_clip.w
     }
 
     pub fn print(&self)

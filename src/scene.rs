@@ -15,7 +15,7 @@ use crate::shape::{Shape, TextureType, Material};
 
 use crate::shape::sphere::Sphere;
 use crate::shape::mesh::Mesh;
-use crate::camera::Camera;
+use crate::camera::{Camera, OBLIQUE_CAM_POS, DEFAULT_FOV};
 use crate::animation::{Animation, Frame, Keyframe};
 
 use std::f32::consts::PI;
@@ -1262,10 +1262,148 @@ impl Scene
             pos: Point3::<f32>::new(2.0, 10.0, 5.0),
             dir: Vector3::<f32>::new(0.0, -1.0, 0.0),
             color: Vector3::<f32>::new(1.0, 1.0, 1.0),
-            intensity: 500.0,
+            intensity: 200.0,
             max_angle: PI / 2.0,
             light_type: LightType::Point
         }));
+    }
+
+    pub fn find_optimal_camera_pos(&mut self)
+    {
+        let mut points = vec![];
+
+        let mut min: Point3::<f32> = Point3::<f32>::new(std::f32::MAX, std::f32::MAX, std::f32::MAX);
+        let mut max: Point3::<f32> = Point3::<f32>::new(-std::f32::MAX, -std::f32::MAX, -std::f32::MAX);
+
+        // get all bounding box points of all objects
+        for item in &self.items
+        {
+            let b_box = item.get_basic().b_box;
+
+            let verts = b_box.vertices();
+
+            let trans = item.get_basic().trans;
+
+            for vert in &verts
+            {
+                let transformed = trans * vert.to_homogeneous();
+                points.push(transformed);
+
+                min.x = min.x.min(transformed.x);
+                min.y = min.y.min(transformed.y);
+                min.z = min.z.min(transformed.z);
+
+                max.x = max.x.max(transformed.x);
+                max.y = max.y.max(transformed.y);
+                max.z = max.z.max(transformed.z);
+            }
+        }
+
+        let delta = Point3::<f32>::new((max.x - min.x).abs(), (max.y - min.y).abs(), (max.z - min.z).abs());
+        let center = Point3::<f32>::new(min.x + (delta.x / 2.0), min.y + (delta.y / 2.0), min.z + (delta.z / 2.0));
+
+        // camera
+        let direction = OBLIQUE_CAM_POS.normalize();
+
+        // set cam pos to center of the object
+        self.cam.eye_pos = center;
+
+        let mut factor = 0.0;
+        let increment = 0.01;
+        let max_factor = 1000.0;
+
+        let padding_factor = 1.001;
+
+        // ********** find best camera position **********
+        while factor < max_factor
+        {
+            let check_pos = center + (direction * factor);
+
+            self.cam.eye_pos.x = check_pos.x;
+            self.cam.eye_pos.y = check_pos.y;
+            self.cam.eye_pos.z = check_pos.z;
+
+            self.cam.dir.x = -direction.x;
+            self.cam.dir.y = -direction.y;
+            self.cam.dir.z = -direction.z;
+
+            self.cam.init_matrices();
+
+            let mut in_frustum = true;
+            for point in &points
+            {
+                let p = Point3::<f32>::new(point.x, point.y, point.z);
+                if !self.cam.is_point_in_frustum(&p)
+                {
+                    in_frustum = false;
+                    break;
+                }
+            }
+
+            // apply padding
+            if in_frustum
+            {
+                self.cam.eye_pos = self.cam.eye_pos + (direction * padding_factor);
+            }
+
+            if in_frustum
+            {
+                break;
+            }
+
+            factor += increment;
+        }
+
+        // ********** find best fov **********
+        let mut fov = 0.0;
+
+        let increment = 0.01;
+        let max_fov = DEFAULT_FOV;
+
+        let fov_padding = 1.1f32;
+
+        while fov < max_fov
+        {
+            self.cam.fov = fov.to_radians();
+            self.cam.init_matrices();
+
+            let mut in_frustum = true;
+            for point in &points
+            {
+                let p = Point3::<f32>::new(point.x, point.y, point.z);
+                if !self.cam.is_point_in_frustum(&p)
+                {
+                    in_frustum = false;
+                    break;
+                }
+            }
+
+            if in_frustum
+            {
+                self.cam.fov *= fov_padding;
+                break;
+            }
+
+            fov += increment;
+        }
+
+        self.cam.init_matrices();
+
+    }
+
+    pub fn find_and_set_default_env_if_needed(&mut self)
+    {
+        if self.cam.is_default_cam()
+        {
+            println!("default camera options deteced -> trying to find optimal camera pos");
+            self.find_optimal_camera_pos();
+        }
+
+        if self.lights.len() == 0
+        {
+            println!("no lights in the scene found --> adding default light");
+            self.add_default_light();
+        }
     }
 
     pub fn delete_light_by_id(&mut self, id: u32)

@@ -94,7 +94,7 @@ impl Shape for Mesh
 
         let f_id = (face_id % self.mesh.indices().len() as u32) as usize;
 
-        if self.uv_indices.len() as i32 - 1 < f_id as i32|| self.mesh.indices().len() as i32 -1 < f_id as i32
+        if self.uv_indices.len() as i32 - 1 < f_id as i32 || self.mesh.indices().len() as i32 -1 < f_id as i32
         {
             //TODO: DEBUG ME
             return Point2::<f32>::new(0.0, 0.0);

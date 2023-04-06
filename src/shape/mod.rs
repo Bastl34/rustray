@@ -53,15 +53,15 @@ impl Bounded for Box<(dyn Shape + Send + Sync + 'static)>
 
         for vert in &verts
         {
-            let transfmed = trans * vert.to_homogeneous();
+            let transformed = trans * vert.to_homogeneous();
 
-            min.x = min.x.min(transfmed.x);
-            min.y = min.y.min(transfmed.y);
-            min.z = min.z.min(transfmed.z);
+            min.x = min.x.min(transformed.x);
+            min.y = min.y.min(transformed.y);
+            min.z = min.z.min(transformed.z);
 
-            max.x = max.x.max(transfmed.x);
-            max.y = max.y.max(transfmed.y);
-            max.z = max.z.max(transfmed.z);
+            max.x = max.x.max(transformed.x);
+            max.y = max.y.max(transformed.y);
+            max.z = max.z.max(transformed.z);
         }
 
         let min = bvh::Point3::new(min.x, min.y, min.z);

@@ -18,7 +18,7 @@ const SHADOW_BIAS: f32 = 0.001;
 const APERTURE_BASE_RESOLUTION: f32 = 800.0;
 
 const CAM_CLIPPING_PLANE_DIST: f32 = 1.0;
-const DEFAILT_VIEW_POS: Vector4::<f32> = Vector4::<f32>::new(0.0, 0.0, 0.0, 1.0);
+const DEFAULT_VIEW_POS: Vector4::<f32> = Vector4::<f32>::new(0.0, 0.0, 0.0, 1.0);
 
 const BVH_MIN_ITEMS: usize = 50;
 
@@ -252,7 +252,7 @@ impl Raytracing
         pixel_pos = scene.cam.projection_inverse * pixel_pos;
         pixel_pos.w = 1.0;
 
-        let mut ray_dir = pixel_pos - DEFAILT_VIEW_POS;
+        let mut ray_dir = pixel_pos - DEFAULT_VIEW_POS;
         ray_dir.w = 0.0;
 
         let origin = scene.cam.view_inverse * pixel_pos;
@@ -352,10 +352,10 @@ impl Raytracing
                 center_pixel_pos = scene.cam.projection_inverse * center_pixel_pos;
                 center_pixel_pos.w = 1.0;
 
-                let mut ray_dir = center_pixel_pos - DEFAILT_VIEW_POS;
+                let mut ray_dir = center_pixel_pos - DEFAULT_VIEW_POS;
                 ray_dir.w = 0.0;
 
-                let origin = scene.cam.view_inverse * DEFAILT_VIEW_POS;
+                let origin = scene.cam.view_inverse * DEFAULT_VIEW_POS;
                 let dir = (scene.cam.view_inverse * ray_dir).normalize();
 
                 let dist = ray_dir.xyz().magnitude();
@@ -389,7 +389,7 @@ impl Raytracing
                 pixel_pos = scene.cam.projection_inverse * pixel_pos;
                 pixel_pos.w = 1.0;
 
-                let mut ray_dir = pixel_pos - DEFAILT_VIEW_POS;
+                let mut ray_dir = pixel_pos - DEFAULT_VIEW_POS;
                 ray_dir.w = 0.0;
 
                 let origin = scene.cam.view_inverse * pixel_pos;
