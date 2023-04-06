@@ -1,4 +1,5 @@
 use bvh::bvh::BVHNode;
+use easy_gltf::Projection;
 use nalgebra::{Point2, Point3, Vector3};
 use parry3d::query::Ray;
 use serde_json::{Value};
@@ -779,7 +780,18 @@ impl Scene
                 self.cam.dir = Vector3::<f32>::new(-forward.x, -forward.y, -forward.z).normalize();
                 self.cam.up = Vector3::<f32>::new(up.x, up.y, up.z).normalize();
 
-                self.cam.fov = cam.fov.0;
+                match cam.projection
+                {
+                    Projection::Perspective { yfov, .. } =>
+                    {
+                        self.cam.fov = yfov.0;
+                    },
+                    Projection::Orthographic { .. } =>
+                    {
+                        !todo!()
+                    },
+                }
+
                 self.cam.clipping_near = cam.znear;
                 self.cam.clipping_far = cam.zfar;
             }

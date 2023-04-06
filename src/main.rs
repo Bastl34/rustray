@@ -89,11 +89,16 @@ fn main()
     {
         let egui_options = runner.get_egui_options();
 
-        eframe::run_native
+        let res = eframe::run_native
         (
             "Rustray",
             egui_options,
             Box::new(|_cc| Box::new(runner)),
         );
+
+        if res.is_err()
+        {
+            println!("error occured");
+        }
     }
 }

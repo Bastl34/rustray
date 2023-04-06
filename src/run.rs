@@ -659,6 +659,7 @@ impl Run
         {
             initial_window_size: Some(egui::vec2(self.width as f32, self.height as f32)),
             initial_window_pos: Some(egui::pos2(self.window_x as f32, self.window_y as f32)),
+            drag_and_drop_support: true,
             ..Default::default()
         }
     }
@@ -680,9 +681,9 @@ fn image_to_retained_image(image: RgbaImage) -> RetainedImage
 
 impl eframe::App for Run
 {
-    fn clear_color(&self, _visuals: &egui::Visuals) -> egui::Rgba
+    fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4]
     {
-        egui::Rgba::WHITE
+        egui::Rgba::WHITE.to_array()
     }
 
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame)
@@ -702,11 +703,10 @@ impl Run
 {
     fn handle_file_drop(&mut self, ctx: &egui::Context)
     {
-        if !ctx.input().raw.dropped_files.is_empty()
+        let dropped_files  = ctx.input(|i| i.raw.dropped_files.clone());
+
+        if !dropped_files.is_empty()
         {
-            let dropped_files = ctx.input().raw.dropped_files.clone();
-
-
             self.rendering_scenes_list.clear();
 
             for file in dropped_files
@@ -1409,10 +1409,12 @@ impl Run
     {
         let window_info = frame.info().window_info.clone();
 
-        if ctx.input_mut().pointer.primary_clicked()
+        let clicked  = ctx.input(|i| i.pointer.any_click());
+        if clicked
         {
-            let x = ctx.input_mut().pointer.interact_pos().unwrap().x as i32;
-            let y = ctx.input_mut().pointer.interact_pos().unwrap().y as i32;
+            let pos = ctx.input(|i| i.pointer.interact_pos());
+            let x = pos.unwrap().x as i32;
+            let y = pos.unwrap().y as i32;
 
             let rt = self.raytracing.read().unwrap();
             let pick_res = rt.pick(x, y);
