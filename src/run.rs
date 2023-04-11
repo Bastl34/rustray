@@ -858,6 +858,12 @@ impl Run
 
                     self.init_scene();
                 }
+
+                if ui.button("add ground plane").clicked()
+                {
+                    self.scene.write().unwrap().add_ground_plane();
+                }
+
                 ui.separator();
 
                 if scene_items > 0
@@ -1327,14 +1333,14 @@ impl Run
                                         let mut ao_texture_label: String = "unset".to_string();
                                         let mut reflectivity_texture_label: String = "unset".to_string();
 
-                                        let mut has_ambient = false;
-                                        let mut has_base = false;
-                                        let mut has_specular = false;
-                                        let mut has_normal = false;
-                                        let mut has_alpha = false;
-                                        let mut has_roughness = false;
-                                        let mut has_ao = false;
-                                        let mut has_reflectivity = false;
+                                        let has_ambient;
+                                        let has_base;
+                                        let has_specular;
+                                        let has_normal;
+                                        let has_alpha;
+                                        let has_roughness;
+                                        let has_ao;
+                                        let has_reflectivity;
 
                                         {
                                             let scene = self.scene.read().unwrap();
@@ -1397,8 +1403,8 @@ impl Run
                                                 if tex.1 && ui.button("🗑").clicked()
                                                 {
                                                     let mut scene = self.scene.write().unwrap();
-                                                        let item = scene.get_obj_by_id_mut(item.0).unwrap();
-                                                        item.get_basic_mut().material.remove_texture(tex.3);
+                                                    let item = scene.get_obj_by_id_mut(item.0).unwrap();
+                                                    item.get_basic_mut().material.remove_texture(tex.3);
                                                 }
                                             });
                                         }

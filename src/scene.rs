@@ -1259,13 +1259,36 @@ impl Scene
         {
             enabled: true,
             id: id,
-            pos: Point3::<f32>::new(2.0, 10.0, 5.0),
+            pos: Point3::<f32>::new(-2.0, 10.0, 5.0),
             dir: Vector3::<f32>::new(0.0, -1.0, 0.0),
             color: Vector3::<f32>::new(1.0, 1.0, 1.0),
             intensity: 200.0,
             max_angle: PI / 2.0,
             light_type: LightType::Point
         }));
+    }
+
+    pub fn find_bottom_y_pos(&self) -> f32
+    {
+        let mut min_y = std::f32::MAX;
+
+        // get all bounding box points of all objects
+        for item in &self.items
+        {
+            let b_box = item.get_basic().b_box;
+
+            let verts = b_box.vertices();
+
+            let trans = item.get_basic().trans;
+
+            for vert in &verts
+            {
+                let transformed = trans * vert.to_homogeneous();
+                min_y = min_y.min(transformed.y);
+            }
+        }
+
+        min_y
     }
 
     pub fn find_optimal_camera_pos(&mut self)
@@ -1404,6 +1427,17 @@ impl Scene
             println!("no lights in the scene found --> adding default light");
             self.add_default_light();
         }
+    }
+
+    pub fn add_ground_plane(&mut self)
+    {
+        let y_pos = self.find_bottom_y_pos();
+
+        // add reflexivity ground plane
+        self.load_json("scene/floor_reflective.json");
+
+        let basic = self.get_by_name_mut("floor reflective").unwrap().get_basic_mut();
+        basic.apply_translation(Vector3::<f32>::new(0.0, y_pos, 0.0));
     }
 
     pub fn delete_light_by_id(&mut self, id: u32)

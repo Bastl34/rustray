@@ -618,6 +618,16 @@ impl ShapeBasics
         self.calc_inverse();
     }
 
+    pub fn apply_translation(&mut self, translation: Vector3<f32>)
+    {
+        let scale = Vector3::<f32>::new(1.0, 1.0, 1.0);
+        let rotation = Vector3::<f32>::new(0.0, 0.0, 0.0);
+
+        self.trans = ShapeBasics::get_transformation(&self.trans, translation, scale, rotation);
+
+        self.calc_inverse();
+    }
+
     pub fn apply_mat(&mut self, trans: &Matrix4<f32>)
     {
         self.trans = trans.clone();
