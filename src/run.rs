@@ -2,7 +2,7 @@ extern crate rand;
 extern crate image;
 
 use chrono::{Datelike, Timelike, Utc, DateTime};
-use egui::{Color32, ScrollArea, RichText, FontDefinitions};
+use egui::{Color32, ScrollArea, RichText};
 use nalgebra::{Vector3};
 use rfd::FileDialog;
 
