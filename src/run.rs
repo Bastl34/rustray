@@ -2,8 +2,9 @@ extern crate rand;
 extern crate image;
 
 use chrono::{Datelike, Timelike, Utc, DateTime};
-use egui::{Color32, ScrollArea, RichText};
+use egui::{Color32, ScrollArea, RichText, FontDefinitions};
 use nalgebra::{Vector3};
+use rfd::FileDialog;
 
 
 use std::f32::consts::PI;
@@ -24,6 +25,7 @@ use crate::post_processing::run_post_processing;
 use crate::renderer::RendererManager;
 use crate::raytracing::Raytracing;
 use crate::scene::{Scene, LightType};
+use crate::shape::{TextureType};
 
 const IMAGE_PATH: &str = "data/output";
 const ANIMATION_PATH: &str = "data/output/animation";
@@ -664,6 +666,7 @@ impl Run
             ..Default::default()
         }
     }
+
 }
 
 // ******************** GUI ********************
@@ -1308,6 +1311,96 @@ impl Run
                                             let g = ((specular_color.g() as f32) / 255.0).clamp(0.0, 1.0);
                                             let b = ((specular_color.b() as f32) / 255.0).clamp(0.0, 1.0);
                                             mat.specular_color = Vector3::<f32>::new(r, g, b);
+                                        }
+                                    });
+
+                                    // ********** textures
+                                    ui.collapsing("Textures", |ui|
+                                    {
+                                        // labels
+                                        let mut ambient_texture_label: String = "unset".to_string();
+                                        let mut base_texture_label: String = "unset".to_string();
+                                        let mut specular_texture_label: String = "unset".to_string();
+                                        let mut normal_texture_label: String = "unset".to_string();
+                                        let mut alpha_texture_label: String = "unset".to_string();
+                                        let mut roughness_texture_label: String = "unset".to_string();
+                                        let mut ao_texture_label: String = "unset".to_string();
+                                        let mut reflectivity_texture_label: String = "unset".to_string();
+
+                                        let mut has_ambient = false;
+                                        let mut has_base = false;
+                                        let mut has_specular = false;
+                                        let mut has_normal = false;
+                                        let mut has_alpha = false;
+                                        let mut has_roughness = false;
+                                        let mut has_ao = false;
+                                        let mut has_reflectivity = false;
+
+                                        {
+                                            let scene = self.scene.read().unwrap();
+                                            let item = scene.get_obj_by_id(item.0).unwrap();
+
+                                            has_ambient = item.get_material().texture_ambient.width() > 0;
+                                            has_base = item.get_material().texture_base.width() > 0;
+                                            has_specular = item.get_material().texture_specular.width() > 0;
+                                            has_normal = item.get_material().texture_normal.width() > 0;
+                                            has_alpha = item.get_material().texture_alpha.width() > 0;
+                                            has_roughness = item.get_material().texture_roughness.width() > 0;
+                                            has_ao = item.get_material().texture_ambient_occlusion.width() > 0;
+                                            has_reflectivity = item.get_material().texture_reflectivity.width() > 0;
+
+                                            if has_ambient { ambient_texture_label = format!("{}x{}", item.get_material().texture_ambient.width(), item.get_material().texture_ambient.height()); }
+                                            if has_base { base_texture_label = format!("{}x{}", item.get_material().texture_base.width(), item.get_material().texture_base.height()); }
+                                            if has_specular { specular_texture_label = format!("{}x{}", item.get_material().texture_specular.width(), item.get_material().texture_specular.height()); }
+                                            if has_normal { normal_texture_label = format!("{}x{}", item.get_material().texture_normal.width(), item.get_material().texture_normal.height()); }
+                                            if has_alpha { alpha_texture_label = format!("{}x{}", item.get_material().texture_alpha.width(), item.get_material().texture_alpha.height()); }
+                                            if has_roughness { roughness_texture_label = format!("{}x{}", item.get_material().texture_roughness.width(), item.get_material().texture_roughness.height()); }
+                                            if has_ao { ao_texture_label = format!("{}x{}", item.get_material().texture_ambient_occlusion.width(), item.get_material().texture_ambient_occlusion.height()); }
+                                            if has_reflectivity { reflectivity_texture_label = format!("{}x{}", item.get_material().texture_reflectivity.width(), item.get_material().texture_reflectivity.height()); }
+                                        }
+
+                                        let mut tex_items = vec![];
+                                        tex_items.push(("ambient texture", has_ambient, ambient_texture_label, TextureType::AmbientEmissive));
+                                        tex_items.push(("base texture", has_base, base_texture_label, TextureType::Base));
+                                        tex_items.push(("specular texture", has_specular, specular_texture_label, TextureType::Specular));
+                                        tex_items.push(("normal texture", has_normal, normal_texture_label, TextureType::Normal));
+                                        tex_items.push(("alpha texture", has_alpha, alpha_texture_label, TextureType::Alpha));
+                                        tex_items.push(("roughness texture", has_roughness, roughness_texture_label, TextureType::Roughness));
+                                        tex_items.push(("ambient occlusion texture", has_ao, ao_texture_label, TextureType::AmbientOcclusion));
+                                        tex_items.push(("reflectivity texture", has_reflectivity, reflectivity_texture_label, TextureType::Reflectivity));
+
+                                        for tex in tex_items
+                                        {
+                                            ui.horizontal(|ui|
+                                            {
+                                                ui.label(format!("{}:", tex.0));
+
+                                                if tex.1
+                                                {
+                                                    ui.label(RichText::new(tex.2).strong());
+                                                }
+                                                else
+                                                {
+                                                    ui.label(RichText::new(tex.2));
+                                                }
+
+                                                if ui.button("+").clicked()
+                                                {
+                                                    if let Some(path) = FileDialog::new().add_filter("Image", &["jpg", "png"]).set_directory("/").pick_file()
+                                                    {
+                                                        let mut scene = self.scene.write().unwrap();
+                                                        let item = scene.get_obj_by_id_mut(item.0).unwrap();
+                                                        item.get_basic_mut().material.load_texture(&path.display().to_string(), tex.3);
+                                                    }
+                                                }
+
+                                                if tex.1 && ui.button("🗑").clicked()
+                                                {
+                                                    let mut scene = self.scene.write().unwrap();
+                                                        let item = scene.get_obj_by_id_mut(item.0).unwrap();
+                                                        item.get_basic_mut().material.remove_texture(tex.3);
+                                                }
+                                            });
                                         }
                                     });
 

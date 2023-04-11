@@ -311,6 +311,45 @@ impl Material
         println!("backface_cullig: {:?}", self.backface_cullig);
     }
 
+    pub fn remove_texture(&mut self, tex_type: TextureType)
+    {
+        match tex_type
+        {
+            TextureType::Base =>
+            {
+                self.texture_base = DynamicImage::new_rgb8(0,0);
+            },
+            TextureType::AmbientEmissive =>
+            {
+                self.texture_ambient = DynamicImage::new_rgb8(0,0);
+            },
+            TextureType::Specular =>
+            {
+                self.texture_specular = DynamicImage::new_rgb8(0,0);
+            },
+            TextureType::Normal =>
+            {
+                self.texture_normal = DynamicImage::new_rgb8(0,0);
+            },
+            TextureType::Alpha =>
+            {
+                self.texture_alpha = DynamicImage::new_rgb8(0,0);
+            },
+            TextureType::Roughness =>
+            {
+                self.texture_roughness = DynamicImage::new_rgb8(0,0);
+            },
+            TextureType::AmbientOcclusion =>
+            {
+                self.texture_ambient_occlusion = DynamicImage::new_rgb8(0,0);
+            },
+            TextureType::Reflectivity =>
+            {
+                self.texture_reflectivity = DynamicImage::new_rgb8(0,0);
+            },
+        }
+    }
+
     pub fn load_texture(&mut self, path: &str, tex_type: TextureType)
     {
         println!("loading texture: {}", path);
