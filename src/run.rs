@@ -963,6 +963,7 @@ impl Run
                             {
                                 ui.horizontal_wrapped(|ui|
                                 {
+
                                     let mut fov;
 
                                     let mut eye_pos;
@@ -1508,7 +1509,6 @@ impl Run
     fn update_states(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame)
     {
         let window_info = frame.info().window_info.clone();
-
         let clicked  = ctx.input(|i| i.pointer.any_click());
         if clicked
         {
