@@ -864,6 +864,11 @@ impl Run
                     self.scene.write().unwrap().add_ground_plane();
                 }
 
+                if ui.button("add environment sphere").clicked()
+                {
+                    self.scene.write().unwrap().add_environment_sphere();
+                }
+
                 ui.separator();
 
                 if scene_items > 0
@@ -963,7 +968,6 @@ impl Run
                             {
                                 ui.horizontal_wrapped(|ui|
                                 {
-
                                     let mut fov;
 
                                     let mut eye_pos;
@@ -1199,6 +1203,7 @@ impl Run
                                         let mut roughness;
                                         let mut monte_carlo;
                                         let mut smooth_shading;
+                                        let mut flip_normals;
                                         let mut reflection_only;
                                         let mut backface_cullig;
 
@@ -1224,6 +1229,7 @@ impl Run
                                             roughness = mat.roughness;
                                             monte_carlo = mat.monte_carlo;
                                             smooth_shading = mat.smooth_shading;
+                                            flip_normals = mat.flip_normals;
                                             reflection_only = mat.reflection_only;
                                             backface_cullig = mat.backface_cullig;
 
@@ -1260,6 +1266,7 @@ impl Run
                                             apply_settings = ui.add(egui::Slider::new(&mut roughness, 0.0..=PI/2.0).text("roughness")).changed() || apply_settings;
                                             apply_settings = ui.checkbox(&mut monte_carlo, "monte carlo").changed() || apply_settings;
                                             apply_settings = ui.checkbox(&mut smooth_shading, "smooth shading").changed() || apply_settings;
+                                            apply_settings = ui.checkbox(&mut flip_normals, "flip normals").changed() || apply_settings;
                                             apply_settings = ui.checkbox(&mut reflection_only, "reflection only").changed() || apply_settings;
                                             apply_settings = ui.checkbox(&mut backface_cullig, "backface cullig").changed() || apply_settings;
 
@@ -1301,6 +1308,7 @@ impl Run
                                             mat.shadow_softness = shadow_softness;
                                             mat.roughness = roughness;
                                             mat.smooth_shading = smooth_shading;
+                                            mat.flip_normals = flip_normals;
                                             mat.reflection_only = reflection_only;
                                             mat.backface_cullig = backface_cullig;
 

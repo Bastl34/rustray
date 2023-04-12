@@ -336,6 +336,7 @@ impl Scene
                         if !&object["roughness"].is_null() { material.roughness = object["roughness"].as_f64().unwrap() as f32; }
                         if !&object["monte_carlo"].is_null() { material.monte_carlo = object["monte_carlo"].as_bool().unwrap(); }
                         if !&object["smooth_shading"].is_null() { material.smooth_shading = object["smooth_shading"].as_bool().unwrap(); }
+                        if !&object["flip_normals"].is_null() { material.flip_normals = object["flip_normals"].as_bool().unwrap(); }
                         if !&object["reflection_only"].is_null() { material.reflection_only = object["reflection_only"].as_bool().unwrap(); }
                         if !&object["backface_cullig"].is_null() { material.backface_cullig = object["backface_cullig"].as_bool().unwrap(); }
 
@@ -829,7 +830,10 @@ impl Scene
                         }
 
                         // texture uv coord
-                        uvs.push(Point2::<f32>::new(vertex.tex_coords.x, -vertex.tex_coords.y));
+                        if model.has_tex_coords()
+                        {
+                            uvs.push(Point2::<f32>::new(vertex.tex_coords.x, -vertex.tex_coords.y));
+                        }
                     }
 
                     // ***** indices
@@ -1438,6 +1442,11 @@ impl Scene
 
         let basic = self.get_by_name_mut("floor reflective").unwrap().get_basic_mut();
         basic.apply_translation(Vector3::<f32>::new(0.0, y_pos, 0.0));
+    }
+
+    pub fn add_environment_sphere(&mut self)
+    {
+        self.load_json("scene/environment.json");
     }
 
     pub fn delete_light_by_id(&mut self, id: u32)

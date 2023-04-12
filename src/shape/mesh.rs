@@ -64,7 +64,7 @@ impl Shape for Mesh
                 face_id = i;
             }
 
-            let mut normal = (self.basic.trans * res.normal.to_homogeneous()).xyz().normalize();
+            let mut normal;
 
             //use normal based on loaded normal (not on computed normal by parry -- if needed for smooth shading)
             if self.get_material().smooth_shading && self.normals.len() > 0 && self.normals_indices.len() > 0
@@ -78,6 +78,16 @@ impl Shape for Mesh
                     normal = -normal;
                 }
             }
+            else
+            {
+                normal = (self.basic.trans * res.normal.to_homogeneous()).xyz().normalize();
+            }
+
+            if self.get_material().flip_normals
+            {
+                normal = -normal;
+            }
+
             return Some((res.toi, normal, face_id))
         }
         None

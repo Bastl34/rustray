@@ -117,6 +117,7 @@ pub struct Material
     pub roughness: f32, //degree in rad (max PI/2)
 
     pub smooth_shading: bool,
+    pub flip_normals: bool,
 
     pub reflection_only: bool,
     pub backface_cullig: bool
@@ -157,6 +158,7 @@ impl Material
             monte_carlo: true,
 
             smooth_shading: true,
+            flip_normals: false,
 
             reflection_only: false,
             backface_cullig: true,
@@ -270,6 +272,7 @@ impl Material
         if default_material.monte_carlo != new_mat.monte_carlo { self.monte_carlo = new_mat.monte_carlo; }
 
         if default_material.smooth_shading != new_mat.smooth_shading { self.smooth_shading = new_mat.smooth_shading; }
+        if default_material.flip_normals != new_mat.flip_normals { self.flip_normals = new_mat.flip_normals; }
 
         if default_material.reflection_only != new_mat.reflection_only { self.reflection_only = new_mat.reflection_only; }
         if default_material.backface_cullig != new_mat.backface_cullig { self.backface_cullig = new_mat.backface_cullig; }
@@ -306,6 +309,7 @@ impl Material
         println!("monte_carlo: {:?}", self.monte_carlo);
 
         println!("smooth_shading: {:?}", self.smooth_shading);
+        println!("flip_normals: {:?}", self.flip_normals);
 
         println!("reflection_only: {:?}", self.reflection_only);
         println!("backface_cullig: {:?}", self.backface_cullig);
