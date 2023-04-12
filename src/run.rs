@@ -2,7 +2,7 @@ extern crate rand;
 extern crate image;
 
 use chrono::{Datelike, Timelike, Utc, DateTime};
-use egui::{Color32, ScrollArea, RichText};
+use egui::{Color32, ScrollArea, RichText, Modifiers};
 use nalgebra::{Vector3};
 use rfd::FileDialog;
 
@@ -728,11 +728,6 @@ impl Run
 
     fn update_gui(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame)
     {
-        if !self.ui_visible
-        {
-            return;
-        }
-
         // ********** main **********
         let main_frame = egui::containers::Frame
         {
@@ -746,6 +741,11 @@ impl Run
 
             image.show(ui);
         });
+
+        if !self.ui_visible
+        {
+            return;
+        }
 
         // ********** settings **********
         egui::Window::new("Settings").show(ctx, |ui|
@@ -1557,10 +1557,21 @@ impl Run
             }
         }
 
-        let k_key_pressed  = ctx.input(|i| i.key_pressed(egui::Key::H));
-        if k_key_pressed
+        // hide ui with H-key
+        if ctx.input(|i| i.key_pressed(egui::Key::H))
         {
             self.ui_visible = !self.ui_visible;
+        }
+
+        // start rendering with CTRL/CMD + R
+        let rendering_shortcut = egui::KeyboardShortcut::new(Modifiers::CTRL | Modifiers::COMMAND, egui::Key::R);
+        if ctx.input_mut(|i| i.consume_shortcut(&rendering_shortcut))
+        {
+            if !self.rendering.is_running() || self.rendering.is_done()
+            {
+                self.restart_rendering();
+                self.stopped = false;
+            }
         }
 
         if let Some(position) = window_info.position
