@@ -107,6 +107,8 @@ pub struct Run//<'a>
     window: bool,
     animate: bool,
 
+    ui_visible: bool,
+
     loading_scene: Arc<Mutex<SceneLoadType>>,
     start_after_init: bool,
 
@@ -149,6 +151,8 @@ impl Run
             window: window,
 
             animate: animate,
+
+            ui_visible: true,
 
             loading_scene: std::sync::Arc::new(std::sync::Mutex::new(SceneLoadType::RaytracingInitNeeded)),
 
@@ -724,6 +728,11 @@ impl Run
 
     fn update_gui(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame)
     {
+        if !self.ui_visible
+        {
+            return;
+        }
+
         // ********** main **********
         let main_frame = egui::containers::Frame
         {
@@ -1546,6 +1555,12 @@ impl Run
                 println!("object_id: {}",object_id);
                 println!();
             }
+        }
+
+        let k_key_pressed  = ctx.input(|i| i.key_pressed(egui::Key::H));
+        if k_key_pressed
+        {
+            self.ui_visible = !self.ui_visible;
         }
 
         if let Some(position) = window_info.position
