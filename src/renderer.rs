@@ -65,9 +65,9 @@ impl RendererManager
         let (tx, rx) = mpsc::channel();
 
         let mut thread_amount = num_cpus::get();
-        if thread_amount > 1
+        if thread_amount > 2
         {
-            thread_amount -=1;
+            thread_amount -=2;
         }
 
         RendererManager

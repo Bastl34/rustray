@@ -1574,6 +1574,22 @@ impl Run
             }
         }
 
+        // clear image
+        let clear_shortcut = egui::KeyboardShortcut::new(Modifiers::CTRL | Modifiers::COMMAND, egui::Key::D);
+        if ctx.input_mut(|i| i.consume_shortcut(&clear_shortcut))
+        {
+            if !self.rendering.is_running() || self.rendering.is_done()
+            {
+                self.init_image();
+            }
+        }
+
+        // fullscreen
+        if ctx.input(|i| i.key_pressed(egui::Key::F))
+        {
+            frame.set_fullscreen(!frame.info().window_info.fullscreen);
+        }
+
         if let Some(position) = window_info.position
         {
             let x = position.x as i32;
