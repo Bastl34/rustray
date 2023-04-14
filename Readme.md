@@ -2,6 +2,9 @@
 
 ## Screenshots
 
+<img src="data/renderings/output_2023-4-14_22-4-2_00000000.png" width="720">
+<br>
+
 <sub>`cargo run --release`</sub><br>
 <img src="data/images/ui.png" width="720">
 <br>
