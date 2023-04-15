@@ -20,6 +20,7 @@ use crate::animation::{Animation, Frame, Keyframe};
 
 use std::f32::consts::PI;
 use std::path::Path;
+use std::sync::Arc;
 
 pub type ScemeItem = Box<dyn Shape + Send + Sync>;
 pub type LightItem = Box<Light>;
@@ -705,6 +706,8 @@ impl Scene
     {
         let mut loaded_ids: Vec<u32> = vec![];
 
+        let mut materials: Vec<Arc<easy_gltf::Material>> = vec![];
+
         let scenes = easy_gltf::load(path).unwrap();
         for scene in scenes
         {
@@ -814,6 +817,22 @@ impl Scene
                 let mut index_vert: u32 = 0;
                 let mut index_uv: u32 = 0;
                 let mut index_normal: u32 = 0;
+
+                let mut found = false;
+                for mat in &materials
+                {
+                    if Arc::ptr_eq(mat, &material)
+                    {
+                        println!(" ............. already in ... ");
+                        found = true;
+                        break;
+                    }
+                }
+
+                if !found
+                {
+                    materials.push(material.clone());
+                }
 
                 for triangle in triangles
                 {
