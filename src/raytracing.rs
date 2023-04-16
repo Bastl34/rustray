@@ -453,7 +453,8 @@ impl Raytracing
             let dist = item.intersect_b_box(&ray, for_shadow);
             if let Some(dist) = dist
             {
-                if item.get_basic().visible && item.get_material().alpha > 0.0 && (!for_shadow || item.get_material().cast_shadow) && (!item.get_material().reflection_only || depth > 1)
+                let material = item.get_material().read().unwrap();
+                if item.get_basic().visible && material.alpha > 0.0 && (!for_shadow || material.cast_shadow) && (!material.reflection_only || depth > 1)
                 {
                     hits.push(HitResult{ item: item.as_ref(), dist: dist });
                 }
@@ -645,16 +646,17 @@ impl Raytracing
 
     pub fn get_tex_color(&self, item: &dyn Shape, uv: &Option<Point2<f32>>, tex_type: TextureType) -> Option<Vector4<f32>>
     {
+        let material = (*item).get_material().read().unwrap();
         //texture
-        if (*item).get_basic().material.has_texture(tex_type) && uv.is_some()
+        if material.has_texture(tex_type) && uv.is_some()
         {
             let uv = uv.unwrap();
 
-            let tex_dims = (*item).get_basic().material.texture_dimension(tex_type);
+            let tex_dims = material.texture_dimension(tex_type);
             let tex_x = self.wrap(uv.x, tex_dims.0);
             let tex_y = self.wrap(uv.y, tex_dims.1);
 
-            let tex_color = (*item).get_basic().material.get_texture_pixel(tex_x, tex_y, tex_type);
+            let tex_color = material.get_texture_pixel(tex_x, tex_y, tex_type);
 
             return Some(tex_color);
         }
@@ -664,7 +666,7 @@ impl Raytracing
 
     pub fn get_item_color(&self, item: &dyn Shape, uv: &Option<Point2<f32>>, color_type: LightningColorType) -> Vector4<f32>
     {
-        let mat = (*item).get_material();
+        let mat = (*item).get_material().read().unwrap();
 
         let mut item_color;
         let tex_type;
@@ -729,6 +731,7 @@ impl Raytracing
             let normal = intersection.1;
             let item = intersection.2;
             let face_id = intersection.3;
+            let material = item.get_material().read().unwrap();
 
             out_depth = hit_dist;
             out_normal = normal;
@@ -739,7 +742,7 @@ impl Raytracing
 
             //get uv
             let mut uv = None;
-            if item.get_material().has_any_texture()
+            if material.has_any_texture()
             {
                 uv = Some((*item).get_uv(hit_point, face_id));
             }
@@ -764,8 +767,8 @@ impl Raytracing
                 normal_map.y = (normal_map.y * 2.0) - 1.0;
                 normal_map.z = (normal_map.z * 2.0) - 1.0;
 
-                normal_map.x *= item.get_material().normal_map_strength;
-                normal_map.y *= item.get_material().normal_map_strength;
+                normal_map.x *= material.normal_map_strength;
+                normal_map.y *= material.normal_map_strength;
 
                 normal_map = normal_map.normalize();
 
@@ -776,9 +779,9 @@ impl Raytracing
 
             //roughness map (overwrites roughness material setting)
             let roughness_tex_color = self.get_tex_color(item, &uv, TextureType::Roughness);
-            if self.config.monte_carlo && item.get_material().monte_carlo && (item.get_material().roughness > 0.0 || roughness_tex_color.is_some())
+            if self.config.monte_carlo && material.monte_carlo && (material.roughness > 0.0 || roughness_tex_color.is_some())
             {
-                let mut roughness = item.get_material().roughness;
+                let mut roughness = material.roughness;
 
                 if let Some(roughness_tex_color) = roughness_tex_color
                 {
@@ -794,7 +797,7 @@ impl Raytracing
             let specular_color = self.get_item_color(item, &uv, LightningColorType::Specular);
 
             //alpha mapping
-            let mut alpha = item.get_material().alpha * base_color.w;
+            let mut alpha = material.alpha * base_color.w;
             let alpha_tex_color = self.get_tex_color(item, &uv, TextureType::Alpha);
             if let Some(alpha_tex_color) = alpha_tex_color
             {
@@ -828,7 +831,7 @@ impl Raytracing
                 let reflect_dir = self.reflect(-direction_to_light, surface_normal);
                 let view_dir = (-r.dir).normalize();
                 let spec_dot = reflect_dir.dot(&view_dir).max(0.0);
-                let light_power = spec_dot.powf(item.get_material().shininess);
+                let light_power = spec_dot.powf(material.shininess);
 
                 let specular = specular_color * light_power;
 
@@ -860,14 +863,14 @@ impl Raytracing
                 }
 
                 //shadow
-                if item.get_material().receive_shadow
+                if material.receive_shadow
                 {
                     let shadow_ray_start = hit_point + (surface_normal * SHADOW_BIAS);
                     let mut shadow_ray_dir = direction_to_light;
 
-                    if self.config.monte_carlo && item.get_material().monte_carlo
+                    if self.config.monte_carlo && material.monte_carlo
                     {
-                        shadow_ray_dir = self.jitter(shadow_ray_dir, item.get_material().shadow_softness);
+                        shadow_ray_dir = self.jitter(shadow_ray_dir, material.shadow_softness);
                     }
 
                     let shadow_ray = Ray::new(shadow_ray_start, shadow_ray_dir);
@@ -886,7 +889,7 @@ impl Raytracing
                     if !in_light
                     {
                         let shadow_obj = shadow_intersection.unwrap().2;
-                        let mut shadow_source_alpha = shadow_obj.get_material().alpha;
+                        let mut shadow_source_alpha = material.alpha;
 
                         let shadow_face_id = shadow_intersection.unwrap().3;
 
@@ -909,13 +912,13 @@ impl Raytracing
                 color.z = color.z + ((light.color.z * (specular.z + base.z)) * intensity);
             }
 
-            let refraction_index = item.get_material().refraction_index;
+            let refraction_index = material.refraction_index;
 
             //fresnel
             let kr = self.fresnel(r.dir, surface_normal, refraction_index);
 
             //reflectivity
-            let mut reflectivity = item.get_material().reflectivity;
+            let mut reflectivity = material.reflectivity;
             let tex_reflexivity = self.get_tex_color(item, &uv, TextureType::Reflectivity);
             if let Some(tex_reflexivity) = tex_reflexivity
             {

@@ -11,7 +11,7 @@ use image::{DynamicImage, Rgba, RgbaImage, ImageBuffer};
 use crate::helper::download;
 use crate::post_processing::PostProcessingConfig;
 use crate::raytracing::RaytracingConfig;
-use crate::shape::{Shape, TextureType, Material};
+use crate::shape::{Shape, TextureType, Material, ShapeBasics, MaterialItem};
 
 use crate::shape::sphere::Sphere;
 use crate::shape::mesh::Mesh;
@@ -20,7 +20,7 @@ use crate::animation::{Animation, Frame, Keyframe};
 
 use std::f32::consts::PI;
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 pub type ScemeItem = Box<dyn Shape + Send + Sync>;
 pub type LightItem = Box<Light>;
@@ -73,6 +73,7 @@ pub struct Scene
     pub items: Vec<ScemeItem>,
     pub lights: Vec<LightItem>,
     pub animation: Animation,
+    pub materials: Vec<MaterialItem>,
 
     pub raytracing_config: RaytracingConfig,
     pub post_processing: PostProcessingConfig,
@@ -91,6 +92,7 @@ impl Scene
             cam: Camera::new(),
             items: vec![],
             lights: vec![],
+            materials: vec![],
             animation: Animation::new(),
 
             raytracing_config: RaytracingConfig::new(),
@@ -105,6 +107,7 @@ impl Scene
         self.item_id = 0;
         self.items.clear();
         self.lights.clear();
+        self.materials.clear();
     }
 
     pub fn get_next_id(&mut self) -> u32
@@ -290,7 +293,9 @@ impl Scene
                     for object in objects
                     {
                         let mut shape: Option<ScemeItem> = None;
-                        let mut material = Material::new();
+
+                        let id = self.get_next_id();
+                        let mut material = Box::new(Material::new(id, "material"));
 
                         //type
                         let item_type = object["type"].as_str().unwrap();
@@ -337,7 +342,6 @@ impl Scene
                         if !&object["roughness"].is_null() { material.roughness = object["roughness"].as_f64().unwrap() as f32; }
                         if !&object["monte_carlo"].is_null() { material.monte_carlo = object["monte_carlo"].as_bool().unwrap(); }
                         if !&object["smooth_shading"].is_null() { material.smooth_shading = object["smooth_shading"].as_bool().unwrap(); }
-                        if !&object["flip_normals"].is_null() { material.flip_normals = object["flip_normals"].as_bool().unwrap(); }
                         if !&object["reflection_only"].is_null() { material.reflection_only = object["reflection_only"].as_bool().unwrap(); }
                         if !&object["backface_cullig"].is_null() { material.backface_cullig = object["backface_cullig"].as_bool().unwrap(); }
 
@@ -389,9 +393,13 @@ impl Scene
                             }
                         }
 
-                        // ***** other settings
-                        let mut visible = true;
+                        // ***** other (basic item) settings
+                        let default_mat = Arc::new(RwLock::new(Box::new(Material::new(0, "unknown"))));
+                        let default_basic_settings = ShapeBasics::new("", default_mat);
+                        let mut visible = default_basic_settings.visible;
+                        let mut flip_normals = default_basic_settings.flip_normals;
                         if !&object["visible"].is_null() { visible = object["visible"].as_bool().unwrap(); }
+                        if !&object["flip_normals"].is_null() { flip_normals = object["flip_normals"].as_bool().unwrap(); }
 
                         // ***** transformation
                         let mut rotation = Vector3::<f32>::new(0.0, 0.0, 0.0);
@@ -410,6 +418,8 @@ impl Scene
                             rotation.z = rotation.z.to_radians();
                         }
 
+                        let material_arc = Arc::new(RwLock::new(material));
+
                         // ***** sphere
                         if item_type == "sphere"
                         {
@@ -422,7 +432,7 @@ impl Scene
                             }
 
                             // create shape
-                            let mut sphere = Box::new(Sphere::new_with_pos(name, pos.x, pos.y, pos.z, radius));
+                            let mut sphere = Box::new(Sphere::new_with_pos(name, material_arc.clone(), pos.x, pos.y, pos.z, radius));
 
                             sphere.get_basic_mut().id = self.get_next_id();
                             loaded_ids.push(sphere.get_basic().id);
@@ -440,6 +450,7 @@ impl Scene
                             let mut plane = Box::new(Mesh::new_plane
                             (
                                 name,
+                                material_arc.clone(),
                                 Point3::<f32>::new(p0["x"].as_f64().unwrap() as f32, p0["y"].as_f64().unwrap() as f32, p0["z"].as_f64().unwrap() as f32),
                                 Point3::<f32>::new(p1["x"].as_f64().unwrap() as f32, p1["y"].as_f64().unwrap() as f32, p1["z"].as_f64().unwrap() as f32),
                                 Point3::<f32>::new(p2["x"].as_f64().unwrap() as f32, p2["y"].as_f64().unwrap() as f32, p2["z"].as_f64().unwrap() as f32),
@@ -505,8 +516,9 @@ impl Scene
                                             item.get_basic_mut().name = name.to_string();
                                         }
 
-                                        item.get_basic_mut().material.apply_diff(&material);
+                                        item.get_basic_mut().material.write().unwrap().apply_diff(&material_arc.read().unwrap());
                                         item.get_basic_mut().visible = visible;
+                                        item.get_basic_mut().flip_normals = flip_normals;
                                         item.get_basic_mut().apply_transformation(translation, scale, rotation);
                                     }
                                 }
@@ -518,13 +530,15 @@ impl Scene
                         // ***** appy material and properties
                         if let Some(mut shape) = shape
                         {
-                            shape.get_basic_mut().material = material;
+                            //shape.get_basic_mut().material = material;
                             shape.get_basic_mut().visible = visible;
+                            shape.get_basic_mut().flip_normals = flip_normals;
                             shape.get_basic_mut().apply_transformation(translation, scale, rotation);
 
                             shape.get_basic_mut().id = self.get_next_id();
 
                             self.items.push(shape);
+                            self.materials.push(material_arc.clone());
                         }
                     }
                 }
@@ -706,7 +720,7 @@ impl Scene
     {
         let mut loaded_ids: Vec<u32> = vec![];
 
-        let mut materials: Vec<Arc<easy_gltf::Material>> = vec![];
+        let mut double_check_materials: Vec<(Arc<easy_gltf::Material>, u32)> = vec![];
 
         let scenes = easy_gltf::load(path).unwrap();
         for scene in scenes
@@ -804,7 +818,9 @@ impl Scene
             for model in scene.models
             {
                 let triangles = model.triangles().unwrap();
-                let material = model.material();
+                let gltf_material = model.material();
+
+                let object_id = self.get_next_id();
 
                 let mut verts: Vec<Point3::<f32>> = vec![];
                 let mut uvs: Vec<Point2<f32>> = vec![];
@@ -818,21 +834,17 @@ impl Scene
                 let mut index_uv: u32 = 0;
                 let mut index_normal: u32 = 0;
 
-                let mut found = false;
-                for mat in &materials
+                let mut reusing_material_object_id = 0;
+                for mat in &double_check_materials
                 {
-                    if Arc::ptr_eq(mat, &material)
+                    if Arc::ptr_eq(&mat.0, &gltf_material)
                     {
-                        println!(" ............. already in ... ");
-                        found = true;
+                        reusing_material_object_id = mat.1;
                         break;
                     }
                 }
 
-                if !found
-                {
-                    materials.push(material.clone());
-                }
+                reusing_material_object_id = 0;
 
                 for triangle in triangles
                 {
@@ -874,66 +886,82 @@ impl Scene
                     }
                 }
 
-                let mut item = Mesh::new_with_data("unknown", verts, indices, uvs, uv_indices, normals, normals_indices);
+                let material_arc;
 
-                // ********** material **********
-
-                let base_color = material.pbr.base_color_factor;
-                item.get_basic_mut().material.base_color = Vector3::<f32>::new(base_color.x, base_color.y, base_color.z);
-                item.get_basic_mut().material.specular_color = item.get_basic_mut().material.base_color * 0.8; // TODO 🤔
-
-                item.get_basic_mut().material.alpha = base_color.w;
-                item.get_basic_mut().material.reflectivity = material.pbr.metallic_factor * 0.5; // do not use full metallic_factor as reflectivity --> otherwise the object will be just complete mirror if metallic is set to 1.0
-                item.get_basic_mut().material.roughness = (1.0 / PI / 2.0) * material.pbr.roughness_factor;
-                //item.get_basic_mut().material.roughness = material.pbr.roughness_factor;
-                //item.get_basic_mut().material.reflectivity = material.pbr.metallic_factor * (1.0 - item.get_basic_mut().material.roughness);
-
-                // base map
-                if material.pbr.base_color_texture.is_some()
+                if reusing_material_object_id != 0
                 {
-                    let img = self.get_dyn_image_from_gltf_material(&material, TextureType::Base);
-                    item.basic.material.load_texture_buffer(&img, TextureType::Base);
+                    material_arc = self.get_material_by_id(reusing_material_object_id).unwrap();
+                }
+                else
+                {
+                    let material_id = self.get_next_id();
+                    material_arc = Arc::new(RwLock::new(Box::new(Material::new(material_id, "unknown"))));
+
+                    // ********** material **********
+                    let mut material = material_arc.write().unwrap();
+
+                    let base_color = gltf_material.pbr.base_color_factor;
+                    material.base_color = Vector3::<f32>::new(base_color.x, base_color.y, base_color.z);
+                    material.specular_color = material.base_color * 0.8; // TODO 🤔
+
+                    material.alpha = base_color.w;
+                    material.reflectivity = gltf_material.pbr.metallic_factor * 0.5; // do not use full metallic_factor as reflectivity --> otherwise the object will be just complete mirror if metallic is set to 1.0
+                    material.roughness = (1.0 / PI / 2.0) * gltf_material.pbr.roughness_factor;
+                    //materialroughness = gltf_material.pbr.roughness_factor;
+                    //material.reflectivity = gltf_material.pbr.metallic_factor * (1.0 - material.roughness);
+
+                    // base map
+                    if gltf_material.pbr.base_color_texture.is_some()
+                    {
+                        let img = self.get_dyn_image_from_gltf_material(&gltf_material, TextureType::Base);
+                        material.load_texture_buffer(&img, TextureType::Base);
+                    }
+
+                    // normal map
+                    if gltf_material.normal.is_some()
+                    {
+                        let img = self.get_dyn_image_from_gltf_material(&gltf_material, TextureType::Normal);
+                        material.load_texture_buffer(&img, TextureType::Normal);
+                    }
+
+                    // metallic map
+                    if gltf_material.pbr.metallic_texture.is_some()
+                    {
+                        let img = self.get_dyn_image_from_gltf_material(&gltf_material, TextureType::Reflectivity);
+                        material.load_texture_buffer(&img, TextureType::Reflectivity);
+                    }
+
+                    // emissive
+                    if gltf_material.emissive.texture.is_some()
+                    {
+                        let img = self.get_dyn_image_from_gltf_material(&gltf_material, TextureType::AmbientEmissive);
+                        material.load_texture_buffer(&img, TextureType::AmbientEmissive);
+                        material.ambient_color.x = gltf_material.emissive.factor.x;
+                        material.ambient_color.y = gltf_material.emissive.factor.y;
+                        material.ambient_color.z = gltf_material.emissive.factor.z;
+                    }
+
+                    // roughness map
+                    if gltf_material.pbr.roughness_texture.is_some()
+                    {
+                        let img = self.get_dyn_image_from_gltf_material(&gltf_material, TextureType::Roughness);
+                        material.load_texture_buffer(&img, TextureType::Roughness);
+                    }
+
+                    // occlusion map
+                    if gltf_material.occlusion.is_some()
+                    {
+                        let img = self.get_dyn_image_from_gltf_material(&gltf_material, TextureType::AmbientOcclusion);
+                        material.load_texture_buffer(&img, TextureType::AmbientOcclusion);
+                    }
+
+                    self.materials.push(material_arc.clone());
+                    double_check_materials.push((gltf_material.clone(), material_id));
                 }
 
-                // normal map
-                if material.normal.is_some()
-                {
-                    let img = self.get_dyn_image_from_gltf_material(&material, TextureType::Normal);
-                    item.basic.material.load_texture_buffer(&img, TextureType::Normal);
-                }
 
-                // metallic map
-                if material.pbr.metallic_texture.is_some()
-                {
-                    let img = self.get_dyn_image_from_gltf_material(&material, TextureType::Reflectivity);
-                    item.basic.material.load_texture_buffer(&img, TextureType::Reflectivity);
-                }
-
-                // emissive
-                if material.emissive.texture.is_some()
-                {
-                    let img = self.get_dyn_image_from_gltf_material(&material, TextureType::AmbientEmissive);
-                    item.basic.material.load_texture_buffer(&img, TextureType::AmbientEmissive);
-                    item.basic.material.ambient_color.x = material.emissive.factor.x;
-                    item.basic.material.ambient_color.y = material.emissive.factor.y;
-                    item.basic.material.ambient_color.z = material.emissive.factor.z;
-                }
-
-                // roughness map
-                if material.pbr.roughness_texture.is_some()
-                {
-                    let img = self.get_dyn_image_from_gltf_material(&material, TextureType::Roughness);
-                    item.basic.material.load_texture_buffer(&img, TextureType::Roughness);
-                }
-
-                // occlusion map
-                if material.occlusion.is_some()
-                {
-                    let img = self.get_dyn_image_from_gltf_material(&material, TextureType::AmbientOcclusion);
-                    item.basic.material.load_texture_buffer(&img, TextureType::AmbientOcclusion);
-                }
-
-                item.get_basic_mut().id = self.get_next_id();
+                let mut item = Mesh::new_with_data("unknown", material_arc.clone(), verts, indices, uvs, uv_indices, normals, normals_indices);
+                item.get_basic_mut().id = object_id;
                 loaded_ids.push(item.get_basic().id);
 
                 self.items.push(Box::new(item));
@@ -1100,7 +1128,9 @@ impl Scene
         };
 
         let (models, materials) = tobj::load_obj(&path, options).unwrap();
-        let materials = materials.unwrap();
+        let wavefront_materials = materials.unwrap();
+
+        let mut double_check_materials: Vec<(usize, u32)> = vec![];
 
         for (_i, m) in models.iter().enumerate()
         {
@@ -1182,72 +1212,104 @@ impl Scene
 
             if verts.len() > 0
             {
-                let mut item = Mesh::new_with_data(m.name.as_str(), verts, indices, uvs, uv_indices, normals, normals_indices);
+                let material_arc;
 
                 //apply material
-                if let Some(mat_id) = mesh.material_id
+                if let Some(wavefront_mat_id) = mesh.material_id
                 {
-                    let mat: &tobj::Material = &materials[mat_id];
-
-                    item.basic.material.shininess = mat.shininess;
-                    item.basic.material.ambient_color = Vector3::<f32>::new(mat.ambient[0], mat.ambient[1], mat.ambient[2]);
-                    item.basic.material.specular_color = Vector3::<f32>::new(mat.specular[0], mat.specular[1], mat.specular[2]);
-                    item.basic.material.base_color = Vector3::<f32>::new(mat.diffuse[0], mat.diffuse[1], mat.diffuse[2]);
-                    item.basic.material.refraction_index = mat.optical_density;
-                    item.basic.material.alpha = mat.dissolve;
-
-                    item.basic.material.ambient_color = item.basic.material.base_color * 0.01;
-
-                    if let Some(illumination) = mat.illumination_model
+                    let mut reusing_material_object_id = 0;
+                    for mat in &double_check_materials
                     {
-                        if illumination > 2
+                        if mat.0 == wavefront_mat_id
                         {
-                            item.basic.material.reflectivity = 0.5;
+                            reusing_material_object_id = mat.1;
+                            break;
                         }
                     }
 
-                    // base texture
-                    if !mat.diffuse_texture.is_empty()
+                    if reusing_material_object_id != 0
                     {
-                        let tex_path = self.get_texture_path(&mat.diffuse_texture, path);
-                        dbg!(&tex_path);
-                        item.basic.material.load_texture(&tex_path, TextureType::Base);
+                        material_arc = self.get_material_by_id(reusing_material_object_id).unwrap();
                     }
-
-                    // normal texture
-                    if !mat.normal_texture.is_empty()
+                    else
                     {
-                        let tex_path = self.get_texture_path(&mat.normal_texture, path);
-                        dbg!(&tex_path);
-                        item.basic.material.load_texture(&tex_path, TextureType::Normal);
-                    }
+                        let material_id = self.get_next_id();
+                        material_arc = Arc::new(RwLock::new(Box::new(Material::new(material_id, ""))));
 
-                    // ambient texture
-                    if !mat.ambient_texture.is_empty()
-                    {
-                        let tex_path = self.get_texture_path(&mat.ambient_texture, path);
-                        dbg!(&tex_path);
-                        item.basic.material.load_texture(&tex_path, TextureType::AmbientEmissive);
-                    }
+                        let mat: &tobj::Material = &wavefront_materials[wavefront_mat_id];
+                        let mut material = material_arc.write().unwrap();
+                        material.name = mat.name.clone();
 
-                    // specular texture
-                    if !mat.specular_texture.is_empty()
-                    {
-                        let tex_path = self.get_texture_path(&mat.specular_texture, path);
-                        dbg!(&tex_path);
-                        item.basic.material.load_texture(&tex_path, TextureType::Specular);
-                    }
+                        material.shininess = mat.shininess;
+                        material.ambient_color = Vector3::<f32>::new(mat.ambient[0], mat.ambient[1], mat.ambient[2]);
+                        material.specular_color = Vector3::<f32>::new(mat.specular[0], mat.specular[1], mat.specular[2]);
+                        material.base_color = Vector3::<f32>::new(mat.diffuse[0], mat.diffuse[1], mat.diffuse[2]);
+                        material.refraction_index = mat.optical_density;
+                        material.alpha = mat.dissolve;
 
-                    // specular texture
-                    if !mat.dissolve_texture.is_empty()
-                    {
-                        let tex_path = self.get_texture_path(&mat.dissolve_texture, path);
-                        dbg!(&tex_path);
-                        item.basic.material.load_texture(&tex_path, TextureType::Alpha);
-                    }
+                        material.ambient_color = material.base_color * 0.01;
 
-                    // shininess_texture is not supported
+                        if let Some(illumination) = mat.illumination_model
+                        {
+                            if illumination > 2
+                            {
+                                material.reflectivity = 0.5;
+                            }
+                        }
+
+                        // base texture
+                        if !mat.diffuse_texture.is_empty()
+                        {
+                            let tex_path = self.get_texture_path(&mat.diffuse_texture, path);
+                            dbg!(&tex_path);
+                            material.load_texture(&tex_path, TextureType::Base);
+                        }
+
+                        // normal texture
+                        if !mat.normal_texture.is_empty()
+                        {
+                            let tex_path = self.get_texture_path(&mat.normal_texture, path);
+                            dbg!(&tex_path);
+                            material.load_texture(&tex_path, TextureType::Normal);
+                        }
+
+                        // ambient texture
+                        if !mat.ambient_texture.is_empty()
+                        {
+                            let tex_path = self.get_texture_path(&mat.ambient_texture, path);
+                            dbg!(&tex_path);
+                            material.load_texture(&tex_path, TextureType::AmbientEmissive);
+                        }
+
+                        // specular texture
+                        if !mat.specular_texture.is_empty()
+                        {
+                            let tex_path = self.get_texture_path(&mat.specular_texture, path);
+                            dbg!(&tex_path);
+                            material.load_texture(&tex_path, TextureType::Specular);
+                        }
+
+                        // specular texture
+                        if !mat.dissolve_texture.is_empty()
+                        {
+                            let tex_path = self.get_texture_path(&mat.dissolve_texture, path);
+                            dbg!(&tex_path);
+                            material.load_texture(&tex_path, TextureType::Alpha);
+                        }
+
+                        // shininess_texture is not supported
+
+                        self.materials.push(material_arc.clone());
+                        double_check_materials.push((wavefront_mat_id, material_id));
+                    }
                 }
+                else
+                {
+                    let material_id = self.get_next_id();
+                    material_arc = Arc::new(RwLock::new(Box::new(Material::new(material_id, ""))));
+                }
+
+                let mut item = Mesh::new_with_data(m.name.as_str(), material_arc.clone(), verts, indices, uvs, uv_indices, normals, normals_indices);
 
                 item.get_basic_mut().id = self.get_next_id();
                 loaded_ids.push(item.get_basic().id);
@@ -1512,6 +1574,19 @@ impl Scene
         }
     }
 
+    pub fn get_material_by_id(&mut self, id: u32) -> Option<MaterialItem>
+    {
+        for item in &self.materials
+        {
+            if item.read().unwrap().id == id
+            {
+                return Some(item.clone());
+            }
+        }
+
+        None
+    }
+
     pub fn get_texture_path(&self, tex_path: &String, mtl_path: &str) -> String
     {
         let mut tex_path = tex_path.clone();
@@ -1701,11 +1776,13 @@ impl Scene
             let name = item.get_basic().name.clone();
             let visible = item.get_basic().visible;
 
-            let b_tex = item.get_basic().material.has_texture(TextureType::Base);
-            let am_tex = item.get_basic().material.has_texture(TextureType::Alpha);
-            let s_tex = item.get_basic().material.has_texture(TextureType::Specular);
-            let n_tex = item.get_basic().material.has_texture(TextureType::Normal);
-            let a_tex = item.get_basic().material.has_texture(TextureType::Alpha);
+            let material = item.get_material().read().unwrap();
+
+            let b_tex = material.has_texture(TextureType::Base);
+            let am_tex = material.has_texture(TextureType::Alpha);
+            let s_tex = material.has_texture(TextureType::Specular);
+            let n_tex = material.has_texture(TextureType::Normal);
+            let a_tex = material.has_texture(TextureType::Alpha);
 
             println!(" - {}: {} (visible: {}, bTex: {}, amTex: {}, sTex: {}, nTex: {}, aTex: {})", id, name, visible, b_tex, am_tex, s_tex, n_tex, a_tex);
         }

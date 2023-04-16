@@ -1,3 +1,5 @@
+use std::sync::{Arc, RwLock};
+
 use bvh::aabb::Bounded;
 use bvh::bounding_hierarchy::BHShape;
 use nalgebra::{Matrix4, Vector3, Point2, Point3, Rotation3, Vector4};
@@ -9,12 +11,14 @@ use image::{DynamicImage, GenericImageView, Pixel};
 
 use crate::helper::approx_equal;
 
+pub type MaterialItem = Arc<RwLock<Box<Material>>>;
+
 pub mod sphere;
 pub mod mesh;
 
 pub trait Shape
 {
-    fn get_material(&self) -> &Material;
+    fn get_material(&self) -> &MaterialItem;
     fn get_basic(&self) -> &ShapeBasics;
     fn get_basic_mut(&mut self) -> &mut ShapeBasics;
 
@@ -88,6 +92,9 @@ impl BHShape for Box<(dyn Shape + Send + Sync + 'static)>
 #[derive(Debug)]
 pub struct Material
 {
+    pub id: u32,
+    pub name: String,
+
     pub ambient_color: Vector3<f32>,
     pub base_color: Vector3<f32>,
     pub specular_color: Vector3<f32>,
@@ -117,7 +124,6 @@ pub struct Material
     pub roughness: f32, //degree in rad (max PI/2)
 
     pub smooth_shading: bool,
-    pub flip_normals: bool,
 
     pub reflection_only: bool,
     pub backface_cullig: bool
@@ -125,10 +131,13 @@ pub struct Material
 
 impl Material
 {
-    pub fn new() -> Material
+    pub fn new(id: u32, name: &str) -> Material
     {
         Material
         {
+            id: id,
+            name: name.to_string(),
+
             ambient_color: Vector3::<f32>::new(0.0, 0.0, 0.0),
             base_color: Vector3::<f32>::new(1.0, 1.0, 1.0),
             specular_color: Vector3::<f32>::new(0.8, 0.8, 0.8),
@@ -158,7 +167,6 @@ impl Material
             monte_carlo: true,
 
             smooth_shading: true,
-            flip_normals: false,
 
             reflection_only: false,
             backface_cullig: true,
@@ -167,7 +175,7 @@ impl Material
 
     pub fn apply_diff(&mut self, new_mat: &Material)
     {
-        let default_material = Material::new();
+        let default_material = Material::new(0, "");
 
         // ********** colors **********
 
@@ -272,7 +280,6 @@ impl Material
         if default_material.monte_carlo != new_mat.monte_carlo { self.monte_carlo = new_mat.monte_carlo; }
 
         if default_material.smooth_shading != new_mat.smooth_shading { self.smooth_shading = new_mat.smooth_shading; }
-        if default_material.flip_normals != new_mat.flip_normals { self.flip_normals = new_mat.flip_normals; }
 
         if default_material.reflection_only != new_mat.reflection_only { self.reflection_only = new_mat.reflection_only; }
         if default_material.backface_cullig != new_mat.backface_cullig { self.backface_cullig = new_mat.backface_cullig; }
@@ -309,7 +316,6 @@ impl Material
         println!("monte_carlo: {:?}", self.monte_carlo);
 
         println!("smooth_shading: {:?}", self.smooth_shading);
-        println!("flip_normals: {:?}", self.flip_normals);
 
         println!("reflection_only: {:?}", self.reflection_only);
         println!("backface_cullig: {:?}", self.backface_cullig);
@@ -552,13 +558,16 @@ pub struct ShapeBasics
 {
     pub id: u32,
     pub name: String,
+
     pub visible: bool,
+    pub flip_normals: bool,
+
     pub trans: Matrix4<f32>,
     tran_inverse: Matrix4<f32>,
 
     pub b_box: Aabb,
 
-    pub material: Material,
+    pub material: MaterialItem,
 
     pub animation_data: AnimationData,
 
@@ -567,17 +576,18 @@ pub struct ShapeBasics
 
 impl ShapeBasics
 {
-    pub fn new(name: &str) -> ShapeBasics
+    pub fn new(name: &str, material: MaterialItem) -> ShapeBasics
     {
         ShapeBasics
         {
             id: 0,
             name: name.to_string(),
             visible: true,
+            flip_normals: false,
             trans: Matrix4::<f32>::identity(),
             tran_inverse: Matrix4::<f32>::identity(),
             b_box: Aabb::new_invalid(),
-            material: Material::new(),
+            material: material,
             animation_data: AnimationData::new(),
 
             node_index: 0

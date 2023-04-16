@@ -95,3 +95,12 @@ cargo run --release -- scene/helmet.json no-animation samples=32 800x600 monte_c
 ```bash
 sudo apt install cmake pkg-config libssl-dev build-essential cmake xorg-dev
 ```
+
+
+## Profiling
+```bash
+cargo install flamegraph
+
+cargo flamegraph --release -- scene/workbench.json cmd 800x600
+
+```

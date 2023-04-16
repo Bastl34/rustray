@@ -1199,8 +1199,11 @@ impl Run
                                 {
                                     ui.horizontal_wrapped(|ui|
                                     {
+                                        // basic settings
                                         let mut visible;
+                                        let mut flip_normals;
 
+                                        // material settings
                                         let mut alpha;
                                         let mut shininess;
                                         let mut reflectivity;
@@ -1212,7 +1215,6 @@ impl Run
                                         let mut roughness;
                                         let mut monte_carlo;
                                         let mut smooth_shading;
-                                        let mut flip_normals;
                                         let mut reflection_only;
                                         let mut backface_cullig;
 
@@ -1225,8 +1227,9 @@ impl Run
                                             let item = scene.get_obj_by_id(item.0).unwrap();
 
                                             visible = item.get_basic().visible;
+                                            flip_normals = item.get_basic().flip_normals;
 
-                                            let mat = &item.get_basic().material;
+                                            let mat = &item.get_material().read().unwrap();
                                             alpha = mat.alpha;
                                             shininess = mat.shininess;
                                             reflectivity = mat.reflectivity;
@@ -1238,7 +1241,6 @@ impl Run
                                             roughness = mat.roughness;
                                             monte_carlo = mat.monte_carlo;
                                             smooth_shading = mat.smooth_shading;
-                                            flip_normals = mat.flip_normals;
                                             reflection_only = mat.reflection_only;
                                             backface_cullig = mat.backface_cullig;
 
@@ -1262,8 +1264,11 @@ impl Run
 
                                         ui.vertical(|ui|
                                         {
+                                            ui.separator();
                                             apply_settings = ui.checkbox(&mut visible, "Visible").changed() || apply_settings;
+                                            apply_settings = ui.checkbox(&mut flip_normals, "flip normals").changed() || apply_settings;
 
+                                            ui.separator();
                                             apply_settings = ui.add(egui::Slider::new(&mut alpha, 0.0..=1.0).text("alpha")).changed() || apply_settings;
                                             apply_settings = ui.add(egui::Slider::new(&mut shininess, 0.0..=1.0).text("shininess")).changed() || apply_settings;
                                             apply_settings = ui.add(egui::Slider::new(&mut reflectivity, 0.0..=1.0).text("reflectivity")).changed() || apply_settings;
@@ -1275,7 +1280,6 @@ impl Run
                                             apply_settings = ui.add(egui::Slider::new(&mut roughness, 0.0..=PI/2.0).text("roughness")).changed() || apply_settings;
                                             apply_settings = ui.checkbox(&mut monte_carlo, "monte carlo").changed() || apply_settings;
                                             apply_settings = ui.checkbox(&mut smooth_shading, "smooth shading").changed() || apply_settings;
-                                            apply_settings = ui.checkbox(&mut flip_normals, "flip normals").changed() || apply_settings;
                                             apply_settings = ui.checkbox(&mut reflection_only, "reflection only").changed() || apply_settings;
                                             apply_settings = ui.checkbox(&mut backface_cullig, "backface cullig").changed() || apply_settings;
 
@@ -1304,8 +1308,9 @@ impl Run
                                             let item = scene.get_obj_by_id_mut(item.0).unwrap();
 
                                             item.get_basic_mut().visible = visible;
+                                            item.get_basic_mut().flip_normals = flip_normals;
 
-                                            let mut mat = &mut item.get_basic_mut().material;
+                                            let mat = &mut item.get_basic_mut().material.write().unwrap();
 
                                             mat.alpha = alpha;
                                             mat.shininess = shininess;
@@ -1317,7 +1322,6 @@ impl Run
                                             mat.shadow_softness = shadow_softness;
                                             mat.roughness = roughness;
                                             mat.smooth_shading = smooth_shading;
-                                            mat.flip_normals = flip_normals;
                                             mat.reflection_only = reflection_only;
                                             mat.backface_cullig = backface_cullig;
 
@@ -1339,6 +1343,7 @@ impl Run
                                     });
 
                                     // ********** textures
+                                    ui.separator();
                                     ui.collapsing("Textures", |ui|
                                     {
                                         // labels
@@ -1363,24 +1368,25 @@ impl Run
                                         {
                                             let scene = self.scene.read().unwrap();
                                             let item = scene.get_obj_by_id(item.0).unwrap();
+                                            let material = item.get_material().read().unwrap();
 
-                                            has_ambient = item.get_material().texture_ambient.width() > 0;
-                                            has_base = item.get_material().texture_base.width() > 0;
-                                            has_specular = item.get_material().texture_specular.width() > 0;
-                                            has_normal = item.get_material().texture_normal.width() > 0;
-                                            has_alpha = item.get_material().texture_alpha.width() > 0;
-                                            has_roughness = item.get_material().texture_roughness.width() > 0;
-                                            has_ao = item.get_material().texture_ambient_occlusion.width() > 0;
-                                            has_reflectivity = item.get_material().texture_reflectivity.width() > 0;
+                                            has_ambient = material.texture_ambient.width() > 0;
+                                            has_base = material.texture_base.width() > 0;
+                                            has_specular = material.texture_specular.width() > 0;
+                                            has_normal = material.texture_normal.width() > 0;
+                                            has_alpha = material.texture_alpha.width() > 0;
+                                            has_roughness = material.texture_roughness.width() > 0;
+                                            has_ao = material.texture_ambient_occlusion.width() > 0;
+                                            has_reflectivity = material.texture_reflectivity.width() > 0;
 
-                                            if has_ambient { ambient_texture_label = format!("{}x{}", item.get_material().texture_ambient.width(), item.get_material().texture_ambient.height()); }
-                                            if has_base { base_texture_label = format!("{}x{}", item.get_material().texture_base.width(), item.get_material().texture_base.height()); }
-                                            if has_specular { specular_texture_label = format!("{}x{}", item.get_material().texture_specular.width(), item.get_material().texture_specular.height()); }
-                                            if has_normal { normal_texture_label = format!("{}x{}", item.get_material().texture_normal.width(), item.get_material().texture_normal.height()); }
-                                            if has_alpha { alpha_texture_label = format!("{}x{}", item.get_material().texture_alpha.width(), item.get_material().texture_alpha.height()); }
-                                            if has_roughness { roughness_texture_label = format!("{}x{}", item.get_material().texture_roughness.width(), item.get_material().texture_roughness.height()); }
-                                            if has_ao { ao_texture_label = format!("{}x{}", item.get_material().texture_ambient_occlusion.width(), item.get_material().texture_ambient_occlusion.height()); }
-                                            if has_reflectivity { reflectivity_texture_label = format!("{}x{}", item.get_material().texture_reflectivity.width(), item.get_material().texture_reflectivity.height()); }
+                                            if has_ambient { ambient_texture_label = format!("{}x{}", material.texture_ambient.width(), material.texture_ambient.height()); }
+                                            if has_base { base_texture_label = format!("{}x{}", material.texture_base.width(), material.texture_base.height()); }
+                                            if has_specular { specular_texture_label = format!("{}x{}", material.texture_specular.width(), material.texture_specular.height()); }
+                                            if has_normal { normal_texture_label = format!("{}x{}", material.texture_normal.width(), material.texture_normal.height()); }
+                                            if has_alpha { alpha_texture_label = format!("{}x{}", material.texture_alpha.width(), material.texture_alpha.height()); }
+                                            if has_roughness { roughness_texture_label = format!("{}x{}", material.texture_roughness.width(), material.texture_roughness.height()); }
+                                            if has_ao { ao_texture_label = format!("{}x{}", material.texture_ambient_occlusion.width(), material.texture_ambient_occlusion.height()); }
+                                            if has_reflectivity { reflectivity_texture_label = format!("{}x{}", material.texture_reflectivity.width(), material.texture_reflectivity.height()); }
                                         }
 
                                         let mut tex_items = vec![];
@@ -1414,7 +1420,7 @@ impl Run
                                                     {
                                                         let mut scene = self.scene.write().unwrap();
                                                         let item = scene.get_obj_by_id_mut(item.0).unwrap();
-                                                        item.get_basic_mut().material.load_texture(&path.display().to_string(), tex.3);
+                                                        item.get_basic_mut().material.write().unwrap().load_texture(&path.display().to_string(), tex.3);
                                                     }
                                                 }
 
@@ -1422,7 +1428,7 @@ impl Run
                                                 {
                                                     let mut scene = self.scene.write().unwrap();
                                                     let item = scene.get_obj_by_id_mut(item.0).unwrap();
-                                                    item.get_basic_mut().material.remove_texture(tex.3);
+                                                    item.get_basic_mut().material.write().unwrap().remove_texture(tex.3);
                                                 }
                                             });
                                         }
