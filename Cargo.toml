@@ -13,7 +13,7 @@ panic = "abort"
 # Improve performance but increase compile time
 #lto = "fat"
 #codegen-units = 1
-debug = true
+#debug = true
 
 [dependencies]
 

@@ -102,7 +102,9 @@ sudo apt install cmake pkg-config libssl-dev build-essential cmake xorg-dev
 # currently not working on windows
 cargo install flamegraph
 
-cargo build --release
+# enable debug = true for release builds in Cargo.toml
+sudo cargo flamegraph -- scene/workbench.json cmd 800x600
+# or
 sudo cargo flamegraph --release -- scene/workbench.json cmd 800x600
 
 cargo run --release -- scene/workbench.json cmd 800x600
