@@ -5,7 +5,7 @@ use parry3d::shape::{TriMesh, FeatureId};
 
 use crate::shape::{Shape, ShapeBasics, TextureType};
 
-use super::MaterialItem;
+use super::{MaterialItem, Material};
 
 pub struct Mesh
 {
@@ -25,6 +25,11 @@ impl Shape for Mesh
     fn get_material(&self) -> &MaterialItem
     {
         &self.basic.material
+    }
+
+    fn get_material_cache_without_textures(&self) -> &Material
+    {
+        &self.basic.material_cache
     }
 
     fn get_basic(&self) -> &ShapeBasics
@@ -47,7 +52,7 @@ impl Shape for Mesh
     {
         let ray_inverse = self.basic.get_inverse_ray(ray);
 
-        let material = self.basic.material.read().unwrap();
+        let material = self.get_material_cache_without_textures();
         let solid = !(material.alpha < 1.0 || material.has_texture(TextureType::Alpha)) && material.backface_cullig && !force_not_solid;
 
         self.basic.b_box.cast_local_ray(&ray_inverse, std::f32::MAX, solid)
@@ -57,7 +62,7 @@ impl Shape for Mesh
     {
         let ray_inverse = self.basic.get_inverse_ray(ray);
 
-        let material = self.basic.material.read().unwrap();
+        let material = self.get_material_cache_without_textures();
         let solid = !(material.alpha < 1.0 || material.has_texture(TextureType::Alpha)) && material.backface_cullig && !force_not_solid;
         let res = self.mesh.cast_local_ray_and_get_normal(&ray_inverse, std::f32::MAX, solid);
         if let Some(res) = res

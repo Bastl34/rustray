@@ -372,6 +372,7 @@ impl Run
         }
         if scene_items > 0
         {
+            { self.scene.write().unwrap().update(); }
             self.rendering.start();
         }
         else
@@ -415,6 +416,7 @@ impl Run
 
         //restart
         self.init_image();
+        { self.scene.write().unwrap().update(); }
         self.rendering.restart(self.width, self.height);
     }
 

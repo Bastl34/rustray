@@ -5,7 +5,7 @@ use parry3d::shape::Ball;
 
 use crate::shape::{Shape, ShapeBasics, TextureType};
 
-use super::MaterialItem;
+use super::{MaterialItem, Material};
 
 pub struct Sphere
 {
@@ -19,6 +19,11 @@ impl Shape for Sphere
     fn get_material(&self) -> &MaterialItem
     {
         &self.basic.material
+    }
+
+    fn get_material_cache_without_textures(&self) -> &Material
+    {
+        &self.basic.material_cache
     }
 
     fn get_basic(&self) -> &ShapeBasics
@@ -41,7 +46,7 @@ impl Shape for Sphere
     {
         let ray_inverse = self.basic.get_inverse_ray(ray);
 
-        let material = self.basic.material.read().unwrap();
+        let material = self.get_material_cache_without_textures();
         let solid = !(material.alpha < 1.0 || material.has_texture(TextureType::Alpha)) && material.backface_cullig && !force_not_solid;
         self.basic.b_box.cast_local_ray(&ray_inverse, std::f32::MAX, solid)
     }
@@ -50,7 +55,7 @@ impl Shape for Sphere
     {
         let ray_inverse = self.basic.get_inverse_ray(ray);
 
-        let material = self.basic.material.read().unwrap();
+        let material = self.get_material_cache_without_textures();
         let solid = !(material.alpha < 1.0 || material.has_texture(TextureType::Alpha)) && material.backface_cullig && !force_not_solid;
         let res = self.ball.cast_local_ray_and_get_normal(&ray_inverse, std::f32::MAX, solid);
         if let Some(res) = res
@@ -96,21 +101,6 @@ impl Shape for Sphere
 
 impl Sphere
 {
-    /*
-    pub fn new(r: f32) -> Sphere
-    {
-        let mut sphere = Sphere
-        {
-            basic: ShapeBasics::new("Sphere"),
-            ball: Ball::new(r)
-        };
-
-        sphere.calc_bbox();
-
-        sphere
-    }
-    */
-
     pub fn new_with_pos(name: &str, material: MaterialItem, x: f32, y: f32, z: f32, r: f32) -> Sphere
     {
         let mut sphere = Sphere

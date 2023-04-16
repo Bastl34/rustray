@@ -453,7 +453,7 @@ impl Raytracing
             let dist = item.intersect_b_box(&ray, for_shadow);
             if let Some(dist) = dist
             {
-                let material = item.get_material().read().unwrap();
+                let material = item.get_material_cache_without_textures();
                 if item.get_basic().visible && material.alpha > 0.0 && (!for_shadow || material.cast_shadow) && (!material.reflection_only || depth > 1)
                 {
                     hits.push(HitResult{ item: item.as_ref(), dist: dist });

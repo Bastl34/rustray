@@ -844,8 +844,6 @@ impl Scene
                     }
                 }
 
-                reusing_material_object_id = 0;
-
                 for triangle in triangles
                 {
                     // ***** data

@@ -19,6 +19,7 @@ pub mod mesh;
 pub trait Shape
 {
     fn get_material(&self) -> &MaterialItem;
+    fn get_material_cache_without_textures(&self) -> &Material;
     fn get_basic(&self) -> &ShapeBasics;
     fn get_basic_mut(&mut self) -> &mut ShapeBasics;
 
@@ -33,6 +34,7 @@ pub trait Shape
     {
         self.calc_bbox();
         self.get_basic_mut().calc_inverse();
+        self.get_basic_mut().update_material_cache();
     }
 
     fn init(&mut self)
@@ -173,7 +175,7 @@ impl Material
         }
     }
 
-    pub fn apply_diff(&mut self, new_mat: &Material)
+    pub fn apply_diff_without_textures(&mut self, new_mat: &Material)
     {
         let default_material = Material::new(0, "");
 
@@ -212,8 +214,35 @@ impl Material
             self.specular_color = new_mat.specular_color;
         }
 
+        // ********** other attributes **********
+        if !approx_equal(default_material.alpha, new_mat.alpha) { self.alpha = new_mat.alpha; }
+        if !approx_equal(default_material.shininess, new_mat.shininess) { self.shininess = new_mat.shininess; }
+        if !approx_equal(default_material.reflectivity, new_mat.reflectivity) { self.reflectivity = new_mat.reflectivity; }
+        if !approx_equal(default_material.refraction_index, new_mat.refraction_index) { self.refraction_index = new_mat.refraction_index; }
+
+        if !approx_equal(default_material.normal_map_strength, new_mat.normal_map_strength) { self.normal_map_strength = new_mat.normal_map_strength; }
+
+        if default_material.cast_shadow != new_mat.cast_shadow { self.cast_shadow = new_mat.cast_shadow; }
+        if default_material.receive_shadow != new_mat.receive_shadow { self.receive_shadow = new_mat.receive_shadow; }
+        if !approx_equal(default_material.shadow_softness, new_mat.shadow_softness) { self.shadow_softness = new_mat.shadow_softness; }
+
+        if !approx_equal(default_material.roughness, new_mat.roughness) { self.roughness = new_mat.roughness; }
+
+        if default_material.monte_carlo != new_mat.monte_carlo { self.monte_carlo = new_mat.monte_carlo; }
+
+        if default_material.smooth_shading != new_mat.smooth_shading { self.smooth_shading = new_mat.smooth_shading; }
+
+        if default_material.reflection_only != new_mat.reflection_only { self.reflection_only = new_mat.reflection_only; }
+        if default_material.backface_cullig != new_mat.backface_cullig { self.backface_cullig = new_mat.backface_cullig; }
+    }
+
+    pub fn apply_diff(&mut self, new_mat: &Material)
+    {
+        // ********** default settings **********
+        self.apply_diff_without_textures(new_mat);
 
         // ********** textures **********
+        let default_material = Material::new(0, "");
 
         // ambient
         if default_material.texture_ambient != new_mat.texture_ambient
@@ -262,27 +291,6 @@ impl Material
         {
             self.texture_reflectivity = new_mat.texture_reflectivity.clone();
         }
-
-        // ********** other attributes **********
-        if !approx_equal(default_material.alpha, new_mat.alpha) { self.alpha = new_mat.alpha; }
-        if !approx_equal(default_material.shininess, new_mat.shininess) { self.shininess = new_mat.shininess; }
-        if !approx_equal(default_material.reflectivity, new_mat.reflectivity) { self.reflectivity = new_mat.reflectivity; }
-        if !approx_equal(default_material.refraction_index, new_mat.refraction_index) { self.refraction_index = new_mat.refraction_index; }
-
-        if !approx_equal(default_material.normal_map_strength, new_mat.normal_map_strength) { self.normal_map_strength = new_mat.normal_map_strength; }
-
-        if default_material.cast_shadow != new_mat.cast_shadow { self.cast_shadow = new_mat.cast_shadow; }
-        if default_material.receive_shadow != new_mat.receive_shadow { self.receive_shadow = new_mat.receive_shadow; }
-        if !approx_equal(default_material.shadow_softness, new_mat.shadow_softness) { self.shadow_softness = new_mat.shadow_softness; }
-
-        if !approx_equal(default_material.roughness, new_mat.roughness) { self.roughness = new_mat.roughness; }
-
-        if default_material.monte_carlo != new_mat.monte_carlo { self.monte_carlo = new_mat.monte_carlo; }
-
-        if default_material.smooth_shading != new_mat.smooth_shading { self.smooth_shading = new_mat.smooth_shading; }
-
-        if default_material.reflection_only != new_mat.reflection_only { self.reflection_only = new_mat.reflection_only; }
-        if default_material.backface_cullig != new_mat.backface_cullig { self.backface_cullig = new_mat.backface_cullig; }
     }
 
     pub fn print(&self)
@@ -568,6 +576,7 @@ pub struct ShapeBasics
     pub b_box: Aabb,
 
     pub material: MaterialItem,
+    pub material_cache: Material, // this cache is used to prevent some rwlock.read executions (because they are super slow)
 
     pub animation_data: AnimationData,
 
@@ -588,6 +597,7 @@ impl ShapeBasics
             tran_inverse: Matrix4::<f32>::identity(),
             b_box: Aabb::new_invalid(),
             material: material,
+            material_cache: Material::new(0, ""),
             animation_data: AnimationData::new(),
 
             node_index: 0
@@ -661,6 +671,11 @@ impl ShapeBasics
     {
         //because we are dealing with 4x4 matrices: unwrap should be fine
         self.tran_inverse = self.trans.try_inverse().unwrap();
+    }
+
+    pub fn update_material_cache(&mut self)
+    {
+        self.material_cache.apply_diff_without_textures(&self.material.read().unwrap());
     }
 
     pub fn init_animation_data(&mut self)
