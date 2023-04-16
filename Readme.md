@@ -99,8 +99,12 @@ sudo apt install cmake pkg-config libssl-dev build-essential cmake xorg-dev
 
 ## Profiling
 ```bash
+# currently not working on windows
 cargo install flamegraph
 
-cargo flamegraph --release -- scene/workbench.json cmd 800x600
+cargo build --release
+sudo cargo flamegraph --release -- scene/workbench.json cmd 800x600
+
+cargo run --release -- scene/workbench.json cmd 800x600
 
 ```
