@@ -1572,7 +1572,20 @@ impl Scene
         }
     }
 
-    pub fn get_material_by_id(&mut self, id: u32) -> Option<MaterialItem>
+    pub fn get_material_by_id(&self, id: u32) -> Option<MaterialItem>
+    {
+        for item in &self.materials
+        {
+            if item.read().unwrap().id == id
+            {
+                return Some(item.clone());
+            }
+        }
+
+        None
+    }
+
+    pub fn get_material_by_id_mut(&mut self, id: u32) -> Option<MaterialItem>
     {
         for item in &self.materials
         {

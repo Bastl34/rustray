@@ -107,6 +107,4 @@ sudo cargo flamegraph -- scene/workbench.json cmd 800x600
 # or
 sudo cargo flamegraph --release -- scene/workbench.json cmd 800x600
 
-cargo run --release -- scene/workbench.json cmd 800x600
-
 ```

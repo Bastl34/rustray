@@ -2,7 +2,7 @@ extern crate rand;
 extern crate image;
 
 use chrono::{Datelike, Timelike, Utc, DateTime};
-use egui::{Color32, ScrollArea, RichText, Modifiers};
+use egui::{Color32, ScrollArea, RichText, Modifiers, Ui};
 use nalgebra::{Vector3};
 use rfd::FileDialog;
 
@@ -24,8 +24,8 @@ use crate::camera::Camera;
 use crate::post_processing::run_post_processing;
 use crate::renderer::RendererManager;
 use crate::raytracing::Raytracing;
-use crate::scene::{Scene, LightType};
-use crate::shape::{TextureType};
+use crate::scene::{Scene, LightType, ScemeItem};
+use crate::shape::{TextureType, Material};
 
 const IMAGE_PATH: &str = "data/output";
 const ANIMATION_PATH: &str = "data/output/animation";
@@ -728,6 +728,235 @@ impl Run
         }
     }
 
+    fn show_material_setting(&mut self, ui: &mut Ui, material_id: u32)
+    {
+        ui.vertical(|ui|
+        {
+            // material settings
+            let material_name;
+            let mut alpha;
+            let mut shininess;
+            let mut reflectivity;
+            let mut refraction_index;
+            let mut normal_map_strength;
+            let mut cast_shadow;
+            let mut receive_shadow;
+            let mut shadow_softness;
+            let mut roughness;
+            let mut monte_carlo;
+            let mut smooth_shading;
+            let mut reflection_only;
+            let mut backface_cullig;
+
+            let mut ambient_color;
+            let mut base_color;
+            let mut specular_color;
+
+            {
+                let scene = self.scene.read().unwrap();
+                let mat_arc = scene.get_material_by_id(material_id).unwrap();
+                let mat = mat_arc.read().unwrap();
+
+                material_name = mat.name.clone();
+                alpha = mat.alpha;
+                shininess = mat.shininess;
+                reflectivity = mat.reflectivity;
+                refraction_index = mat.refraction_index;
+                normal_map_strength = mat.normal_map_strength;
+                cast_shadow = mat.cast_shadow;
+                receive_shadow = mat.receive_shadow;
+                shadow_softness = mat.shadow_softness;
+                roughness = mat.roughness;
+                monte_carlo = mat.monte_carlo;
+                smooth_shading = mat.smooth_shading;
+                reflection_only = mat.reflection_only;
+                backface_cullig = mat.backface_cullig;
+
+                let r = (mat.ambient_color.x * 255.0) as u8;
+                let g = (mat.ambient_color.y * 255.0) as u8;
+                let b = (mat.ambient_color.z * 255.0) as u8;
+                ambient_color = Color32::from_rgb(r, g, b);
+
+                let r = (mat.base_color.x * 255.0) as u8;
+                let g = (mat.base_color.y * 255.0) as u8;
+                let b = (mat.base_color.z * 255.0) as u8;
+                base_color = Color32::from_rgb(r, g, b);
+
+                let r = (mat.specular_color.x * 255.0) as u8;
+                let g = (mat.specular_color.y * 255.0) as u8;
+                let b = (mat.specular_color.z * 255.0) as u8;
+                specular_color = Color32::from_rgb(r, g, b);
+            }
+
+            let mut apply_settings = false;
+
+            apply_settings = ui.add(egui::Slider::new(&mut alpha, 0.0..=1.0).text("alpha")).changed() || apply_settings;
+            apply_settings = ui.add(egui::Slider::new(&mut shininess, 0.0..=1.0).text("shininess")).changed() || apply_settings;
+            apply_settings = ui.add(egui::Slider::new(&mut reflectivity, 0.0..=1.0).text("reflectivity")).changed() || apply_settings;
+            apply_settings = ui.add(egui::Slider::new(&mut refraction_index, 1.0..=5.0).text("refraction index")).changed() || apply_settings;
+            apply_settings = ui.add(egui::Slider::new(&mut normal_map_strength, 0.0..=100.0).text("normal map strength")).changed() || apply_settings;
+            apply_settings = ui.checkbox(&mut cast_shadow, "cast shadow").changed() || apply_settings;
+            apply_settings = ui.checkbox(&mut receive_shadow, "receive shadow").changed() || apply_settings;
+            apply_settings = ui.add(egui::Slider::new(&mut shadow_softness, 0.0..=100.0).text("shadow softness")).changed() || apply_settings;
+            apply_settings = ui.add(egui::Slider::new(&mut roughness, 0.0..=PI/2.0).text("roughness")).changed() || apply_settings;
+            apply_settings = ui.checkbox(&mut monte_carlo, "monte carlo").changed() || apply_settings;
+            apply_settings = ui.checkbox(&mut smooth_shading, "smooth shading").changed() || apply_settings;
+            apply_settings = ui.checkbox(&mut reflection_only, "reflection only").changed() || apply_settings;
+            apply_settings = ui.checkbox(&mut backface_cullig, "backface cullig").changed() || apply_settings;
+
+            ui.horizontal(|ui|
+            {
+                ui.label("ambient color:");
+                apply_settings = ui.color_edit_button_srgba(&mut ambient_color).changed() || apply_settings;
+            });
+
+            ui.horizontal(|ui|
+            {
+                ui.label("base color:");
+                apply_settings = ui.color_edit_button_srgba(&mut base_color).changed() || apply_settings;
+            });
+
+            ui.horizontal(|ui|
+            {
+                ui.label("specular color:");
+                apply_settings = ui.color_edit_button_srgba(&mut specular_color).changed() || apply_settings;
+            });
+
+
+            if apply_settings
+            {
+                let mut scene = self.scene.write().unwrap();
+                let mat_arc = scene.get_material_by_id_mut(material_id).unwrap();
+                let mut mat = mat_arc.write().unwrap();
+
+                mat.alpha = alpha;
+                mat.shininess = shininess;
+                mat.reflectivity = reflectivity;
+                mat.refraction_index = refraction_index;
+                mat.normal_map_strength = normal_map_strength;
+                mat.cast_shadow = cast_shadow;
+                mat.receive_shadow = receive_shadow;
+                mat.shadow_softness = shadow_softness;
+                mat.roughness = roughness;
+                mat.monte_carlo = monte_carlo;
+                mat.smooth_shading = smooth_shading;
+                mat.reflection_only = reflection_only;
+                mat.backface_cullig = backface_cullig;
+
+                let r = ((ambient_color.r() as f32) / 255.0).clamp(0.0, 1.0);
+                let g = ((ambient_color.g() as f32) / 255.0).clamp(0.0, 1.0);
+                let b = ((ambient_color.b() as f32) / 255.0).clamp(0.0, 1.0);
+                mat.ambient_color = Vector3::<f32>::new(r, g, b);
+
+                let r = ((base_color.r() as f32) / 255.0).clamp(0.0, 1.0);
+                let g = ((base_color.g() as f32) / 255.0).clamp(0.0, 1.0);
+                let b = ((base_color.b() as f32) / 255.0).clamp(0.0, 1.0);
+                mat.base_color = Vector3::<f32>::new(r, g, b);
+
+                let r = ((specular_color.r() as f32) / 255.0).clamp(0.0, 1.0);
+                let g = ((specular_color.g() as f32) / 255.0).clamp(0.0, 1.0);
+                let b = ((specular_color.b() as f32) / 255.0).clamp(0.0, 1.0);
+                mat.specular_color = Vector3::<f32>::new(r, g, b);
+            }
+
+
+            // ********** textures
+            ui.collapsing("Textures", |ui|
+            {
+                // labels
+                let mut ambient_texture_label: String = "unset".to_string();
+                let mut base_texture_label: String = "unset".to_string();
+                let mut specular_texture_label: String = "unset".to_string();
+                let mut normal_texture_label: String = "unset".to_string();
+                let mut alpha_texture_label: String = "unset".to_string();
+                let mut roughness_texture_label: String = "unset".to_string();
+                let mut ao_texture_label: String = "unset".to_string();
+                let mut reflectivity_texture_label: String = "unset".to_string();
+
+                let has_ambient;
+                let has_base;
+                let has_specular;
+                let has_normal;
+                let has_alpha;
+                let has_roughness;
+                let has_ao;
+                let has_reflectivity;
+
+                {
+                    let scene = self.scene.read().unwrap();
+                    let mat_arc = scene.get_material_by_id(material_id).unwrap();
+                    let material = mat_arc.write().unwrap();
+
+                    has_ambient = material.texture_ambient.width() > 0;
+                    has_base = material.texture_base.width() > 0;
+                    has_specular = material.texture_specular.width() > 0;
+                    has_normal = material.texture_normal.width() > 0;
+                    has_alpha = material.texture_alpha.width() > 0;
+                    has_roughness = material.texture_roughness.width() > 0;
+                    has_ao = material.texture_ambient_occlusion.width() > 0;
+                    has_reflectivity = material.texture_reflectivity.width() > 0;
+
+                    if has_ambient { ambient_texture_label = format!("{}x{}", material.texture_ambient.width(), material.texture_ambient.height()); }
+                    if has_base { base_texture_label = format!("{}x{}", material.texture_base.width(), material.texture_base.height()); }
+                    if has_specular { specular_texture_label = format!("{}x{}", material.texture_specular.width(), material.texture_specular.height()); }
+                    if has_normal { normal_texture_label = format!("{}x{}", material.texture_normal.width(), material.texture_normal.height()); }
+                    if has_alpha { alpha_texture_label = format!("{}x{}", material.texture_alpha.width(), material.texture_alpha.height()); }
+                    if has_roughness { roughness_texture_label = format!("{}x{}", material.texture_roughness.width(), material.texture_roughness.height()); }
+                    if has_ao { ao_texture_label = format!("{}x{}", material.texture_ambient_occlusion.width(), material.texture_ambient_occlusion.height()); }
+                    if has_reflectivity { reflectivity_texture_label = format!("{}x{}", material.texture_reflectivity.width(), material.texture_reflectivity.height()); }
+                }
+
+                let mut tex_items = vec![];
+                tex_items.push(("ambient texture", has_ambient, ambient_texture_label, TextureType::AmbientEmissive));
+                tex_items.push(("base texture", has_base, base_texture_label, TextureType::Base));
+                tex_items.push(("specular texture", has_specular, specular_texture_label, TextureType::Specular));
+                tex_items.push(("normal texture", has_normal, normal_texture_label, TextureType::Normal));
+                tex_items.push(("alpha texture", has_alpha, alpha_texture_label, TextureType::Alpha));
+                tex_items.push(("roughness texture", has_roughness, roughness_texture_label, TextureType::Roughness));
+                tex_items.push(("ambient occlusion texture", has_ao, ao_texture_label, TextureType::AmbientOcclusion));
+                tex_items.push(("reflectivity texture", has_reflectivity, reflectivity_texture_label, TextureType::Reflectivity));
+
+                for tex in tex_items
+                {
+                    ui.horizontal(|ui|
+                    {
+                        ui.label(format!("{}:", tex.0));
+
+                        if tex.1
+                        {
+                            ui.label(RichText::new(tex.2).strong());
+                        }
+                        else
+                        {
+                            ui.label(RichText::new(tex.2));
+                        }
+
+                        if ui.button("+").clicked()
+                        {
+                            if let Some(path) = FileDialog::new().add_filter("Image", &["jpg", "png"]).set_directory("/").pick_file()
+                            {
+                                let mut scene = self.scene.write().unwrap();
+                                let mat_arc = scene.get_material_by_id_mut(material_id).unwrap();
+                                let mut material = mat_arc.write().unwrap();
+
+                                material.load_texture(&path.display().to_string(), tex.3);
+                            }
+                        }
+
+                        if tex.1 && ui.button("🗑").clicked()
+                        {
+                            let mut scene = self.scene.write().unwrap();
+                            let mat_arc = scene.get_material_by_id_mut(material_id).unwrap();
+                            let mut material = mat_arc.write().unwrap();
+
+                            material.remove_texture(tex.3);
+                        }
+                    });
+                }
+            });
+        });
+    }
+
     fn update_gui(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame)
     {
         // ********** main **********
@@ -1182,6 +1411,33 @@ impl Run
                             }
                         });
 
+                        // ********** materials **********
+                        ui.heading("Materials");
+
+                        let mut material_items = vec![];
+                        {
+                            let scene = self.scene.read().unwrap();
+                            for material in & scene.materials
+                            {
+                                let mat = material.read().unwrap();
+                                material_items.push((mat.id, mat.name.clone()));
+                            }
+                        }
+
+                        ui.vertical(|ui|
+                        {
+                            for item in & material_items
+                            {
+                                ui.collapsing(format!("{}: {}", item.0, item.1), |ui|
+                                {
+                                    ui.horizontal_wrapped(|ui|
+                                    {
+                                        self.show_material_setting(ui, item.0);
+                                    });
+                                });
+                            }
+                        });
+
                         // ********** scene items **********
                         ui.heading("Scene Items");
                         ui.vertical(|ui|
@@ -1199,30 +1455,12 @@ impl Run
                             {
                                 ui.collapsing(format!("{}: {}", item.0, item.1), |ui|
                                 {
+                                    // ********** basic settings **********
                                     ui.horizontal_wrapped(|ui|
                                     {
                                         // basic settings
                                         let mut visible;
                                         let mut flip_normals;
-
-                                        // material settings
-                                        let mut alpha;
-                                        let mut shininess;
-                                        let mut reflectivity;
-                                        let mut refraction_index;
-                                        let mut normal_map_strength;
-                                        let mut cast_shadow;
-                                        let mut receive_shadow;
-                                        let mut shadow_softness;
-                                        let mut roughness;
-                                        let mut monte_carlo;
-                                        let mut smooth_shading;
-                                        let mut reflection_only;
-                                        let mut backface_cullig;
-
-                                        let mut ambient_color;
-                                        let mut base_color;
-                                        let mut specular_color;
 
                                         {
                                             let scene = self.scene.read().unwrap();
@@ -1230,36 +1468,6 @@ impl Run
 
                                             visible = item.get_basic().visible;
                                             flip_normals = item.get_basic().flip_normals;
-
-                                            let mat = &item.get_material().read().unwrap();
-                                            alpha = mat.alpha;
-                                            shininess = mat.shininess;
-                                            reflectivity = mat.reflectivity;
-                                            refraction_index = mat.refraction_index;
-                                            normal_map_strength = mat.normal_map_strength;
-                                            cast_shadow = mat.cast_shadow;
-                                            receive_shadow = mat.receive_shadow;
-                                            shadow_softness = mat.shadow_softness;
-                                            roughness = mat.roughness;
-                                            monte_carlo = mat.monte_carlo;
-                                            smooth_shading = mat.smooth_shading;
-                                            reflection_only = mat.reflection_only;
-                                            backface_cullig = mat.backface_cullig;
-
-                                            let r = (mat.ambient_color.x * 255.0) as u8;
-                                            let g = (mat.ambient_color.y * 255.0) as u8;
-                                            let b = (mat.ambient_color.z * 255.0) as u8;
-                                            ambient_color = Color32::from_rgb(r, g, b);
-
-                                            let r = (mat.base_color.x * 255.0) as u8;
-                                            let g = (mat.base_color.y * 255.0) as u8;
-                                            let b = (mat.base_color.z * 255.0) as u8;
-                                            base_color = Color32::from_rgb(r, g, b);
-
-                                            let r = (mat.specular_color.x * 255.0) as u8;
-                                            let g = (mat.specular_color.y * 255.0) as u8;
-                                            let b = (mat.specular_color.z * 255.0) as u8;
-                                            specular_color = Color32::from_rgb(r, g, b);
                                         }
 
                                         let mut apply_settings = false;
@@ -1269,39 +1477,6 @@ impl Run
                                             ui.separator();
                                             apply_settings = ui.checkbox(&mut visible, "Visible").changed() || apply_settings;
                                             apply_settings = ui.checkbox(&mut flip_normals, "flip normals").changed() || apply_settings;
-
-                                            ui.separator();
-                                            apply_settings = ui.add(egui::Slider::new(&mut alpha, 0.0..=1.0).text("alpha")).changed() || apply_settings;
-                                            apply_settings = ui.add(egui::Slider::new(&mut shininess, 0.0..=1.0).text("shininess")).changed() || apply_settings;
-                                            apply_settings = ui.add(egui::Slider::new(&mut reflectivity, 0.0..=1.0).text("reflectivity")).changed() || apply_settings;
-                                            apply_settings = ui.add(egui::Slider::new(&mut refraction_index, 1.0..=5.0).text("refraction index")).changed() || apply_settings;
-                                            apply_settings = ui.add(egui::Slider::new(&mut normal_map_strength, 0.0..=100.0).text("normal map strength")).changed() || apply_settings;
-                                            apply_settings = ui.checkbox(&mut cast_shadow, "cast shadow").changed() || apply_settings;
-                                            apply_settings = ui.checkbox(&mut receive_shadow, "receive shadow").changed() || apply_settings;
-                                            apply_settings = ui.add(egui::Slider::new(&mut shadow_softness, 0.0..=100.0).text("shadow softness")).changed() || apply_settings;
-                                            apply_settings = ui.add(egui::Slider::new(&mut roughness, 0.0..=PI/2.0).text("roughness")).changed() || apply_settings;
-                                            apply_settings = ui.checkbox(&mut monte_carlo, "monte carlo").changed() || apply_settings;
-                                            apply_settings = ui.checkbox(&mut smooth_shading, "smooth shading").changed() || apply_settings;
-                                            apply_settings = ui.checkbox(&mut reflection_only, "reflection only").changed() || apply_settings;
-                                            apply_settings = ui.checkbox(&mut backface_cullig, "backface cullig").changed() || apply_settings;
-
-                                            ui.horizontal(|ui|
-                                            {
-                                                ui.label("ambient color:");
-                                                apply_settings = ui.color_edit_button_srgba(&mut ambient_color).changed() || apply_settings;
-                                            });
-
-                                            ui.horizontal(|ui|
-                                            {
-                                                ui.label("base color:");
-                                                apply_settings = ui.color_edit_button_srgba(&mut base_color).changed() || apply_settings;
-                                            });
-
-                                            ui.horizontal(|ui|
-                                            {
-                                                ui.label("specular color:");
-                                                apply_settings = ui.color_edit_button_srgba(&mut specular_color).changed() || apply_settings;
-                                            });
                                         });
 
                                         if apply_settings
@@ -1311,129 +1486,21 @@ impl Run
 
                                             item.get_basic_mut().visible = visible;
                                             item.get_basic_mut().flip_normals = flip_normals;
-
-                                            let mat = &mut item.get_basic_mut().material.write().unwrap();
-
-                                            mat.alpha = alpha;
-                                            mat.shininess = shininess;
-                                            mat.reflectivity = reflectivity;
-                                            mat.refraction_index = refraction_index;
-                                            mat.normal_map_strength = normal_map_strength;
-                                            mat.cast_shadow = cast_shadow;
-                                            mat.receive_shadow = receive_shadow;
-                                            mat.shadow_softness = shadow_softness;
-                                            mat.roughness = roughness;
-                                            mat.smooth_shading = smooth_shading;
-                                            mat.reflection_only = reflection_only;
-                                            mat.backface_cullig = backface_cullig;
-
-                                            let r = ((ambient_color.r() as f32) / 255.0).clamp(0.0, 1.0);
-                                            let g = ((ambient_color.g() as f32) / 255.0).clamp(0.0, 1.0);
-                                            let b = ((ambient_color.b() as f32) / 255.0).clamp(0.0, 1.0);
-                                            mat.ambient_color = Vector3::<f32>::new(r, g, b);
-
-                                            let r = ((base_color.r() as f32) / 255.0).clamp(0.0, 1.0);
-                                            let g = ((base_color.g() as f32) / 255.0).clamp(0.0, 1.0);
-                                            let b = ((base_color.b() as f32) / 255.0).clamp(0.0, 1.0);
-                                            mat.base_color = Vector3::<f32>::new(r, g, b);
-
-                                            let r = ((specular_color.r() as f32) / 255.0).clamp(0.0, 1.0);
-                                            let g = ((specular_color.g() as f32) / 255.0).clamp(0.0, 1.0);
-                                            let b = ((specular_color.b() as f32) / 255.0).clamp(0.0, 1.0);
-                                            mat.specular_color = Vector3::<f32>::new(r, g, b);
                                         }
                                     });
 
-                                    // ********** textures
-                                    ui.separator();
-                                    ui.collapsing("Textures", |ui|
+                                    // ********** material and textures **********
+                                    let material_id;
+                                    let material_name;
                                     {
-                                        // labels
-                                        let mut ambient_texture_label: String = "unset".to_string();
-                                        let mut base_texture_label: String = "unset".to_string();
-                                        let mut specular_texture_label: String = "unset".to_string();
-                                        let mut normal_texture_label: String = "unset".to_string();
-                                        let mut alpha_texture_label: String = "unset".to_string();
-                                        let mut roughness_texture_label: String = "unset".to_string();
-                                        let mut ao_texture_label: String = "unset".to_string();
-                                        let mut reflectivity_texture_label: String = "unset".to_string();
-
-                                        let has_ambient;
-                                        let has_base;
-                                        let has_specular;
-                                        let has_normal;
-                                        let has_alpha;
-                                        let has_roughness;
-                                        let has_ao;
-                                        let has_reflectivity;
-
-                                        {
-                                            let scene = self.scene.read().unwrap();
-                                            let item = scene.get_obj_by_id(item.0).unwrap();
-                                            let material = item.get_material().read().unwrap();
-
-                                            has_ambient = material.texture_ambient.width() > 0;
-                                            has_base = material.texture_base.width() > 0;
-                                            has_specular = material.texture_specular.width() > 0;
-                                            has_normal = material.texture_normal.width() > 0;
-                                            has_alpha = material.texture_alpha.width() > 0;
-                                            has_roughness = material.texture_roughness.width() > 0;
-                                            has_ao = material.texture_ambient_occlusion.width() > 0;
-                                            has_reflectivity = material.texture_reflectivity.width() > 0;
-
-                                            if has_ambient { ambient_texture_label = format!("{}x{}", material.texture_ambient.width(), material.texture_ambient.height()); }
-                                            if has_base { base_texture_label = format!("{}x{}", material.texture_base.width(), material.texture_base.height()); }
-                                            if has_specular { specular_texture_label = format!("{}x{}", material.texture_specular.width(), material.texture_specular.height()); }
-                                            if has_normal { normal_texture_label = format!("{}x{}", material.texture_normal.width(), material.texture_normal.height()); }
-                                            if has_alpha { alpha_texture_label = format!("{}x{}", material.texture_alpha.width(), material.texture_alpha.height()); }
-                                            if has_roughness { roughness_texture_label = format!("{}x{}", material.texture_roughness.width(), material.texture_roughness.height()); }
-                                            if has_ao { ao_texture_label = format!("{}x{}", material.texture_ambient_occlusion.width(), material.texture_ambient_occlusion.height()); }
-                                            if has_reflectivity { reflectivity_texture_label = format!("{}x{}", material.texture_reflectivity.width(), material.texture_reflectivity.height()); }
-                                        }
-
-                                        let mut tex_items = vec![];
-                                        tex_items.push(("ambient texture", has_ambient, ambient_texture_label, TextureType::AmbientEmissive));
-                                        tex_items.push(("base texture", has_base, base_texture_label, TextureType::Base));
-                                        tex_items.push(("specular texture", has_specular, specular_texture_label, TextureType::Specular));
-                                        tex_items.push(("normal texture", has_normal, normal_texture_label, TextureType::Normal));
-                                        tex_items.push(("alpha texture", has_alpha, alpha_texture_label, TextureType::Alpha));
-                                        tex_items.push(("roughness texture", has_roughness, roughness_texture_label, TextureType::Roughness));
-                                        tex_items.push(("ambient occlusion texture", has_ao, ao_texture_label, TextureType::AmbientOcclusion));
-                                        tex_items.push(("reflectivity texture", has_reflectivity, reflectivity_texture_label, TextureType::Reflectivity));
-
-                                        for tex in tex_items
-                                        {
-                                            ui.horizontal(|ui|
-                                            {
-                                                ui.label(format!("{}:", tex.0));
-
-                                                if tex.1
-                                                {
-                                                    ui.label(RichText::new(tex.2).strong());
-                                                }
-                                                else
-                                                {
-                                                    ui.label(RichText::new(tex.2));
-                                                }
-
-                                                if ui.button("+").clicked()
-                                                {
-                                                    if let Some(path) = FileDialog::new().add_filter("Image", &["jpg", "png"]).set_directory("/").pick_file()
-                                                    {
-                                                        let mut scene = self.scene.write().unwrap();
-                                                        let item = scene.get_obj_by_id_mut(item.0).unwrap();
-                                                        item.get_basic_mut().material.write().unwrap().load_texture(&path.display().to_string(), tex.3);
-                                                    }
-                                                }
-
-                                                if tex.1 && ui.button("🗑").clicked()
-                                                {
-                                                    let mut scene = self.scene.write().unwrap();
-                                                    let item = scene.get_obj_by_id_mut(item.0).unwrap();
-                                                    item.get_basic_mut().material.write().unwrap().remove_texture(tex.3);
-                                                }
-                                            });
-                                        }
+                                        let scene = self.scene.read().unwrap();
+                                        let item = scene.get_obj_by_id(item.0).unwrap();
+                                        material_id = item.get_material().read().unwrap().id;
+                                        material_name = item.get_material().read().unwrap().name.clone();
+                                    }
+                                    ui.collapsing(format!("Material ({})", material_name), |ui|
+                                    {
+                                        self.show_material_setting(ui, material_id);
                                     });
 
                                     if ui.button(RichText::new("delete").color(ui.visuals().error_fg_color)).clicked()
@@ -1449,10 +1516,8 @@ impl Run
                     .inner;
 
                     ui.separator();
-
                 }
             });
-
 
             // ********** start rendering **********
             if scene_items > 0
@@ -1572,8 +1637,9 @@ impl Run
         }
 
         // start rendering with CTRL/CMD + R
-        let rendering_shortcut = egui::KeyboardShortcut::new(Modifiers::CTRL | Modifiers::COMMAND, egui::Key::R);
-        if ctx.input_mut(|i| i.consume_shortcut(&rendering_shortcut))
+        let rendering_shortcut_ctrl = egui::KeyboardShortcut::new(Modifiers::CTRL, egui::Key::R);
+        let rendering_shortcut_cmd = egui::KeyboardShortcut::new(Modifiers::COMMAND, egui::Key::R);
+        if ctx.input_mut(|i| i.consume_shortcut(&rendering_shortcut_cmd) || i.consume_shortcut(&rendering_shortcut_ctrl))
         {
             if !self.rendering.is_running() || self.rendering.is_done()
             {
@@ -1583,8 +1649,9 @@ impl Run
         }
 
         // clear image
-        let clear_shortcut = egui::KeyboardShortcut::new(Modifiers::CTRL | Modifiers::COMMAND, egui::Key::D);
-        if ctx.input_mut(|i| i.consume_shortcut(&clear_shortcut))
+        let clear_shortcut_ctrl = egui::KeyboardShortcut::new(Modifiers::CTRL, egui::Key::D);
+        let clear_shortcut_cmd = egui::KeyboardShortcut::new(Modifiers::COMMAND, egui::Key::D);
+        if ctx.input_mut(|i| i.consume_shortcut(&clear_shortcut_ctrl) || i.consume_shortcut(&clear_shortcut_cmd))
         {
             if !self.rendering.is_running() || self.rendering.is_done()
             {
