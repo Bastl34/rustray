@@ -1,3 +1,5 @@
+use std::sync::{Arc, RwLock};
+
 use bvh::aabb::Bounded;
 use bvh::bounding_hierarchy::BHShape;
 use nalgebra::{Matrix4, Vector3, Point2, Point3, Rotation3, Vector4};
@@ -9,12 +11,15 @@ use image::{DynamicImage, GenericImageView, Pixel};
 
 use crate::helper::approx_equal;
 
+pub type MaterialItem = Arc<RwLock<Box<Material>>>;
+
 pub mod sphere;
 pub mod mesh;
 
 pub trait Shape
 {
-    fn get_material(&self) -> &Material;
+    fn get_material(&self) -> &MaterialItem;
+    fn get_material_cache_without_textures(&self) -> &Material;
     fn get_basic(&self) -> &ShapeBasics;
     fn get_basic_mut(&mut self) -> &mut ShapeBasics;
 
@@ -29,6 +34,7 @@ pub trait Shape
     {
         self.calc_bbox();
         self.get_basic_mut().calc_inverse();
+        self.get_basic_mut().update_material_cache();
     }
 
     fn init(&mut self)
@@ -88,6 +94,9 @@ impl BHShape for Box<(dyn Shape + Send + Sync + 'static)>
 #[derive(Debug)]
 pub struct Material
 {
+    pub id: u32,
+    pub name: String,
+
     pub ambient_color: Vector3<f32>,
     pub base_color: Vector3<f32>,
     pub specular_color: Vector3<f32>,
@@ -117,7 +126,6 @@ pub struct Material
     pub roughness: f32, //degree in rad (max PI/2)
 
     pub smooth_shading: bool,
-    pub flip_normals: bool,
 
     pub reflection_only: bool,
     pub backface_cullig: bool
@@ -125,10 +133,13 @@ pub struct Material
 
 impl Material
 {
-    pub fn new() -> Material
+    pub fn new(id: u32, name: &str) -> Material
     {
         Material
         {
+            id: id,
+            name: name.to_string(),
+
             ambient_color: Vector3::<f32>::new(0.0, 0.0, 0.0),
             base_color: Vector3::<f32>::new(1.0, 1.0, 1.0),
             specular_color: Vector3::<f32>::new(0.8, 0.8, 0.8),
@@ -158,16 +169,15 @@ impl Material
             monte_carlo: true,
 
             smooth_shading: true,
-            flip_normals: false,
 
             reflection_only: false,
             backface_cullig: true,
         }
     }
 
-    pub fn apply_diff(&mut self, new_mat: &Material)
+    pub fn apply_diff_without_textures(&mut self, new_mat: &Material)
     {
-        let default_material = Material::new();
+        let default_material = Material::new(0, "");
 
         // ********** colors **********
 
@@ -204,8 +214,35 @@ impl Material
             self.specular_color = new_mat.specular_color;
         }
 
+        // ********** other attributes **********
+        if !approx_equal(default_material.alpha, new_mat.alpha) { self.alpha = new_mat.alpha; }
+        if !approx_equal(default_material.shininess, new_mat.shininess) { self.shininess = new_mat.shininess; }
+        if !approx_equal(default_material.reflectivity, new_mat.reflectivity) { self.reflectivity = new_mat.reflectivity; }
+        if !approx_equal(default_material.refraction_index, new_mat.refraction_index) { self.refraction_index = new_mat.refraction_index; }
+
+        if !approx_equal(default_material.normal_map_strength, new_mat.normal_map_strength) { self.normal_map_strength = new_mat.normal_map_strength; }
+
+        if default_material.cast_shadow != new_mat.cast_shadow { self.cast_shadow = new_mat.cast_shadow; }
+        if default_material.receive_shadow != new_mat.receive_shadow { self.receive_shadow = new_mat.receive_shadow; }
+        if !approx_equal(default_material.shadow_softness, new_mat.shadow_softness) { self.shadow_softness = new_mat.shadow_softness; }
+
+        if !approx_equal(default_material.roughness, new_mat.roughness) { self.roughness = new_mat.roughness; }
+
+        if default_material.monte_carlo != new_mat.monte_carlo { self.monte_carlo = new_mat.monte_carlo; }
+
+        if default_material.smooth_shading != new_mat.smooth_shading { self.smooth_shading = new_mat.smooth_shading; }
+
+        if default_material.reflection_only != new_mat.reflection_only { self.reflection_only = new_mat.reflection_only; }
+        if default_material.backface_cullig != new_mat.backface_cullig { self.backface_cullig = new_mat.backface_cullig; }
+    }
+
+    pub fn apply_diff(&mut self, new_mat: &Material)
+    {
+        // ********** default settings **********
+        self.apply_diff_without_textures(new_mat);
 
         // ********** textures **********
+        let default_material = Material::new(0, "");
 
         // ambient
         if default_material.texture_ambient != new_mat.texture_ambient
@@ -254,28 +291,6 @@ impl Material
         {
             self.texture_reflectivity = new_mat.texture_reflectivity.clone();
         }
-
-        // ********** other attributes **********
-        if !approx_equal(default_material.alpha, new_mat.alpha) { self.alpha = new_mat.alpha; }
-        if !approx_equal(default_material.shininess, new_mat.shininess) { self.shininess = new_mat.shininess; }
-        if !approx_equal(default_material.reflectivity, new_mat.reflectivity) { self.reflectivity = new_mat.reflectivity; }
-        if !approx_equal(default_material.refraction_index, new_mat.refraction_index) { self.refraction_index = new_mat.refraction_index; }
-
-        if !approx_equal(default_material.normal_map_strength, new_mat.normal_map_strength) { self.normal_map_strength = new_mat.normal_map_strength; }
-
-        if default_material.cast_shadow != new_mat.cast_shadow { self.cast_shadow = new_mat.cast_shadow; }
-        if default_material.receive_shadow != new_mat.receive_shadow { self.receive_shadow = new_mat.receive_shadow; }
-        if !approx_equal(default_material.shadow_softness, new_mat.shadow_softness) { self.shadow_softness = new_mat.shadow_softness; }
-
-        if !approx_equal(default_material.roughness, new_mat.roughness) { self.roughness = new_mat.roughness; }
-
-        if default_material.monte_carlo != new_mat.monte_carlo { self.monte_carlo = new_mat.monte_carlo; }
-
-        if default_material.smooth_shading != new_mat.smooth_shading { self.smooth_shading = new_mat.smooth_shading; }
-        if default_material.flip_normals != new_mat.flip_normals { self.flip_normals = new_mat.flip_normals; }
-
-        if default_material.reflection_only != new_mat.reflection_only { self.reflection_only = new_mat.reflection_only; }
-        if default_material.backface_cullig != new_mat.backface_cullig { self.backface_cullig = new_mat.backface_cullig; }
     }
 
     pub fn print(&self)
@@ -309,7 +324,6 @@ impl Material
         println!("monte_carlo: {:?}", self.monte_carlo);
 
         println!("smooth_shading: {:?}", self.smooth_shading);
-        println!("flip_normals: {:?}", self.flip_normals);
 
         println!("reflection_only: {:?}", self.reflection_only);
         println!("backface_cullig: {:?}", self.backface_cullig);
@@ -552,13 +566,17 @@ pub struct ShapeBasics
 {
     pub id: u32,
     pub name: String,
+
     pub visible: bool,
+    pub flip_normals: bool,
+
     pub trans: Matrix4<f32>,
     tran_inverse: Matrix4<f32>,
 
     pub b_box: Aabb,
 
-    pub material: Material,
+    pub material: MaterialItem,
+    pub material_cache: Material, // this cache is used to prevent some rwlock.read executions (because they are super slow)
 
     pub animation_data: AnimationData,
 
@@ -567,17 +585,19 @@ pub struct ShapeBasics
 
 impl ShapeBasics
 {
-    pub fn new(name: &str) -> ShapeBasics
+    pub fn new(name: &str, material: MaterialItem) -> ShapeBasics
     {
         ShapeBasics
         {
             id: 0,
             name: name.to_string(),
             visible: true,
+            flip_normals: false,
             trans: Matrix4::<f32>::identity(),
             tran_inverse: Matrix4::<f32>::identity(),
             b_box: Aabb::new_invalid(),
-            material: Material::new(),
+            material: material,
+            material_cache: Material::new(0, ""),
             animation_data: AnimationData::new(),
 
             node_index: 0
@@ -651,6 +671,11 @@ impl ShapeBasics
     {
         //because we are dealing with 4x4 matrices: unwrap should be fine
         self.tran_inverse = self.trans.try_inverse().unwrap();
+    }
+
+    pub fn update_material_cache(&mut self)
+    {
+        self.material_cache.apply_diff_without_textures(&self.material.read().unwrap());
     }
 
     pub fn init_animation_data(&mut self)

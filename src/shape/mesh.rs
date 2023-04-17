@@ -3,7 +3,9 @@ use nalgebra::{Vector3, Point3, Point2, Isometry3};
 use parry3d::query::{Ray, RayCast};
 use parry3d::shape::{TriMesh, FeatureId};
 
-use crate::shape::{Shape, ShapeBasics, Material, TextureType};
+use crate::shape::{Shape, ShapeBasics, TextureType};
+
+use super::{MaterialItem, Material};
 
 pub struct Mesh
 {
@@ -20,9 +22,14 @@ pub struct Mesh
 
 impl Shape for Mesh
 {
-    fn get_material(&self) -> &Material
+    fn get_material(&self) -> &MaterialItem
     {
         &self.basic.material
+    }
+
+    fn get_material_cache_without_textures(&self) -> &Material
+    {
+        &self.basic.material_cache
     }
 
     fn get_basic(&self) -> &ShapeBasics
@@ -45,7 +52,8 @@ impl Shape for Mesh
     {
         let ray_inverse = self.basic.get_inverse_ray(ray);
 
-        let solid = !(self.basic.material.alpha < 1.0 || self.basic.material.has_texture(TextureType::Alpha)) && self.basic.material.backface_cullig && !force_not_solid;
+        let material = self.get_material_cache_without_textures();
+        let solid = !(material.alpha < 1.0 || material.has_texture(TextureType::Alpha)) && material.backface_cullig && !force_not_solid;
 
         self.basic.b_box.cast_local_ray(&ray_inverse, std::f32::MAX, solid)
     }
@@ -54,7 +62,8 @@ impl Shape for Mesh
     {
         let ray_inverse = self.basic.get_inverse_ray(ray);
 
-        let solid = !(self.basic.material.alpha < 1.0 || self.basic.material.has_texture(TextureType::Alpha)) && self.basic.material.backface_cullig && !force_not_solid;
+        let material = self.get_material_cache_without_textures();
+        let solid = !(material.alpha < 1.0 || material.has_texture(TextureType::Alpha)) && material.backface_cullig && !force_not_solid;
         let res = self.mesh.cast_local_ray_and_get_normal(&ray_inverse, std::f32::MAX, solid);
         if let Some(res) = res
         {
@@ -67,7 +76,7 @@ impl Shape for Mesh
             let mut normal;
 
             //use normal based on loaded normal (not on computed normal by parry -- if needed for smooth shading)
-            if self.get_material().smooth_shading && self.normals.len() > 0 && self.normals_indices.len() > 0
+            if material.smooth_shading && self.normals.len() > 0 && self.normals_indices.len() > 0
             {
                 let hit = ray.origin + (ray.dir * res.toi);
                 normal = self.get_normal(hit, face_id);
@@ -83,7 +92,7 @@ impl Shape for Mesh
                 normal = (self.basic.trans * res.normal.to_homogeneous()).xyz().normalize();
             }
 
-            if self.get_material().flip_normals
+            if self.get_basic().flip_normals
             {
                 normal = -normal;
             }
@@ -154,28 +163,11 @@ impl Shape for Mesh
 
 impl Mesh
 {
-    pub fn new() -> Mesh
+    pub fn new_with_data(name: &str, material: MaterialItem, vertices: Vec<Point3<f32>>, indices: Vec<[u32; 3]>, uvs: Vec<Point2<f32>>, uv_indices: Vec<[u32; 3]>, normals: Vec<Point3<f32>>, normals_indices: Vec<[u32; 3]>) -> Mesh
     {
         let mut mesh = Mesh
         {
-            basic: ShapeBasics::new("Mesh"),
-            mesh: TriMesh::new(vec![], vec![]),
-            uvs: vec![],
-            uv_indices: vec![],
-            normals: vec![],
-            normals_indices: vec![]
-        };
-
-        mesh.calc_bbox();
-
-        mesh
-    }
-
-    pub fn new_with_data(name: &str, vertices: Vec<Point3<f32>>, indices: Vec<[u32; 3]>, uvs: Vec<Point2<f32>>, uv_indices: Vec<[u32; 3]>, normals: Vec<Point3<f32>>, normals_indices: Vec<[u32; 3]>) -> Mesh
-    {
-        let mut mesh = Mesh
-        {
-            basic: ShapeBasics::new(name),
+            basic: ShapeBasics::new(name, material),
             mesh: TriMesh::new(vertices, indices),
             uvs: uvs,
             uv_indices: uv_indices,
@@ -191,7 +183,7 @@ impl Mesh
         mesh
     }
 
-    pub fn new_plane(name: &str, x0: Point3<f32>, x1: Point3<f32>, x2: Point3<f32>, x3: Point3<f32>) -> Mesh
+    pub fn new_plane(name: &str, material: MaterialItem, x0: Point3<f32>, x1: Point3<f32>, x2: Point3<f32>, x3: Point3<f32>) -> Mesh
     {
         let points = vec![ x0, x1, x2, x3, ];
 
@@ -206,7 +198,7 @@ impl Mesh
         let indices = vec![[0u32, 1, 2], [0, 2, 3]];
         let uv_indices = vec![[0u32, 1, 2], [0, 2, 3]];
 
-        Mesh::new_with_data(name, points, indices, uvs, uv_indices, vec![], vec![])
+        Mesh::new_with_data(name, material, points, indices, uvs, uv_indices, vec![], vec![])
     }
 
     fn get_normal(&self, hit: Point3<f32>, face_id: u32) -> Vector3<f32>

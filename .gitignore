@@ -5,8 +5,10 @@ Cargo.lock
 pos.data
 
 *.blend1
-*.blend2 
+*.blend2
 
 data/
 output.png
 output*.png
+
+flamegraph*.svg

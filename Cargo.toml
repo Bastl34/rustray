@@ -13,13 +13,13 @@ panic = "abort"
 # Improve performance but increase compile time
 #lto = "fat"
 #codegen-units = 1
+#debug = true
 
 [dependencies]
 
 egui = "0.21.0"
 eframe = "0.21.2"
 egui_extras = "0.21.0"
-
 rand = "*"
 num_cpus = "*"
 nalgebra = "0.32.1"
@@ -30,7 +30,7 @@ chrono = "0.4"
 tobj = "3.2"
 serde_json = "1.0"
 easy-gltf = "1.0.0"
-attohttpc = "0.24.1"
+attohttpc = "0.25.0"
 bvh = "0.7"
 regex = "1"
 rfd = "0.11"
