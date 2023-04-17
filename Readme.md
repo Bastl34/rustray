@@ -2,7 +2,16 @@
 
 ## Screenshots
 
+<sub>`own custom model`</sub><br>
 <img src="data/renderings/output_2023-4-14_22-4-2_00000000.png" width="720">
+<br>
+
+<sub>`from: sketchfab.com/3d-models/cyberpunk-speeder-78cf4a37a1604ddeb99651d531d7a0ff`</sub><br>
+<img src="data/renderings/output_2023-4-17_18-57-30_00000000.png" width="720">
+<br>
+
+<sub>`from: https://sketchfab.com/3d-models/mandalorian-a713ff25a95e428e92c6054c3d005dff`</sub><br>
+<img src="data/renderings/output_2023-4-17_17-53-11_00000000.png" width="720">
 <br>
 
 <sub>`cargo run --release`</sub><br>
