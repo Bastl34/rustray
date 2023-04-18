@@ -24,8 +24,8 @@ use crate::camera::Camera;
 use crate::post_processing::run_post_processing;
 use crate::renderer::RendererManager;
 use crate::raytracing::Raytracing;
-use crate::scene::{Scene, LightType, ScemeItem};
-use crate::shape::{TextureType, Material};
+use crate::scene::{Scene, LightType};
+use crate::shape::{TextureType};
 
 const IMAGE_PATH: &str = "data/output";
 const ANIMATION_PATH: &str = "data/output/animation";
@@ -733,7 +733,6 @@ impl Run
         ui.vertical(|ui|
         {
             // material settings
-            let material_name;
             let mut alpha;
             let mut shininess;
             let mut reflectivity;
@@ -757,7 +756,6 @@ impl Run
                 let mat_arc = scene.get_material_by_id(material_id).unwrap();
                 let mat = mat_arc.read().unwrap();
 
-                material_name = mat.name.clone();
                 alpha = mat.alpha;
                 shininess = mat.shininess;
                 reflectivity = mat.reflectivity;
@@ -1474,7 +1472,6 @@ impl Run
 
                                         ui.vertical(|ui|
                                         {
-                                            ui.separator();
                                             apply_settings = ui.checkbox(&mut visible, "Visible").changed() || apply_settings;
                                             apply_settings = ui.checkbox(&mut flip_normals, "flip normals").changed() || apply_settings;
                                         });
@@ -1520,33 +1517,36 @@ impl Run
             });
 
             // ********** start rendering **********
-            if scene_items > 0
+            ui.add_enabled_ui(!is_loading_scene, |ui|
             {
-                if running && !is_done
+                if scene_items > 0
                 {
-                    if ui.button("Stop Rendering").clicked()
+                    if running && !is_done
                     {
-                        self.rendering.stop();
-                        self.stopped = true;
+                        if ui.button("Stop Rendering").clicked()
+                        {
+                            self.rendering.stop();
+                            self.stopped = true;
+                        }
+                    }
+                    else
+                    {
+                        ui.horizontal(|ui|
+                        {
+                            if ui.button("Start Rendering").clicked()
+                            {
+                                self.restart_rendering();
+                                self.stopped = false;
+                            }
+
+                            if ui.button("Start Post Processing").clicked()
+                            {
+                                self.post_processing();
+                            }
+                        });
                     }
                 }
-                else
-                {
-                    ui.horizontal(|ui|
-                    {
-                        if ui.button("Start Rendering").clicked()
-                        {
-                            self.restart_rendering();
-                            self.stopped = false;
-                        }
-
-                        if ui.button("Start Post Processing").clicked()
-                        {
-                            self.post_processing();
-                        }
-                    });
-                }
-            }
+            });
         });
 
         // ********** status **********
