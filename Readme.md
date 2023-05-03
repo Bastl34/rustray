@@ -11,7 +11,7 @@
 <br>
 
 <sub>`from: https://sketchfab.com/3d-models/mandalorian-a713ff25a95e428e92c6054c3d005dff`</sub><br>
-<img src="data/renderings/output_2023-4-17_17-53-11_00000000.png" width="720">
+<img src="data/renderings/output_2023-4-19_12-27-20_00000000.png" width="720">
 <br>
 
 <sub>`cargo run --release`</sub><br>
