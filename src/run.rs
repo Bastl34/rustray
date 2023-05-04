@@ -6,7 +6,6 @@ use egui::{Color32, ScrollArea, RichText, Modifiers, Ui};
 use nalgebra::{Vector3};
 use rfd::FileDialog;
 
-
 use std::f32::consts::PI;
 use std::{fs};
 use std::sync::{RwLock, Arc, Mutex};
@@ -883,7 +882,7 @@ impl Run
                 {
                     let scene = self.scene.read().unwrap();
                     let mat_arc = scene.get_material_by_id(material_id).unwrap();
-                    let material = mat_arc.write().unwrap();
+                    let material = mat_arc.read().unwrap();
 
                     has_ambient = material.texture_ambient.width() > 0;
                     has_base = material.texture_base.width() > 0;
@@ -903,6 +902,7 @@ impl Run
                     if has_ao { ao_texture_label = format!("{}x{}", material.texture_ambient_occlusion.width(), material.texture_ambient_occlusion.height()); }
                     if has_reflectivity { reflectivity_texture_label = format!("{}x{}", material.texture_reflectivity.width(), material.texture_reflectivity.height()); }
                 }
+
 
                 let mut tex_items = vec![];
                 tex_items.push(("ambient texture", has_ambient, ambient_texture_label, TextureType::AmbientEmissive));
