@@ -9,7 +9,7 @@ use parry3d::bounding_volume::Aabb;
 
 use image::{DynamicImage, GenericImageView, Pixel};
 
-use crate::helper::approx_equal;
+use crate::helper::{approx_equal, interpolate_vec4};
 
 pub type MaterialItem = Arc<RwLock<Box<Material>>>;
 
@@ -110,6 +110,8 @@ pub struct Material
     pub texture_ambient_occlusion: DynamicImage,
     pub texture_reflectivity: DynamicImage,
 
+    pub texture_filtering_nearest: bool,
+
     pub alpha: f32,
     pub shininess: f32,
     pub reflectivity: f32,
@@ -152,6 +154,8 @@ impl Material
             texture_roughness: DynamicImage::new_rgb8(0,0),
             texture_ambient_occlusion: DynamicImage::new_rgb8(0,0),
             texture_reflectivity: DynamicImage::new_rgb8(0,0),
+
+            texture_filtering_nearest: false,
 
             alpha: 1.0,
             shininess: 150.0,
@@ -215,6 +219,7 @@ impl Material
         }
 
         // ********** other attributes **********
+        if default_material.texture_filtering_nearest != new_mat.texture_filtering_nearest { self.texture_filtering_nearest = new_mat.texture_filtering_nearest; }
         if !approx_equal(default_material.alpha, new_mat.alpha) { self.alpha = new_mat.alpha; }
         if !approx_equal(default_material.shininess, new_mat.shininess) { self.shininess = new_mat.shininess; }
         if !approx_equal(default_material.reflectivity, new_mat.reflectivity) { self.reflectivity = new_mat.reflectivity; }
@@ -307,6 +312,8 @@ impl Material
         println!("texture_roughness: {:?}", self.texture_roughness.width() > 0);
         println!("texture_ambient_occlusion: {:?}", self.texture_ambient_occlusion.width() > 0);
         println!("texture_reflectivity: {:?}", self.texture_reflectivity.width() > 0);
+
+        println!("texture_filtering_nearest: {:?}", self.texture_filtering_nearest);
 
         println!("alpha: {:?}", self.alpha);
         println!("shininess: {:?}", self.shininess);
@@ -530,6 +537,95 @@ impl Material
             (rgba[2] as f32) / 255.0,
             (rgba[3] as f32) / 255.0
         )
+    }
+
+    pub fn get_texture_pixel_interpolate(&self, x: f32, y: f32, tex_type: TextureType) -> Vector4<f32>
+    {
+        if !self.has_texture(tex_type)
+        {
+            return Vector4::<f32>::new(0.0, 0.0, 0.0, 1.0);
+        }
+
+        let tex: &DynamicImage;
+
+        match tex_type
+        {
+            TextureType::Base => { tex = &self.texture_base; },
+            TextureType::AmbientEmissive => { tex = &self.texture_ambient; },
+            TextureType::Specular => { tex = &self.texture_specular; },
+            TextureType::Normal => { tex = &self.texture_normal; },
+            TextureType::Alpha => { tex = &self.texture_alpha; },
+            TextureType::Roughness => { tex = &self.texture_roughness; },
+            TextureType::AmbientOcclusion => { tex = &self.texture_ambient_occlusion; },
+            TextureType::Reflectivity => { tex = &self.texture_reflectivity; }
+        }
+
+        let width = tex.width();
+        let height = tex.height();
+
+        let mut x = x * width as f32;
+        let mut y = y * height as f32;
+        if x < 0.0 { x = x + width as f32; }
+        if y < 0.0 { y = y + height as f32; }
+
+        let mut x0: u32 = x.floor() as u32;
+        let mut x1: u32 = x.ceil() as u32;
+
+        let mut y0: u32 = y.floor() as u32;
+        let mut y1: u32 = y.ceil() as u32;
+
+        // out of bounds check
+        if x0 >= tex.width() { x0 = tex.width() - 1; }
+        if y0 >= tex.height() { y0 = tex.height() - 1; }
+        if x1 >= tex.width() { x1 = tex.width() - 1; }
+        if y1 >= tex.height() { y1 = tex.height() - 1; }
+
+        let x_f = x - x0 as f32;
+        let y_f = y - y0 as f32;
+
+        let p0 = tex.get_pixel(x0, y0).to_rgba();
+        let p1 = tex.get_pixel(x1, y0).to_rgba();
+        let p2 = tex.get_pixel(x0, y1).to_rgba();
+        let p3 = tex.get_pixel(x1, y1).to_rgba();
+
+        let p0_f = Vector4::<f32>::new
+        (
+            (p0[0] as f32) / 255.0,
+            (p0[1] as f32) / 255.0,
+            (p0[2] as f32) / 255.0,
+            (p0[3] as f32) / 255.0
+        );
+
+        let p1_f = Vector4::<f32>::new
+        (
+            (p1[0] as f32) / 255.0,
+            (p1[1] as f32) / 255.0,
+            (p1[2] as f32) / 255.0,
+            (p1[3] as f32) / 255.0
+        );
+
+        let p2_f = Vector4::<f32>::new
+        (
+            (p2[0] as f32) / 255.0,
+            (p2[1] as f32) / 255.0,
+            (p2[2] as f32) / 255.0,
+            (p2[3] as f32) / 255.0
+        );
+
+        let p3_f = Vector4::<f32>::new
+        (
+            (p3[0] as f32) / 255.0,
+            (p3[1] as f32) / 255.0,
+            (p3[2] as f32) / 255.0,
+            (p3[3] as f32) / 255.0
+        );
+
+        let p_res_1 = interpolate_vec4(p0_f, p1_f, x_f);
+        let p_res_2 = interpolate_vec4(p2_f, p3_f, x_f);
+
+        let res = interpolate_vec4(p_res_1, p_res_2, y_f);
+
+        res
     }
 }
 

@@ -732,6 +732,7 @@ impl Run
         ui.vertical(|ui|
         {
             // material settings
+            let mut texture_filtering_nearest;
             let mut alpha;
             let mut shininess;
             let mut reflectivity;
@@ -755,6 +756,7 @@ impl Run
                 let mat_arc = scene.get_material_by_id(material_id).unwrap();
                 let mat = mat_arc.read().unwrap();
 
+                texture_filtering_nearest = mat.texture_filtering_nearest;
                 alpha = mat.alpha;
                 shininess = mat.shininess;
                 reflectivity = mat.reflectivity;
@@ -787,6 +789,7 @@ impl Run
 
             let mut apply_settings = false;
 
+            apply_settings = ui.checkbox(&mut texture_filtering_nearest, "nearest texture filtering").changed() || apply_settings;
             apply_settings = ui.add(egui::Slider::new(&mut alpha, 0.0..=1.0).text("alpha")).changed() || apply_settings;
             apply_settings = ui.add(egui::Slider::new(&mut shininess, 0.0..=1.0).text("shininess")).changed() || apply_settings;
             apply_settings = ui.add(egui::Slider::new(&mut reflectivity, 0.0..=1.0).text("reflectivity")).changed() || apply_settings;
@@ -826,6 +829,7 @@ impl Run
                 let mat_arc = scene.get_material_by_id_mut(material_id).unwrap();
                 let mut mat = mat_arc.write().unwrap();
 
+                mat.texture_filtering_nearest = texture_filtering_nearest;
                 mat.alpha = alpha;
                 mat.shininess = shininess;
                 mat.reflectivity = reflectivity;

@@ -331,6 +331,7 @@ impl Scene
                         }
 
                         // ***** material settings
+                        if !&object["texture_filtering_nearest"].is_null() { material.texture_filtering_nearest = object["texture_filtering_nearest"].as_bool().unwrap(); }
                         if !&object["alpha"].is_null() { material.alpha = object["alpha"].as_f64().unwrap() as f32; }
                         if !&object["shininess"].is_null() { material.shininess = object["shininess"].as_f64().unwrap() as f32; }
                         if !&object["reflectivity"].is_null() { material.reflectivity = object["reflectivity"].as_f64().unwrap() as f32; }
@@ -1287,7 +1288,6 @@ impl Scene
                         {
                             let diffuse_texture = mat.diffuse_texture.clone().unwrap();
                             let tex_path = self.get_texture_path(&diffuse_texture, path);
-                            dbg!(&tex_path);
                             material.load_texture(&tex_path, TextureType::Base);
                         }
 
@@ -1296,7 +1296,6 @@ impl Scene
                         {
                             let normal_texture = mat.normal_texture.clone().unwrap();
                             let tex_path = self.get_texture_path(&normal_texture, path);
-                            dbg!(&tex_path);
                             material.load_texture(&tex_path, TextureType::Normal);
                         }
 
@@ -1305,7 +1304,6 @@ impl Scene
                         {
                             let ambient_texture = mat.ambient_texture.clone().unwrap();
                             let tex_path = self.get_texture_path(&ambient_texture, path);
-                            dbg!(&tex_path);
                             material.load_texture(&tex_path, TextureType::AmbientEmissive);
                         }
 
@@ -1314,7 +1312,6 @@ impl Scene
                         {
                             let specular_texture = mat.specular_texture.clone().unwrap();
                             let tex_path = self.get_texture_path(&specular_texture, path);
-                            dbg!(&tex_path);
                             material.load_texture(&tex_path, TextureType::Specular);
                         }
 
@@ -1323,7 +1320,6 @@ impl Scene
                         {
                             let dissolve_texture = mat.dissolve_texture.clone().unwrap();
                             let tex_path = self.get_texture_path(&dissolve_texture, path);
-                            dbg!(&tex_path);
                             material.load_texture(&tex_path, TextureType::Alpha);
                         }
 
@@ -1836,6 +1832,5 @@ impl Scene
         println!("activated: {}", self.animation.has_animation());
         println!("fps: {}", self.animation.fps);
         println!("frames_to_render: {}", self.animation.get_frames_amount_to_render());
-        //dbg!(&self.animation);
     }
 }

@@ -1,4 +1,4 @@
-use nalgebra::Vector3;
+use nalgebra::{Vector3, Vector4};
 use rand::Rng;
 
 use std::fs::File;
@@ -35,6 +35,17 @@ pub fn download(url: &str, local_path: &str) -> attohttpc::Result
 pub fn interpolate(a: f32, b: f32, f: f32) -> f32
 {
     return a + f * (b - a);
+}
+
+pub fn interpolate_vec4(a: Vector4<f32>, b: Vector4<f32>, f: f32) -> Vector4<f32>
+{
+    Vector4::<f32>::new
+    (
+        interpolate(a.x, b.x, f),
+        interpolate(a.y, b.y, f),
+        interpolate(a.z, b.z, f),
+        interpolate(a.w, b.w, f)
+    )
 }
 
 // https://stackoverflow.com/a/16544330

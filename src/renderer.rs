@@ -70,6 +70,8 @@ impl RendererManager
             thread_amount -=2;
         }
 
+        //thread_amount = 1;
+
         RendererManager
         {
             width: width,

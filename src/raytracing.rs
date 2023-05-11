@@ -619,6 +619,7 @@ impl Raytracing
         new_dir.normalize()
     }
 
+    // texture edge wraping
     fn wrap(&self, val: f32, bound: u32) -> u32
     {
         let signed_bound = bound as i32;
@@ -648,13 +649,20 @@ impl Raytracing
         {
             let uv = uv.unwrap();
 
-            let tex_dims = material.texture_dimension(tex_type);
-            let tex_x = self.wrap(uv.x, tex_dims.0);
-            let tex_y = self.wrap(uv.y, tex_dims.1);
+            if material.texture_filtering_nearest
+            {
+                let tex_dims = material.texture_dimension(tex_type);
+                let tex_x = self.wrap(uv.x, tex_dims.0);
+                let tex_y = self.wrap(uv.y, tex_dims.1);
 
-            let tex_color = material.get_texture_pixel(tex_x, tex_y, tex_type);
-
-            return Some(tex_color);
+                let tex_color = material.get_texture_pixel(tex_x, tex_y, tex_type);
+                return Some(tex_color);
+            }
+            else
+            {
+                let tex_color = material.get_texture_pixel_interpolate(uv.x, uv.y, tex_type);
+                return Some(tex_color);
+            }
         }
 
         None
