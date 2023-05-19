@@ -1123,6 +1123,7 @@ impl Scene
         let options = &tobj::LoadOptions
         {
             triangulate: true,
+            single_index: true,
             ..Default::default()
         };
 
@@ -1333,6 +1334,17 @@ impl Scene
                 {
                     let material_id = self.get_next_id();
                     material_arc = Arc::new(RwLock::new(Box::new(Material::new(material_id, ""))));
+                }
+
+                // if single index is enabled -> there is just one index array for all attributes
+                if uvs.len() > 0 && uv_indices.len() == 0
+                {
+                    uv_indices = indices.clone();
+                }
+
+                if normals.len() > 0 && normals_indices.len() == 0
+                {
+                    normals_indices = indices.clone();
                 }
 
                 let mut item = Mesh::new_with_data(m.name.as_str(), material_arc.clone(), verts, indices, uvs, uv_indices, normals, normals_indices);
