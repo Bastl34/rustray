@@ -112,7 +112,6 @@ impl Sphere
         sphere.basic.trans = Isometry3::translation(x, y, z).to_homogeneous();
         //sphere.basic.trans = Isometry3::translation(x, y, z).to_homogeneous() * Isometry3::rotation(Vector3::new(0.0, 2.0, 0.0)).to_homogeneous();
 
-
         sphere.calc_bbox();
 
         sphere

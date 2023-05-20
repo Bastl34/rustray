@@ -11,7 +11,8 @@
             "type": "gltf",
             "url": "https://github.com/Bastl34/gltf-samples/raw/main/sponza-gltf-sample/glTF/Sponza_fixed.glb",
             "path": "data/temp/Sponza_fixed.glb",
-            "backface_culling": false
+            "backface_culling": false,
+            "texture_filtering_nearest": true
         }
     ]
 }
