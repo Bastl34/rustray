@@ -2,7 +2,7 @@ use bvh::bvh::BVHNode;
 use easy_gltf::Projection;
 use nalgebra::{Point2, Point3, Vector3};
 use parry3d::query::Ray;
-use serde_json::{Value};
+use serde_json::Value;
 
 use easy_gltf::Light::{Directional, Point, Spot};
 
@@ -41,6 +41,7 @@ pub struct Light
 {
     pub enabled: bool,
     pub id: u32,
+    pub name: String,
     pub pos: Point3<f32>,
     pub dir: Vector3<f32>,
     pub color: Vector3<f32>,
@@ -277,6 +278,7 @@ impl Scene
                         {
                             enabled: true,
                             id: id,
+                            name: "light".to_string(),
                             pos: pos,
                             dir: dir,
                             color: color,
@@ -731,13 +733,14 @@ impl Scene
             {
                 match light
                 {
-                    Point { position, color, intensity } =>
+                    Point { position, color, intensity, name } =>
                     {
                         let id = self.get_next_id();
                         self.lights.push(Box::new(Light
                         {
                             enabled: true,
                             id: id,
+                            name: name.unwrap_or("light".to_string()),
                             pos: Point3::<f32>::new(position.x, position.y, position.z),
                             dir: Vector3::<f32>::new(0.0, -1.0, 0.0),
                             color: Vector3::<f32>::new(color.x, color.y, color.z),
@@ -746,13 +749,14 @@ impl Scene
                             light_type: LightType::Point
                         }));
                     },
-                    Directional { direction, color, intensity } =>
+                    Directional { direction, color, intensity, name } =>
                     {
                         let id = self.get_next_id();
                         self.lights.push(Box::new(Light
                         {
                             enabled: true,
                             id: id,
+                            name: name.unwrap_or("light".to_string()),
                             pos: Point3::<f32>::new(0.0, 0.0, 0.0),
                             dir: Vector3::<f32>::new(direction.x, direction.y, direction.z),
                             color: Vector3::<f32>::new(color.x, color.y, color.z),
@@ -761,7 +765,7 @@ impl Scene
                             light_type: LightType::Directional
                         }));
                     },
-                    Spot { position, direction, color, intensity, inner_cone_angle, outer_cone_angle } =>
+                    Spot { position, direction, color, intensity, inner_cone_angle, outer_cone_angle, name } =>
                     {
                         println!("TODO: use inner_cone_angle: {}", inner_cone_angle);
 
@@ -770,6 +774,7 @@ impl Scene
                         {
                             enabled: true,
                             id: id,
+                            name: name.unwrap_or("light".to_string()),
                             pos: Point3::<f32>::new(position.x, position.y, position.z),
                             dir: Vector3::<f32>::new(direction.x, direction.y, direction.z),
                             color: Vector3::<f32>::new(color.x, color.y, color.z),
@@ -894,7 +899,8 @@ impl Scene
                 else
                 {
                     let material_id = self.get_next_id();
-                    material_arc = Arc::new(RwLock::new(Box::new(Material::new(material_id, "unknown"))));
+                    let name = gltf_material.name.clone().unwrap_or("default".to_string());
+                    material_arc = Arc::new(RwLock::new(Box::new(Material::new(material_id, name.as_str()))));
 
                     // ********** material **********
                     let mut material = material_arc.write().unwrap();
@@ -958,8 +964,8 @@ impl Scene
                     double_check_materials.push((gltf_material.clone(), material_id));
                 }
 
-
-                let mut item = Mesh::new_with_data("unknown", material_arc.clone(), verts, indices, uvs, uv_indices, normals, normals_indices);
+                let name = model.mesh_name().clone().unwrap_or("unknown");
+                let mut item = Mesh::new_with_data(name, material_arc.clone(), verts, indices, uvs, uv_indices, normals, normals_indices);
                 item.get_basic_mut().id = object_id;
                 loaded_ids.push(item.get_basic().id);
 
@@ -1316,7 +1322,7 @@ impl Scene
                             material.load_texture(&tex_path, TextureType::Specular);
                         }
 
-                        // specular texture
+                        // dissolve texture
                         if mat.dissolve_texture.is_some()
                         {
                             let dissolve_texture = mat.dissolve_texture.clone().unwrap();
@@ -1359,13 +1365,14 @@ impl Scene
         loaded_ids
     }
 
-    pub fn add_light(&mut self, pos: Point3::<f32>, dir: Vector3::<f32>, color: Vector3::<f32>, intensity: f32, max_angle: f32, light_type: LightType)
+    pub fn add_light(&mut self, name: String, pos: Point3::<f32>, dir: Vector3::<f32>, color: Vector3::<f32>, intensity: f32, max_angle: f32, light_type: LightType)
     {
         let id = self.get_next_id();
         self.lights.push(Box::new(Light
         {
             enabled: true,
             id: id,
+            name: name,
             pos: pos,
             dir: dir,
             color: color,
@@ -1382,6 +1389,7 @@ impl Scene
         {
             enabled: true,
             id: id,
+            name: "default".to_string(),
             pos: Point3::<f32>::new(-2.0, 10.0, 5.0),
             dir: Vector3::<f32>::new(0.0, -1.0, 0.0),
             color: Vector3::<f32>::new(1.0, 1.0, 1.0),

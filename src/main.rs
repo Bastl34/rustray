@@ -1,3 +1,4 @@
+use egui::{Style, Visuals};
 use regex::Regex;
 use run::Run;
 
@@ -93,7 +94,16 @@ fn main()
         (
             "Rustray",
             egui_options,
-            Box::new(|_cc| Box::new(runner)),
+            Box::new(|creation_context|
+            {
+                let style = Style
+                {
+                    visuals: Visuals::dark(),
+                    ..Style::default()
+                };
+                creation_context.egui_ctx.set_style(style);
+                Box::new(runner)
+            }),
         );
 
         if res.is_err()
