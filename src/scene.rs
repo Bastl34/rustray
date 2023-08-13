@@ -867,7 +867,8 @@ impl Scene
                         // texture uv coord
                         if model.has_tex_coords()
                         {
-                            uvs.push(Point2::<f32>::new(vertex.tex_coords.x, -vertex.tex_coords.y));
+                            // flip y coordinate
+                            uvs.push(Point2::<f32>::new(vertex.tex_coords.x, 1.0 -vertex.tex_coords.y));
                         }
                     }
 
