@@ -719,14 +719,11 @@ impl ShapeBasics
         let rotation_y  = Rotation3::from_euler_angles(0.0, rotation.y, 0.0).to_homogeneous();
         let rotation_z  = Rotation3::from_euler_angles(0.0, 0.0, rotation.z).to_homogeneous();
 
-        //let rotation  = Rotation3::new(rotation).to_homogeneous();
-
         trans = trans * translation;
-        trans = trans * scale;
-        //trans = trans * rotation;
         trans = trans * rotation_z;
         trans = trans * rotation_y;
         trans = trans * rotation_x;
+        trans = trans * scale;
 
         trans
     }
