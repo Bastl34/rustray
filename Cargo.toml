@@ -1,5 +1,5 @@
 [package]
-name = "raytracer"
+name = "rustray"
 version = "0.2.0"
 edition = "2021"
 
@@ -17,9 +17,9 @@ panic = "abort"
 
 [dependencies]
 
-egui = "0.22.0"
-eframe = "0.22.0"
-egui_extras = "0.22.0"
+egui = "0.23.0"
+eframe = "0.23.0"
+egui_extras = "0.23.0"
 rand = "*"
 num_cpus = "*"
 nalgebra = "0.32.1"
@@ -30,7 +30,7 @@ chrono = "0.4"
 tobj = "4.0.0"
 serde_json = "1.0"
 easy-gltf = { version = "1.1.0", features = ["names"] }
-attohttpc = "0.25.0"
+attohttpc = "0.26.1"
 bvh = "0.7"
 regex = "1"
-rfd = "0.11"
+rfd = "0.12.0"
