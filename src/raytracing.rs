@@ -918,24 +918,24 @@ impl Raytracing
             //fresnel
             let kr = self.fresnel(r.dir, surface_normal, refraction_index);
 
-            //reflectivity
-            let mut reflectivity = material.reflectivity;
+            //reflextivity
+            let mut reflextivity = material.reflectivity;
             let tex_reflexivity = self.get_tex_color(&material, &uv, TextureType::Reflectivity);
             if let Some(tex_reflexivity) = tex_reflexivity
             {
-                reflectivity = tex_reflexivity.x;
+                reflextivity = tex_reflexivity.x;
             }
 
-            color = color * (1.0 - reflectivity);
+            color = color * (1.0 - reflextivity);
 
             //if item.get_material().reflectivity > 0.0 && depth <= self.config.max_recursion
-            if reflectivity > 0.0 && depth <= self.config.max_recursion
+            if reflextivity > 0.0 && depth <= self.config.max_recursion
             {
                 let reflection_ray = self.create_reflection(surface_normal, r.dir, hit_point);
                 let reflection_color = self.get_color_depth_normal_id(scene, reflection_ray, depth + 1).0;
 
                 //color = color + (reflection_color * reflectivity * kr);
-                color = color + (reflection_color * reflectivity);
+                color = color + (reflection_color * reflextivity);
             }
 
             //refraction
