@@ -607,7 +607,13 @@ impl Raytracing
         let b1 = b3.cross(&diff).normalize();
         let b2 = b1.cross(&b3);
 
-        let z = rand::thread_rng().gen_range((spread * PI).cos()..1.0);
+        let z_range = (spread * PI).cos()..1.0;
+        if z_range.is_empty()
+        {
+            return dir;
+        }
+
+        let z = rand::thread_rng().gen_range(z_range);
         let r = (1.0 - z * z).sqrt();
         let theta = rand::thread_rng().gen_range(-PI..PI);
         let x = r * theta.cos();
